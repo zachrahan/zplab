@@ -12,7 +12,7 @@ class _FixDylibInternalPaths:
                 raise ValueError('fixDylibInternalPaths(limitToPaths = None, limitToFiles = None, verbose = False): both limitToPaths were limitToFiles specified.')
 
     def execute(self):
-        pass
+        
 
 def fixDylibInternalPaths(limitToPaths = None, limitToFiles = None, verbose = False):
     '''OSX can store relative or absolute paths of dylib dependencies in addition to the relative or absolute
@@ -22,19 +22,24 @@ def fixDylibInternalPaths(limitToPaths = None, limitToFiles = None, verbose = Fa
     resorting to the DYLD_LIBRARY_PATH environment variable.  Additionally, any binaries linked against the updated
     dylib retain the path to the dylib.
 
-    If only limitToPaths is specified, all dylibs in the paths specified will be processed.
+    If only limitToPaths is specified, all dylibs in the paths specified will be processed
     If only limitToFiles is specified, only the dylibs specified by filename will be processed.
     If neither or both are specified, an exception is thrown.'''
 
     fixer = _FixDylibInternalPaths(limitToPaths, limitToFiles, verbose)
     fixer.execute()
-    del fixer
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
+    parser.add_argument('-v', '--verbose', action = 'store_true', help = 'output progress information during execution')
     group = parser.add_mutually_exclusive_group(required = True)
     group.add_argument('--by-file', action = 'store_true')
     group.add_argument('--by-directory', action = 'store_true')
-    parser.add_argument('targets', help='dylib files or dylib directories to process')
+    parser.add_argument('targets', metavar = 'target', nargs = '+', help='dylib files or dylib directories to process')
     args = parser.parse_args()
+
+    if args.by_file:
+        fixDylibInternalPaths(limitToFiles = args.targets, verbose = args.verbose)
+    elif args.by_directory:
+        fixDylibInternalPaths(limitToPaths = args.targets, verbose = args.verbose)
