@@ -1,4 +1,7 @@
+#!/usr/bin/env python3
+#
 # Copyright 2014 WUSTL ZPLAB
+#
 
 #TODO: abstract port write into function that verifies return represents expected byte count & throws if not
 
@@ -14,6 +17,9 @@ class Lumencor:
         self._serialPort.write(bytearray.fromhex(u'57 02 FF 50'))
         # "Set GPI05-7 push-pull out, GPIO4 open drain out"
         self._serialPort.write(bytearray.fromhex(u'57 03 AB 50'))
+        # The lumencor box replies with nonsense to the first get temperature request.  We issue a get temperature request and ignore the result so that the next
+        # get temperature request returns useful data.
+        self.getTemp()
 
     def getTemp(self):
         if self._serialPort.write(bytearray.fromhex(u'53 91 02 50')) == 4:
@@ -33,3 +39,8 @@ class Lumencor:
         # disable all
         self._serialPort.write(bytearray.fromhex(u'4F 7F 50'))
         print("temp after: ", self.getTemp())
+
+if __name__ == '__main__':
+    from lumencor import direct_manip
+    direct_manip.show()
+
