@@ -1,5 +1,9 @@
+﻿# Copyright 2014 WUSTL ZPLAB
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 from acquisition.lumencor.ui_lumencormanipdialog import Ui_LumencorManipDialog
+from acquisition.lumencor.lumencor import Lumencor
+from acquisition.lumencor.lumencor_exception import LumencorException
 
 class LumencorManipDialog(QtWidgets.QDialog):
     class ColorControlSet:
@@ -8,8 +12,9 @@ class LumencorManipDialog(QtWidgets.QDialog):
             self.slider = slider
             self.spinBox = spinBox
 
-    def __init__(self, parent=None):
+    def __init__(self, parent, lumencorInstance):
         super(LumencorManipDialog, self).__init__(parent)
+        self.lumencorInstance = lumencorInstance
 
         self.ui = Ui_LumencorManipDialog()
         self.ui.setupUi(self)
@@ -34,17 +39,37 @@ class LumencorManipDialog(QtWidgets.QDialog):
             ccs.toggle.toggled.connect(lambda on, name = c: self.handleToggleNamedColor(name, on))
             # Send slider changes to lumencor box
             ccs.slider.sliderMoved.connect(lambda intensity, name = c: self.handleSetNamedColorIntensity(name, intensity))
-            # Send spinbox changed to lumencor box unless the spinbox change was caused by a slider drag
+            # Send spinbox changes to lumencor box unless the spinbox change was caused by a slider drag (slider
+            # drag both updates spinbox and sends change to lumencor, so sending change again would be redundant)
             ccs.spinBox.valueChanged.connect(lambda intensity, name = c, slider = ccs.slider: slider.isSliderDown() or self.handleSetNamedColorIntensity(name, intensity))
 
+        self.tempUpdateTimer = QtCore.QTimer(self)
+        self.tempUpdateTimer.timeout.connect(self.handleTempUpdateTimerFired)
+        self.tempUpdateTimer.start(2000)
+
+    def closeEvent(self, event):
+        self.lumencorInstance.toggleAllColors(False)
+        super().closeEvent(event)
+
     def handleToggleNamedColor(self, name, on):
-        print('toggled {} {}'.format(name, on))
+        self.lumencorInstance.toggleColor(name, on)
 
     def handleSetNamedColorIntensity(self, name, intensity):
-        print('set {} intensity to {}'.format(name, intensity))
+        self.lumencorInstance.setColorIntensity(name, intensity)
 
-def show():
+    def handleTempUpdateTimerFired(self):
+        temp = self.lumencorInstance.getTemp()
+        text = str()
+        if temp is None:
+            text = 'Temp: unavailable'
+        else:
+            text = 'Temp: {}ºC'.format(temp)
+        self.ui.tempLabel.setText(text)
+
+def show(lumencorInstance=None):
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    dialog = LumencorManipDialog()
+    if lumencorInstance is None:
+        lumencorInstance = Lumencor()
+    dialog = LumencorManipDialog(None, lumencorInstance)
     sys.exit(dialog.exec_())
