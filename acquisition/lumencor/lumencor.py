@@ -36,7 +36,7 @@ class Lumencor:
         self.setAllColorsIntensity(0)
 
     def _write(self, byteArray):
-#       print(''.join('{:02x} '.format(x) for x in byteArray))
+        #print(''.join('{:02x} '.format(x) for x in byteArray))
         byteCountWritten = self._serialPort.write(byteArray)
         byteCount = len(byteArray)
         if byteCountWritten != byteCount:
