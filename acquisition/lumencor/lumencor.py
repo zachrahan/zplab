@@ -6,19 +6,19 @@ import time
 from acquisition.lumencor.lumencor_exception import LumencorException
 
 class Lumencor:
-    _colorToggleLeftShiftIndexes = {\
-        'red'   : 0,\
-        'green' : 1,\
-        'cyan'  : 2,\
-        'UV'    : 3,\
-        'blue'  : 5,\
+    _colorToggleLeftShiftIndexes = {
+        'red'   : 0,
+        'green' : 1,
+        'cyan'  : 2,
+        'UV'    : 3,
+        'blue'  : 5,
         'teal'  : 6 }
-    _colorIntensityBases = {\
-        'red'   : bytearray.fromhex('53 18 03 08 F0 00 50'),\
-        'green' : bytearray.fromhex('53 18 03 04 F0 00 50'),\
-        'cyan'  : bytearray.fromhex('53 18 03 02 F0 00 50'),\
-        'UV'    : bytearray.fromhex('53 18 03 01 F0 00 50'),\
-        'blue'  : bytearray.fromhex('53 1A 03 01 F0 00 50'),\
+    _colorIntensityBases = {
+        'red'   : bytearray.fromhex('53 18 03 08 F0 00 50'),
+        'green' : bytearray.fromhex('53 18 03 04 F0 00 50'),
+        'cyan'  : bytearray.fromhex('53 18 03 02 F0 00 50'),
+        'UV'    : bytearray.fromhex('53 18 03 01 F0 00 50'),
+        'blue'  : bytearray.fromhex('53 1A 03 01 F0 00 50'),
         'teal'  : bytearray.fromhex('53 1A 03 02 F0 00 50') }
 
     def __init__(self, serialPortDescriptor = '/dev/tty.usbserial-FTVI2WYU'):

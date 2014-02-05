@@ -1,7 +1,7 @@
 ﻿# Copyright 2014 WUSTL ZPLAB
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-from acquisition.lumencor.ui_lumencormanipdialog import Ui_LumencorManipDialog
+import os
+from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from acquisition.lumencor.lumencor import Lumencor
 from acquisition.lumencor.lumencor_exception import LumencorException
 
@@ -16,7 +16,10 @@ class LumencorManipDialog(QtWidgets.QDialog):
         super(LumencorManipDialog, self).__init__(parent)
         self.lumencorInstance = lumencorInstance
 
-        self.ui = Ui_LumencorManipDialog()
+        # Note that uic.loadUiType(..) returns a tuple containing two class types (the form class and the Qt base
+        # class).  The line below instantiates the form class.  It is assumed that the .ui file resides in the same
+        # directory as this .py file.
+        self.ui = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'direct_manip.ui'))[0]()
         self.ui.setupUi(self)
 
         self.colorControlSets = {\
