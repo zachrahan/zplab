@@ -23,8 +23,9 @@ class Lumencor:
 
     def __init__(self, serialPortDescriptor = '/dev/ttyLumencor'):
         self._serialPort = serial.Serial(serialPortDescriptor, 9600, timeout=1)
-        #TODO: check that port was opened successfully
-        #RS232 Lumencor docs state: "The [following] two commands MUST be issued after every power cycle to properly configure controls for further commands."
+        if not self._serialPort.isOpen():
+            raise LumencorException('Failed to open {}.'.format(serialPortDescriptor))
+        # RS232 Lumencor docs state: "The [following] two commands MUST be issued after every power cycle to properly configure controls for further commands."
         # "Set GPIO0-3 as open drain output"
         self._write(bytearray.fromhex(u'57 02 FF 50'))
         # "Set GPI05-7 push-pull out, GPIO4 open drain out"
