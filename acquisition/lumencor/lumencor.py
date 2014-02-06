@@ -21,7 +21,7 @@ class Lumencor:
         'blue'  : bytearray.fromhex('53 1A 03 01 F0 00 50'),
         'teal'  : bytearray.fromhex('53 1A 03 02 F0 00 50') }
 
-    def __init__(self, serialPortDescriptor = '/dev/tty.usbserial-FTVI2WYU'):
+    def __init__(self, serialPortDescriptor = '/dev/ttyLumencor'):
         self._serialPort = serial.Serial(serialPortDescriptor, 9600, timeout=1)
         #TODO: check that port was opened successfully
         #RS232 Lumencor docs state: "The [following] two commands MUST be issued after every power cycle to properly configure controls for further commands."
