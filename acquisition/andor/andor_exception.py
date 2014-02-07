@@ -2,5 +2,5 @@
 
 from acquisition.acquisition_exception import AcquisitionException
 
-class LumencorException:
+class AndorException:
     pass
