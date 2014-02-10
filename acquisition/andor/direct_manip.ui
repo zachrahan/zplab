@@ -121,6 +121,16 @@
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QPushButton" name="testButton">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>test</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
      </item>
@@ -207,6 +217,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>testButton</sender>
+   <signal>clicked()</signal>
+   <receiver>AndorManipMainWindow</receiver>
+   <slot>testButtonClicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>789</x>
+     <y>266</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>687</x>
+     <y>225</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>openImageClicked()</slot>
@@ -214,5 +240,6 @@
   <slot>refreshAndorDeviceListButtonClicked()</slot>
   <slot>andorDeviceSelected(int)</slot>
   <slot>connectDisconnectAndorDeviceButtonClicked()</slot>
+  <slot>testButtonClicked()</slot>
  </slots>
 </ui>

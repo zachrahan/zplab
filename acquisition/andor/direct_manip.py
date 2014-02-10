@@ -61,12 +61,17 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
             self.ui.andorDeviceListCombo.setEnabled(False)
             self.ui.refreshAndorDeviceListButton.setEnabled(False)
             self.ui.connectDisconnectAndorDeviceButton.setText('Disconnect')
+            self.ui.testButton.setEnabled(True)
         else:
             # Disconnect...
             self.zylaInstance = None
             self.ui.andorDeviceListCombo.setEnabled(True)
             self.ui.refreshAndorDeviceListButton.setEnabled(True)
             self.ui.connectDisconnectAndorDeviceButton.setText('Connect')
+            self.ui.testButton.setEnabled(False)
+
+    def testButtonClicked(self):
+        QtWidgets.QMessageBox.information(self, 'Test Result', self.zylaInstance.getPixelEncoding())
 
 def show(andorInstance=None):
     import sys

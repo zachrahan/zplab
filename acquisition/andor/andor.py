@@ -37,3 +37,12 @@ class Zyla:
     def __del__(self):
         if self.isOpen:
             self.andorInstance.atcore.AT_Close(self.deviceHandle)
+
+    def getPixelEncoding(self):
+        enumIndex = ctypes.c_int(-1)
+        if self.andorInstance.atcore.AT_GetEnumIndex(self.deviceHandle, 'PixelEncoding', ctypes.byref(enumIndex)) != 0:
+            raise AndorException('AT_GetEnumIndex(..) for PixelEncoding failed.')
+        pixelEncoding = ctypes.create_unicode_buffer(128)
+        if self.andorInstance.atcore.AT_GetEnumStringByIndex(self.deviceHandle, 'PixelEncoding', enumIndex, pixelEncoding, 128) != 0:
+            raise AndorException('AT_GetEnumStringByIndex(..) for PixelEncoding failed.')
+        return pixelEncoding.value
