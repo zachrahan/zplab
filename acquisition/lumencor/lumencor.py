@@ -1,6 +1,5 @@
 ﻿# Copyright 2014 WUSTL ZPLAB
 
-from numpy import *
 import serial
 import time
 from acquisition.lumencor.lumencor_exception import LumencorException

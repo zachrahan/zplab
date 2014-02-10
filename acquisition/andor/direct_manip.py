@@ -24,16 +24,27 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
     def openImageClicked(self):
         fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self)
         if fileName is not None:
-            self.usePixmap(QtGui.QPixmap(fileName))
+            self._usePixmap(QtGui.QPixmap(fileName))
 
     def saveImageClicked(self):
         pass
 
-    def usePixmap(self, pixmap):
+    def _usePixmap(self, pixmap):
         if self.imageItem is not None:
             self.graphicsScene.removeItem(self.imageItem)
         self.graphicsScene.addPixmap(pixmap)
         self.graphicsScene.setSceneRect(QtCore.QRectF(0, 0, pixmap.width(), pixmap.height()))
+
+    def refreshAndorDeviceListButtonClicked(self):
+        deviceNames = self.andorInstance.getDeviceNames()
+        # Clear existing contents
+        while self.ui.andorDeviceListCombo.count() > 0:
+            self.ui.andorDeviceListCombo.removeItem(self.ui.andorDeviceListCombo.count() - 1)
+        # Populate
+        deviceIndex = 0
+        for deviceName in deviceNames:
+            self.ui.andorDeviceListCombo.addItem('{}: {}'.format(deviceIndex, deviceName))
+            deviceIndex += 1
 
 def show(andorInstance=None):
     import sys
