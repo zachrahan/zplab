@@ -24,3 +24,16 @@ class Andor:
             deviceNames.append(deviceName.value)
             self.atcore.AT_Close(handle)
         return deviceNames
+
+class Zyla:
+    def __init__(self, andorInstance, deviceIndex):
+        self.andorInstance = andorInstance
+        self.deviceHandle = ctypes.c_int(-1)
+        self.isOpen = False
+        if self.andorInstance.atcore.AT_Open(deviceIndex, ctypes.byref(self.deviceHandle)) != 0:
+            raise AndorException('AT_Open(..) failed.')
+        self.isOpen = True
+
+    def __del__(self):
+        if self.isOpen:
+            self.andorInstance.atcore.AT_Close(self.deviceHandle)

@@ -76,9 +76,12 @@
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
            <widget class="QComboBox" name="andorDeviceListCombo">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="sizePolicy">
-             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-              <horstretch>1</horstretch>
+             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <horstretch>100</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
@@ -93,8 +96,8 @@
           <item>
            <widget class="QPushButton" name="refreshAndorDeviceListButton">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>1</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
@@ -102,11 +105,21 @@
              <string>Refresh</string>
             </property>
             <property name="text">
-             <string notr="true">↷</string>
+             <string>Refresh</string>
             </property>
            </widget>
           </item>
          </layout>
+        </item>
+        <item>
+         <widget class="QPushButton" name="connectDisconnectAndorDeviceButton">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Connect</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -178,10 +191,28 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>connectDisconnectAndorDeviceButton</sender>
+   <signal>clicked()</signal>
+   <receiver>AndorManipMainWindow</receiver>
+   <slot>connectDisconnectAndorDeviceButtonClicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>841</x>
+     <y>237</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>494</x>
+     <y>341</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>openImageClicked()</slot>
   <slot>saveImageClicked()</slot>
   <slot>refreshAndorDeviceListButtonClicked()</slot>
+  <slot>andorDeviceSelected(int)</slot>
+  <slot>connectDisconnectAndorDeviceButtonClicked()</slot>
  </slots>
 </ui>
