@@ -2,5 +2,6 @@
 
 from acquisition.acquisition_exception import AcquisitionException
 
-class AndorException:
-    pass
+class AndorException(AcquisitionException):
+    def __init__(self, description):
+        self.description = description

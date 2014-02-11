@@ -2,5 +2,6 @@
 
 from acquisition.acquisition_exception import AcquisitionException
 
-class LumencorException:
-    pass
+class LumencorException(AcquisitionException):
+    def __init__(self, description):
+        self.description = description

@@ -20,6 +20,15 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
         self.ui.graphicsView.setScene(self.graphicsScene)
         self.imageItem = None
 
+        self.enableWhenConnected = [
+            self.ui.testButton,
+            self.ui.exposureTimeLabel,
+            self.ui.exposureTimeSpinBox,
+            self.ui.acquireButton ]
+        self.disableWhenConnected = [
+            self.ui.andorDeviceListCombo,
+            self.ui.refreshAndorDeviceListButton ]
+
     def closeEvent(self, event):
         super().closeEvent(event)
 
@@ -42,6 +51,7 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
         # Clear existing contents
         while self.ui.andorDeviceListCombo.count() > 0:
             self.ui.andorDeviceListCombo.removeItem(self.ui.andorDeviceListCombo.count() - 1)
+
         if deviceNames is None or len(deviceNames) == 0:
             self.ui.andorDeviceListCombo.setEnabled(False)
             self.ui.connectDisconnectAndorDeviceButton.setEnabled(False)
@@ -58,20 +68,25 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
         if self.zylaInstance is None:
             # Connect...
             self.zylaInstance = Zyla(self.andorInstance, self.ui.andorDeviceListCombo.currentIndex())
-            self.ui.andorDeviceListCombo.setEnabled(False)
-            self.ui.refreshAndorDeviceListButton.setEnabled(False)
+            for widget in self.enableWhenConnected:
+                widget.setEnabled(True)
+            for widget in self.disableWhenConnected:
+                widget.setEnabled(False)
             self.ui.connectDisconnectAndorDeviceButton.setText('Disconnect')
-            self.ui.testButton.setEnabled(True)
         else:
             # Disconnect...
             self.zylaInstance = None
-            self.ui.andorDeviceListCombo.setEnabled(True)
-            self.ui.refreshAndorDeviceListButton.setEnabled(True)
+            for widget in self.enableWhenConnected:
+                widget.setEnabled(False)
+            for widget in self.disableWhenConnected:
+                widget.setEnabled(True)
             self.ui.connectDisconnectAndorDeviceButton.setText('Connect')
-            self.ui.testButton.setEnabled(False)
 
     def testButtonClicked(self):
         QtWidgets.QMessageBox.information(self, 'Test Result', self.zylaInstance.getPixelEncoding())
+
+    def acquireButtonClicked(self):
+        self.zylaInstance.acquireImage(self.ui.exposureTimeSpinBox.value())
 
 def show(andorInstance=None):
     import sys

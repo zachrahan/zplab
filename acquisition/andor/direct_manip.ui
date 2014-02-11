@@ -131,6 +131,49 @@
           </property>
          </widget>
         </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <item>
+           <widget class="QLabel" name="exposureTimeLabel">
+            <property name="text">
+             <string>Exposure:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="exposureTimeSpinBox">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="suffix">
+             <string>s</string>
+            </property>
+            <property name="decimals">
+             <number>4</number>
+            </property>
+            <property name="maximum">
+             <double>9999999.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QPushButton" name="acquireButton">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="toolTip">
+           <string>Expose for specified time and get resulting image</string>
+          </property>
+          <property name="text">
+           <string>Acquire</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
      </item>
@@ -233,6 +276,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>acquireButton</sender>
+   <signal>clicked()</signal>
+   <receiver>AndorManipMainWindow</receiver>
+   <slot>acquireButtonClicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>869</x>
+     <y>346</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>687</x>
+     <y>355</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>openImageClicked()</slot>
@@ -241,5 +300,6 @@
   <slot>andorDeviceSelected(int)</slot>
   <slot>connectDisconnectAndorDeviceButtonClicked()</slot>
   <slot>testButtonClicked()</slot>
+  <slot>acquireButtonClicked()</slot>
  </slots>
 </ui>
