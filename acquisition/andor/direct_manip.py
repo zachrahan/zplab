@@ -88,7 +88,7 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
     def acquireButtonClicked(self):
         self.zylaInstance.acquireImage(self.ui.exposureTimeSpinBox.value())
 
-def show(andorInstance=None):
+def show(launcherDescription=None, moduleArgs=None, andorInstance=None):
     import sys
     app = QtWidgets.QApplication(sys.argv)
     if andorInstance is None:

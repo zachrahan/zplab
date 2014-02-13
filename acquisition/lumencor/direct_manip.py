@@ -69,10 +69,19 @@ class LumencorManipDialog(QtWidgets.QDialog):
             text = 'Temp: {}ºC'.format(temp)
         self.ui.tempLabel.setText(text)
 
-def show(lumencorInstance=None):
+def show(lumencorInstance=None, launcherDescription=None, moduleArgs=None):
     import sys
+    import argparse
+
+    parser = argparse.ArgumentParser(launcherDescription)
+    parser.add_argument('--port')
+    args = parser.parse_args(moduleArgs)
+
     app = QtWidgets.QApplication(sys.argv)
     if lumencorInstance is None:
-        lumencorInstance = Lumencor()
+        if args.port is None:
+            lumencorInstance = Lumencor()
+        else:
+            lumencorInstance = Lumencor(args.port)
     dialog = LumencorManipDialog(None, lumencorInstance)
     sys.exit(dialog.exec_())

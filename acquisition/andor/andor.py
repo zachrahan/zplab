@@ -48,9 +48,23 @@ class Zyla:
         return pixelEncoding.value
 
     def acquireImage(self, exposureTime):
+        # Exposure time
         if self.andorInstance.atcore.AT_SetFloat(self.deviceHandle, 'Exposure Time', ct.c_double(exposureTime)) != 0:
             raise AndorException('Failed to set exposure time.')
 
+        # AOI binning
+#        if self.andorInstance.atcore.AT_SetInt(self.deviceHandle, 'AOIHBin', 1) != 0:
+#            raise AndorException('Failed to set horizontal binning.')
+#        if self.andorInstance.atcore.AT_SetInt(self.deviceHandle, 'AOIVBin', 1) != 0:
+#            raise AndorException('Failed to set vertical binning.')
+
+        # AOI top left
+        if self.andorInstance.atcore.AT_SetInt(self.deviceHandle, 'AOILeft', 1) != 0:
+            raise AndorException('Failed to set AOI left.')
+        if self.andorInstance.atcore.AT_SetInt(self.deviceHandle, 'AOITop', 1) != 0:
+            raise AndorException('Failed to set AOI top.')
+
+        # AOI width and height
         aoiw = ct.c_longlong(-1)
         if self.andorInstance.atcore.AT_GetIntMax(self.deviceHandle, 'AOI Width', ct.byref(aoiw)) != 0:
             raise AndorException('Failed to get max AOI width.')

@@ -5,3 +5,4 @@ class AcquisitionException(Exception):
         self.description = description
     def __str__(self):
         return repr(self.description)
+
