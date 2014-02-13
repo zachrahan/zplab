@@ -1,5 +1,7 @@
 # Copyright 2014 WUSTL ZPLAB
 
+import numpy as np
+import numpy.matlib
 import os
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from acquisition.andor.andor import (Andor, Zyla)
@@ -86,7 +88,20 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
         QtWidgets.QMessageBox.information(self, 'Test Result', self.zylaInstance.getPixelEncoding())
 
     def acquireButtonClicked(self):
-        self.zylaInstance.acquireImage(self.ui.exposureTimeSpinBox.value())
+        im16g = self.zylaInstance.acquireImage(self.ui.exposureTimeSpinBox.value())
+        # Normalize
+        im16gf = im16g.astype(np.float32)
+        #im16gf = np.matlib.rand(im16g.shape).view(np.ndarray)
+        im16gf -= im16gf.min()
+        im16gf /= im16gf.max()
+        del im16g
+        # Display (SLOW)
+        imq = QtGui.QImage(im16gf.shape[1], im16gf.shape[0], QtGui.QImage.Format_RGB32)
+        for y in range(im16gf.shape[0]):
+            for x in range(im16gf.shape[1]):
+                cv = im16gf[y, x] * 256
+                imq.setPixel(x, y, QtGui.qRgb(cv, cv, cv))
+        self._usePixmap(QtGui.QPixmap.fromImage(imq))
 
 def show(launcherDescription=None, moduleArgs=None, andorInstance=None):
     import sys

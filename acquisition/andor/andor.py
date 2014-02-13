@@ -76,10 +76,12 @@ class Zyla:
         if self.andorInstance.atcore.AT_SetInt(self.deviceHandle, 'AOI Height', aoih) != 0:
             raise AndorException('Failed to set AOI height to maximum ({}).'.format(aoih.value))
 
+        # AOI stride
         aoiStride = ct.c_longlong(-1)
         if self.andorInstance.atcore.AT_GetInt(self.deviceHandle, 'AOIStride', ct.byref(aoiStride)) != 0:
             raise AndorException('Failed to get AOI stride.')
 
+        # Make acquisition buffer
         imageBufferSize = ct.c_longlong(-1)
         if self.andorInstance.atcore.AT_GetInt(self.deviceHandle, 'ImageSizeBytes', ct.byref(imageBufferSize)) != 0:
             raise AndorException('Failed to get ImageSizeBytes.')
@@ -90,15 +92,24 @@ class Zyla:
 
         imageBuffer = np.ndarray(shape=(imageBufferSize.value / aoiStride.value, aoiStride.value / 2), dtype=np.uint16, order='C')
 
+        # Queue acquisition buffer
         acquisitionTimeout = int(exposureTime * 3 * 1000)
         if acquisitionTimeout < 500:
             acquisitionTimeout = 500
+        self.andorInstance.atcore.AT_Flush(self.deviceHandle)
         if self.andorInstance.atcore.AT_QueueBuffer(self.deviceHandle, imageBuffer.ctypes.data_as(ct.POINTER(ct.c_ubyte)), imageBufferSize) != 0:
             raise AndorException('Failed to queue image buffer for acquisition from camera.')
-        print(self.andorInstance.atcore.AT_Command(self.deviceHandle, 'Acquisition Start'))
-#        if self.andorInstance.atcore.AT_Command(self.deviceHandle, 'AcquisitionStart') != 0:
-#            raise AndorException('Acquisition start command failed.')
+
+        # Initiate acquisition
+        if self.andorInstance.atcore.AT_Command(self.deviceHandle, 'AcquisitionStart') != 0:
+            raise AndorException('Acquisition start command failed.')
+
+        # Wait for acquisition to complete and verify that acquisition data was written to the acquisition buffer we queued
         acquiredBuffer = ct.c_void_p()
         acquiredBufferSize = ct.c_longlong(-1);
-        print(self.andorInstance.atcore.AT_WaitBuffer(self.deviceHandle, ct.byref(acquiredBuffer), ct.byref(acquiredBufferSize), acquisitionTimeout))
-#           raise AndorException('Failed to acquire buffer from camera.')
+        if self.andorInstance.atcore.AT_WaitBuffer(self.deviceHandle, ct.byref(acquiredBuffer), ct.byref(acquiredBufferSize), acquisitionTimeout) != 0:
+            raise AndorException('Failed to acquire buffer from camera.')
+        if acquiredBuffer.value != imageBuffer.ctypes.data_as(ct.c_void_p).value:
+            raise AndorException('Acquired image buffer has different address than queued image buffer.')
+
+        return imageBuffer[:aoih.value, :aoiw.value]

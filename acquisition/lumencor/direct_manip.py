@@ -23,11 +23,11 @@ class LumencorManipDialog(QtWidgets.QDialog):
         self.ui.setupUi(self)
 
         self.colorControlSets = {\
-            'red' : self.ColorControlSet(self.ui.redToggle, self.ui.redSlider, self.ui.redSpinBox),\
-            'green' : self.ColorControlSet(self.ui.greenToggle, self.ui.greenSlider, self.ui.greenSpinBox),\
-            'cyan' : self.ColorControlSet(self.ui.cyanToggle, self.ui.cyanSlider, self.ui.cyanSpinBox),\
-            'blue' : self.ColorControlSet(self.ui.blueToggle, self.ui.blueSlider, self.ui.blueSpinBox),\
-            'UV' : self.ColorControlSet(self.ui.UVToggle, self.ui.UVSlider, self.ui.UVSpinBox),\
+            'red' : self.ColorControlSet(self.ui.redToggle, self.ui.redSlider, self.ui.redSpinBox),
+            'green' : self.ColorControlSet(self.ui.greenToggle, self.ui.greenSlider, self.ui.greenSpinBox),
+            'cyan' : self.ColorControlSet(self.ui.cyanToggle, self.ui.cyanSlider, self.ui.cyanSpinBox),
+            'blue' : self.ColorControlSet(self.ui.blueToggle, self.ui.blueSlider, self.ui.blueSpinBox),
+            'UV' : self.ColorControlSet(self.ui.UVToggle, self.ui.UVSlider, self.ui.UVSpinBox),
             'teal' : self.ColorControlSet(self.ui.tealToggle, self.ui.tealSlider, self.ui.tealSpinBox) }
 
         for c, ccs in self.colorControlSets.items():
