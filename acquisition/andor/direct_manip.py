@@ -1,7 +1,7 @@
 # Copyright 2014 WUSTL ZPLAB
 
+import ctypes as ct
 import numpy as np
-import numpy.matlib
 import os
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from acquisition.andor.andor import (Andor, Zyla)
@@ -36,8 +36,12 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
 
     def openImageClicked(self):
         fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self)
-        if fileName is not None:
-            self._usePixmap(QtGui.QPixmap(fileName))
+        if fileName is not None and fileName != '':
+            impx = QtGui.QPixmap(fileName)
+            if impx.isNull():
+                QtWidgets.QMessageBox.critical(self, 'Failed to Load Image', 'Failed to load an image from "{}".'.format(fileName))
+            else:
+                self._usePixmap(impx)
 
     def saveImageClicked(self):
         pass
@@ -45,7 +49,8 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
     def _usePixmap(self, pixmap):
         if self.imageItem is not None:
             self.graphicsScene.removeItem(self.imageItem)
-        self.graphicsScene.addPixmap(pixmap)
+            self.imageItem = None
+        self.imageItem = self.graphicsScene.addPixmap(pixmap)
         self.graphicsScene.setSceneRect(QtCore.QRectF(0, 0, pixmap.width(), pixmap.height()))
 
     def refreshAndorDeviceListButtonClicked(self):
@@ -89,19 +94,33 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
 
     def acquireButtonClicked(self):
         im16g = self.zylaInstance.acquireImage(self.ui.exposureTimeSpinBox.value())
-        # Normalize
+        shape = im16g.shape
+
+        # Normalize and convert to 8-bit grayscale
         im16gf = im16g.astype(np.float32)
-        #im16gf = np.matlib.rand(im16g.shape).view(np.ndarray)
-        im16gf -= im16gf.min()
-        im16gf /= im16gf.max()
         del im16g
-        # Display (SLOW)
-        imq = QtGui.QImage(im16gf.shape[1], im16gf.shape[0], QtGui.QImage.Format_RGB32)
-        for y in range(im16gf.shape[0]):
-            for x in range(im16gf.shape[1]):
-                cv = im16gf[y, x] * 256
-                imq.setPixel(x, y, QtGui.qRgb(cv, cv, cv))
-        self._usePixmap(QtGui.QPixmap.fromImage(imq))
+        im16gf -= im16gf.min()
+        im16gf *= 0xff / im16gf.max()
+        im32argb = im16gf.astype(np.uint8)
+        del im16gf
+
+        # Convert to 32-bit color with ignored junk data in alpha channel
+        im32argb = np.repeat(im32argb, 4, axis=1)
+
+        # Display
+        imq = QtGui.QImage(im32argb.data, shape[1], shape[0], QtGui.QImage.Format_RGB32)
+        impx = QtGui.QPixmap.fromImage(imq)
+        # It should not be necessary to call detach here, but if this is not done, impx will continue
+        # to reference im32argb through imq - without increasing the reference count of either.  According
+        # to the Qt docs, QPixmap.fromImage copies the QImage's data, but this does not seem to actually
+        # be the case.  Perhaps Qt is too clever for its own good and inserts im32argb into the pixmap cache;
+        # calling detach forces QPixmap to copy its data out of the pixmap cache and thus works around the
+        # issue.
+        impx.detach()
+        del imq
+        del im32argb
+        self._usePixmap(impx)
+        del impx
 
 def show(launcherDescription=None, moduleArgs=None, andorInstance=None):
     import sys
