@@ -135,6 +135,9 @@
          <layout class="QHBoxLayout" name="horizontalLayout_3">
           <item>
            <widget class="QLabel" name="exposureTimeLabel">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string>Exposure:</string>
             </property>
@@ -142,6 +145,9 @@
           </item>
           <item>
            <widget class="QDoubleSpinBox" name="exposureTimeSpinBox">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
