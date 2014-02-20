@@ -3,9 +3,28 @@
 import ctypes as ct
 import numpy as np
 import os
-from PyQt5 import QtCore, QtGui, QtWidgets, uic
+from PyQt5 import QtCore, QtGui, QtWidgets, QtOpenGL, uic
 from acquisition.andor.andor import (Andor, Zyla)
 from acquisition.andor.andor_exception import AndorException
+
+class ImageItem(QtWidgets.QGraphicsItem):
+    def __init__(self, pixmap, parent = None):
+        super().__init__(parent)
+        self.pixmap = pixmap
+        self.textureId = None
+        self.boundingQRectF = QtCore.QRectF(0, 0, self.pixmap.width(), self.pixmap.height())
+
+    def boundingRect(self):
+        return self.boundingQRectF
+
+    def paint(self, painter, option, widget):
+        if widget is None:
+            raise AndorException('ImageItem cache mode must be QGraphicsItem::NoCache.')
+        painter.beginNativePainting()
+        if self.textureId is None:
+            self.textureId = widget.bindTexture(self.pixmap)
+        widget.drawTexture(self.boundingQRectF, self.textureId)
+        painter.endNativePainting()
 
 class AndorManipMainWindow(QtWidgets.QMainWindow):
     def __init__(self, parent, andorInstance):
@@ -17,10 +36,24 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
+        qglf = QtOpenGL.QGLFormat()
+        # Our weakest target platform is Macmini6,1 which has Intel HD 4000 graphics supporting up to OpenGL 4.1 on OS X
+        qglf.setVersion(4, 1)
+        # QGraphicsView uses at least some OpenGL functionality deprecated in OpenGL 3.0 when manipulating the surface
+        # owned by the QGLWidget
+        qglf.setProfile(QtOpenGL.QGLFormat.CompatibilityProfile)
+        # Uncomment following line if tearing is visible in graphics view widget
+#       qglf.setSwapInterval(1)
+        # Want hardware rendering (should be enabled by default, but this can't hurt)
+        qglf.setDirectRendering(True)
+        # Force graphicsview to render with OpenGL backend
+        self.ui.graphicsView.setViewport(QtOpenGL.QGLWidget(qglf))
+
         self.graphicsScene = QtWidgets.QGraphicsScene(self)
-        self.graphicsScene.setSceneRect(QtCore.QRectF(0, 0, 1000, 1000))
+        self.graphicsScene.setSceneRect(QtCore.QRectF(0, 0, 100, 100))
         self.ui.graphicsView.setScene(self.graphicsScene)
         self.imageItem = None
+        self.ui.graphicsView.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
 
         self.enableWhenConnected = [
             self.ui.testButton,
@@ -50,7 +83,8 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
         if self.imageItem is not None:
             self.graphicsScene.removeItem(self.imageItem)
             self.imageItem = None
-        self.imageItem = self.graphicsScene.addPixmap(pixmap)
+        self.imageItem = ImageItem(pixmap)
+        self.graphicsScene.addItem(self.imageItem)
         self.graphicsScene.setSceneRect(QtCore.QRectF(0, 0, pixmap.width(), pixmap.height()))
 
     def refreshAndorDeviceListButtonClicked(self):
@@ -121,6 +155,8 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
         del im32argb
         self._usePixmap(impx)
         del impx
+
+
 
 def show(launcherDescription=None, moduleArgs=None, andorInstance=None):
     import sys
