@@ -2,6 +2,7 @@
 
 import ctypes as ct
 import numpy as np
+from OpenGL import GL
 import os
 from PyQt5 import QtCore, QtGui, QtWidgets, QtOpenGL, uic
 from acquisition.andor.andor import (Andor, Zyla)
