@@ -1,8 +1,7 @@
 // Copyright 2014 WUSTL ZPLAB
 
-#include <iostream>
-#include <string>
-
+#include "_common.h"
+#include "_AndorException.h"
 #include "_Api.h"
 
 std::unique_ptr<_Api> _Api::s_instance;
@@ -10,9 +9,10 @@ std::unique_ptr<_Api> _Api::s_instance;
 _Api::_Api()
 {
     std::cerr << "_Api::_Api()\n";
-    if(AT_InitialiseLibrary() != AT_SUCCESS)
+    int r = AT_InitialiseLibrary();
+    if(r != AT_SUCCESS)
     {
-        throw std::string("Failed to initialize Andor SDK3 API (AT_InitialiseLibrary() != AT_SUCCESS).");
+        throw _AndorException("Failed to initialize Andor SDK3 API.", r);
     }
 }
 

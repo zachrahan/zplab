@@ -1,28 +1,40 @@
 // Copyright 2014 WUSTL ZPLAB
 
+#include "_common.h"
+
 #include <boost/python.hpp>
 #include <boost/python/import.hpp>
 #include <boost/python/module.hpp>
 #include <boost/python/class.hpp>
 #include <boost/python/manage_new_object.hpp>
-#include <iostream>
-#include <memory>
 
+#include "_AndorException.h"
 #include "_Api.h"
 #include "_Camera.h"
 
 using namespace boost::python;
 
-static void stringToAndorExceptionTranslator(const std::shared_ptr<object>& andorExceptionType, const std::string& description)
+static void andorExceptionBaseTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorExceptionBase& _andorExceptionBase)
 {
-    // The following line is roughly equivalent to the python "andorException = AndorException(description)"
-    object andorException{ (*andorExceptionType)(description.c_str()) };
+    std::cerr << "static void andorExceptionBaseTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorExceptionBase& _andorExceptionBase)\n";
+    // The following line is roughly equivalent to the python "andorException = \
+    // AndorException(_andorExceptionBase.description())"
+    object andorException{ (*andorExceptionType)(_andorExceptionBase.description().c_str()) };
+    PyErr_SetObject(andorExceptionType->ptr(), andorException.ptr() );
+}
+
+static void andorExceptionTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorException& _andorException)
+{
+    std::cerr << "static void andorExceptionTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorException& _andorException)\n";
+    // The following line is roughly equivalent to the python "andorException = \
+    // AndorException(_andorException.description(), _andorException.errorCode(), _andorException.errorName())"
+    object andorException{ (*andorExceptionType)(_andorException.description().c_str(), _andorException.errorCode(), _andorException.errorName().c_str()) };
     PyErr_SetObject(andorExceptionType->ptr(), andorException.ptr() );
 }
 
 static void test()
 {
-    throw std::string("testing exceptions");
+    throw _AndorException("hello world", 1);
 }
 
 // Note that this block is executed by the Python interpreter when this module is loaded
@@ -42,8 +54,9 @@ BOOST_PYTHON_MODULE(_andor)
         // mechanism is instead used to manage the boost::python::object's lifetime and therefore the lifetime of the
         // python object itself.
         std::shared_ptr<object> andorExceptionType{ new object(andorExceptionPackage.attr("AndorException")) };
-        // Register the C++ string exception to Python AndorException translator
-        register_exception_translator<std::string>( [=](const std::string& description){stringToAndorExceptionTranslator(andorExceptionType, description);} );
+        // Register C++ to python exception translators
+        register_exception_translator<_AndorExceptionBase>( [=](const _AndorExceptionBase& _andorExceptionBase){andorExceptionBaseTranslator(andorExceptionType, _andorExceptionBase);} );
+        register_exception_translator<_AndorException>( [=](const _AndorException& _andorException){andorExceptionTranslator(andorExceptionType, _andorException);} );
 
         // Initialize Andor SDK3 API library
         _Api::instantiate();

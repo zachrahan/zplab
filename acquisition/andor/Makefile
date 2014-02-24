@@ -13,14 +13,17 @@ CC = g++
 CPPFLAGS = -fPIC -std=c++11 -I/usr/include/python3.3 -I/usr/local/include -O2 -march=native
 LDFLAGS = -fPIC -shared -L/usr/local/lib -lboost_python-3.3-mt -latcore -lpython3.3 -O2 -march=native
 
-all: $(PROGRAM)
+all: _common.h.gch $(PROGRAM)
+
+_common.h.gch : _common.h
+	$(CC) $(CPPFLAGS) -c $< -o $@
 
 $(PROGRAM): .depend $(OBJS)
 	$(CC) $(LDFLAGS) $(OBJS) -Wl,-soname,$(PROGRAM) -o $(PROGRAM)
 
 depend: .depend
 
-.depend: cmd = $(CC) -MM -MF depend $(var); cat depend >> .depend;
+.depend: cmd = $(CC) $(CPPFLAGS) -MM -MF depend $(var); cat depend >> .depend;
 .depend:
 	@echo "Generating dependencies..."
 	@$(foreach var, $(CPP_FILES), $(cmd))
@@ -34,10 +37,10 @@ depend: .depend
 %.o: %.cpp
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
-%: %.cpp
-	$(CC) $(CPPFLAGS) -o $@ $<
+#%: %.cpp
+#	$(CC) $(CPPFLAGS) -o $@ $<
 
 clean:
-	rm -f .depend $(OBJS) $(PROGRAM)
+	rm -f .depend $(OBJS) $(PROGRAM) _common.h.gch
 
 .PHONY: clean depend

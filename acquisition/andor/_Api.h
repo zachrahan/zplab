@@ -1,9 +1,9 @@
 // Copyright 2014 WUSTL ZPLAB
 
-#include <atcore.h>
-#include <memory>
+#pragma once
+#include "_common.h"
 
-// Used to execute AT_InitialiseLibrary()/AT_FinaliseLibrary() when python loads/unloads this module
+// Used to execute AT_InitialiseLibrary()/AT_FinaliseLibrary() when python loads/unloads the _andor module
 class _Api
 {
 public:
