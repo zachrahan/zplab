@@ -90,7 +90,7 @@ void _AndorException::lookupErrorName(const int& errorCode, std::string& errorNa
     };
     static const std::size_t errorNamesCount = sizeof(errorNames) / sizeof(*errorNames);
 
-    if(errorCode >= 0 && errorCode < errorNamesCount)
+    if(errorCode >= 0 && static_cast<std::size_t>(errorCode) < errorNamesCount)
     {
         errorName = errorNames[errorCode];
     }

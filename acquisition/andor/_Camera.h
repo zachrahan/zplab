@@ -2,11 +2,10 @@
 
 #pragma once
 #include "_common.h"
-#include "_AndorException.h"
-#include "_Camera.h"
 
 class _Camera
 {
 public:
+    static std::shared_ptr<std::vector<std::string>> getDeviceNames();
 protected:
 };
