@@ -5,7 +5,7 @@ import numpy as np
 from OpenGL import GL
 import os
 from PyQt5 import QtCore, QtGui, QtWidgets, QtOpenGL, uic
-from acquisition.andor.andor import (Andor, Zyla)
+from acquisition.andor.andor import Camera
 from acquisition.andor.andor_exception import AndorException
 
 class ImageItem(QtWidgets.QGraphicsItem):
@@ -28,10 +28,9 @@ class ImageItem(QtWidgets.QGraphicsItem):
         painter.endNativePainting()
 
 class AndorManipMainWindow(QtWidgets.QMainWindow):
-    def __init__(self, parent, andorInstance):
+    def __init__(self, parent):
         super().__init__(parent)
-        self.andorInstance = andorInstance
-        self.zylaInstance = None
+        self.camera = None
 
         self.ui = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'direct_manip.ui'))[0]()
         self.ui.setupUi(self)
@@ -89,7 +88,7 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
         self.graphicsScene.setSceneRect(QtCore.QRectF(0, 0, pixmap.width(), pixmap.height()))
 
     def refreshAndorDeviceListButtonClicked(self):
-        deviceNames = self.andorInstance.getDeviceNames()
+        deviceNames = Camera.getDeviceNames()
         # Clear existing contents
         while self.ui.andorDeviceListCombo.count() > 0:
             self.ui.andorDeviceListCombo.removeItem(self.ui.andorDeviceListCombo.count() - 1)
@@ -107,9 +106,9 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
             self.ui.connectDisconnectAndorDeviceButton.setEnabled(True)
 
     def connectDisconnectAndorDeviceButtonClicked(self):
-        if self.zylaInstance is None:
+        if self.camera is None:
             # Connect...
-            self.zylaInstance = Zyla(self.andorInstance, self.ui.andorDeviceListCombo.currentIndex())
+            self.camera = Camera(self.ui.andorDeviceListCombo.currentIndex())
             for widget in self.enableWhenConnected:
                 widget.setEnabled(True)
             for widget in self.disableWhenConnected:
@@ -117,7 +116,7 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
             self.ui.connectDisconnectAndorDeviceButton.setText('Disconnect')
         else:
             # Disconnect...
-            self.zylaInstance = None
+            self.camera = None
             for widget in self.enableWhenConnected:
                 widget.setEnabled(False)
             for widget in self.disableWhenConnected:
@@ -125,10 +124,10 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
             self.ui.connectDisconnectAndorDeviceButton.setText('Connect')
 
     def testButtonClicked(self):
-        QtWidgets.QMessageBox.information(self, 'Test Result', self.zylaInstance.getPixelEncoding())
+        QtWidgets.QMessageBox.information(self, 'Test Result', self.camera.getPixelEncoding())
 
     def acquireButtonClicked(self):
-        im16g = self.zylaInstance.acquireImage(self.ui.exposureTimeSpinBox.value())
+        im16g = self.camera.acquireImage(self.ui.exposureTimeSpinBox.value())
         shape = im16g.shape
 
         # Normalize and convert to 8-bit grayscale
@@ -159,11 +158,9 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
 
 
 
-def show(launcherDescription=None, moduleArgs=None, andorInstance=None):
+def show(launcherDescription=None, moduleArgs=None):
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    if andorInstance is None:
-        andorInstance = Andor()
-    mainWindow = AndorManipMainWindow(None, andorInstance)
+    mainWindow = AndorManipMainWindow(None)
     mainWindow.show()
     sys.exit(app.exec_())
