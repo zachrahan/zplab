@@ -5,6 +5,7 @@
 #ifndef __ANDOR_129384706128903746_COMMON__
 #define __ANDOR_129384706128903746_COMMON__
 
+#include <algorithm>
 #include <atcore.h>
 #include <boost/locale.hpp>
 #include <boost/numpy.hpp>
@@ -16,9 +17,11 @@
 #include <boost/python/manage_new_object.hpp>
 #include <boost/utility.hpp>
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>

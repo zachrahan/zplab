@@ -60,6 +60,11 @@ std::shared_ptr<std::vector<std::string>> _Camera::getDeviceNames()
     return ret;
 }
 
+const wchar_t* _Camera::lookupFeatureName(const Feature& feature)
+{
+    return sm_featureNames[static_cast<std::ptrdiff_t>(feature)];
+}
+
 _Camera::_Camera(const AT_64& deviceIndex)
 {
     int r = ::AT_Open(deviceIndex, &m_dh);
@@ -82,6 +87,148 @@ _Camera::~_Camera()
         std::cerr << "WARNING: AT_Close failed with error #" << r << " (" << errorName << ").\n";
     }
     std::cerr << "_Camera::~_Camera()\n";
+}
+
+int AT_EXP_CONV _Camera::atCallbackWrapper(AT_H dh, const AT_WC* calledFeatureName, void* crtvp)
+{
+    int ret{AT_CALLBACK_SUCCESS};
+    _CallbackRegistrationToken& crt(*reinterpret_cast<_CallbackRegistrationToken*>(crtvp));
+    const wchar_t* requestedFeatureName{_Camera::lookupFeatureName(crt.m_feature)};
+
+    // Compare requested and called feature strings without regard for whitespace discrepancies
+    bool same{true}, cfne, rfne;
+    for(const wchar_t* cfn{calledFeatureName}, *rfn{requestedFeatureName};;)
+    {
+        if(*cfn == L' ')
+        {
+            // Skip space in calledFeature
+            ++cfn;
+            continue;
+        }
+        if(*rfn == L' ')
+        {
+            // Skip space in requestedFeature
+            ++rfn;
+            continue;
+        }
+        cfne = *cfn == L'\0';
+        rfne = *rfn == L'\0';
+        if(cfne != rfne)
+        {
+            // Encountered the end of one string while still attempting to match a non-whitespace character in the
+            // other
+            same = false;
+            break;
+        }
+        if(cfne) // Note: cfne == rfne at this point; checking rfne as well would be redundant
+        {
+            // Reached the end of both strings without encountering a mismatch
+            break;
+        }
+        if(*cfn != *rfn)
+        {
+            // Encountered mismatch between non-whitespace characters
+            same = false;
+            break;
+        }
+        // Non-whitespace characters in both strings matched.  Advance to next character in both strings.
+        ++cfn;
+        ++rfn;
+    }
+
+    if(!same)
+    {
+        std::wostringstream o;
+        o << L"Callback specified for feature \"" << requestedFeatureName
+          << L"\" was instead called by Andor SDK with feature string \"" << calledFeatureName
+          << L"\".  Note that spaces do not interfere with correct feature string identification.";
+        throw _AndorExceptionBase(o.str());
+    }
+    if(dh != crt.m_camera.m_dh)
+    {
+        std::wostringstream o;
+        o << L"Callback for feature \"" << requestedFeatureName << L"\" on device with Andor SDK handle "
+          << crt.m_camera.m_dh << L" was instead called by Andor SDK with handle " << dh << L'.';
+        throw _AndorExceptionBase(o.str());
+    }
+
+    // From Andor SDK3 manual: "As soon as this callback is registered a single callback will be made immediately to
+    // allow the callback handling code to perform any Initialisation code to set up monitoring of the feature."
+    //
+    // We do not want this; we want to be called if and only if our feature changed.  So, this unwanted
+    // initialization call, termed the "precall," is noted and ignored and does not result in the callback supplied
+    // by the user being executed.
+    if(!crt.m_precalled)
+    {
+        crt.m_precalled = true;
+    }
+    else
+    {
+        if(!crt.m_callback())
+        {
+            // Any old error code that isn't zero should suffice, but this one is hopefully different from any used
+            // by the Andor SDK and should thus be identifiable should it need to be.
+            ret = std::numeric_limits<int>::min() + 4242;
+        }
+    }
+    return ret;
+}
+
+std::shared_ptr<_Camera::_CallbackRegistrationToken> _Camera::AT_RegisterFeatureCallback(const Feature& feature, const std::function<bool()>& callback)
+{
+    std::ptrdiff_t fi{static_cast<std::ptrdiff_t>(feature)};
+    std::shared_ptr<_CallbackRegistrationToken> crt{new _CallbackRegistrationToken{*this, feature, callback}};
+    int r = ::AT_RegisterFeatureCallback(m_dh, sm_featureNames[fi], &_Camera::atCallbackWrapper, reinterpret_cast<void*>(crt.get()));
+    if(r != AT_SUCCESS)
+    {
+        std::wostringstream o;
+        o << "AT_RegisterFeatureCallback call to Andor SDK for feature \"" << sm_featureNames[fi] << "\" failed.";
+        throw _AndorException(o.str(), r);
+    }
+    m_crts.insert(crt);
+    return crt;
+}
+
+static bool AT_RegisterFeatureCallbackPyWrapperHelper(py::object& pyCallback)
+{
+    return py::extract<bool>(pyCallback());
+}
+
+std::shared_ptr<_Camera::_CallbackRegistrationToken> _Camera::AT_RegisterFeatureCallbackPyWrapper(const Feature& feature, py::object pyCallback)
+{
+    // The following should work, but does not compile on g++ 4.8.2-r1.
+//  AT_RegisterFeatureCallback(feature, [=]()mutable{return py::extract<bool>(pyCallback());});
+    // So we use a static wrapper function for executing the py::extract portion (the part that causes compilation
+    // problems).
+    return AT_RegisterFeatureCallback(feature, [pyCallback]()mutable{return AT_RegisterFeatureCallbackPyWrapperHelper(pyCallback);});
+}
+
+void _Camera::AT_UnregisterFeatureCallback(const std::shared_ptr<_CallbackRegistrationToken>& crt)
+{
+    std::ptrdiff_t fi{static_cast<std::ptrdiff_t>(crt->m_feature)};
+    if(&crt->m_camera != this)
+    {
+        std::wostringstream o;
+        o << L"AT_UnregisterFeatureCallback called for feature \"" << sm_featureNames[fi] 
+          << L"\" for different _Camera instance's callback token.";
+        throw _AndorExceptionBase(o.str());
+    }
+    Crts::iterator it{m_crts.find(crt)};
+    if(it == m_crts.end())
+    {
+        std::wostringstream o;
+        o << L"AT_UnregisterFeatureCallback called for feature \"" << sm_featureNames[fi] 
+          << L"\" for callback that is not registered.  Perhaps AT_UnregisterFeatureCallback was called twice for the same callback token.";
+        throw _AndorExceptionBase(o.str());
+    }
+    m_crts.erase(it);
+    int r = ::AT_UnregisterFeatureCallback(m_dh, sm_featureNames[fi], &_Camera::atCallbackWrapper, reinterpret_cast<void*>(crt.get()));
+    if(r != AT_SUCCESS)
+    {
+        std::wostringstream o;
+        o << "AT_UnregisterFeatureCallback call to Andor SDK for feature \"" << sm_featureNames[fi] << "\" failed.";
+        throw _AndorException(o.str(), r);
+    }
 }
 
 bool _Camera::AT_IsImplemented(const Feature& feature)
@@ -546,3 +693,21 @@ const wchar_t *_Camera::sm_featureNames[] =
     L"Trigger Mode",
     L"Vertically Center AOI"
 };
+
+_Camera::_CallbackRegistrationToken::_CallbackRegistrationToken(_Camera& camera_, const Feature& feature_, const std::function<bool()>& callback_)
+  : m_camera(camera_),
+    m_feature(feature_),
+    m_callback(callback_),
+    m_precalled(false)
+{
+}
+
+bool _Camera::_CallbackRegistrationToken::operator == (const _CallbackRegistrationToken& rhs) const
+{
+    return this == &rhs;
+}
+
+bool _Camera::_CallbackRegistrationToken::operator != (const _CallbackRegistrationToken& rhs) const
+{
+    return this != &rhs;
+}

@@ -94,10 +94,31 @@ public:
         _End
     };
 
+    class _CallbackRegistrationToken
+      : boost::noncopyable
+    {
+    public:
+        _CallbackRegistrationToken() = delete;
+        bool operator == (const _CallbackRegistrationToken& rhs) const;
+        bool operator != (const _CallbackRegistrationToken& rhs) const;
+    protected:
+        _CallbackRegistrationToken(_Camera& camera_, const Feature& feature_, const std::function<bool()>& callback_);
+        _Camera& m_camera;
+        Feature m_feature;
+        std::function<bool()> m_callback;
+        bool m_precalled;
+        friend _Camera;
+    };
+
     static std::shared_ptr<std::vector<std::string>> getDeviceNames();
+    static const wchar_t* lookupFeatureName(const Feature& feature);
 
     explicit _Camera(const AT_64& deviceIndex);
     virtual ~_Camera();
+
+    std::shared_ptr<_CallbackRegistrationToken> AT_RegisterFeatureCallback(const Feature& feature, const std::function<bool()>& callback);
+    std::shared_ptr<_CallbackRegistrationToken> AT_RegisterFeatureCallbackPyWrapper(const Feature& feature, py::object pyCallback);
+    void AT_UnregisterFeatureCallback(const std::shared_ptr<_CallbackRegistrationToken>& crt);
 
     bool AT_IsImplemented(const Feature& feature);
     bool AT_IsReadable(const Feature& feature);
@@ -140,4 +161,10 @@ protected:
 
     // Device handle
     AT_H m_dh;
+
+    // Callback Registration TokenS
+    typedef std::set<std::shared_ptr<_CallbackRegistrationToken>> Crts;
+    Crts m_crts;
+
+    static int AT_EXP_CONV atCallbackWrapper(AT_H dh, const AT_WC* calledFeatureName, void* crtvp);
 };

@@ -76,6 +76,8 @@ BOOST_PYTHON_MODULE(_andor)
         class_<_Camera, boost::noncopyable>("_Camera", init<AT_64>())
             .def("getDeviceNames", &_Camera::getDeviceNames)
             .staticmethod("getDeviceNames")
+            .def("AT_RegisterFeatureCallback", &_Camera::AT_RegisterFeatureCallbackPyWrapper)
+            .def("AT_UnregisterFeatureCallback", &_Camera::AT_UnregisterFeatureCallback)
             .def("AT_IsImplemented", &_Camera::AT_IsImplemented)
             .def("AT_IsReadable", &_Camera::AT_IsReadable)
             .def("AT_IsWritable", &_Camera::AT_IsWritable)
@@ -104,6 +106,8 @@ BOOST_PYTHON_MODULE(_andor)
             .def("AT_QueueBuffer", &_Camera::AT_QueueBuffer)
             .def("AT_WaitBuffer", &_Camera::AT_WaitBuffer)
             .def("AT_Flush", &_Camera::AT_Flush);
+
+        class_<_Camera::_CallbackRegistrationToken, std::shared_ptr<_Camera::_CallbackRegistrationToken>, boost::noncopyable>("_CallbackRegistrationToken", no_init);
 
         enum_<_Camera::Feature>("Feature")
             .value("AccumulateCount", _Camera::Feature::AccumulateCount)

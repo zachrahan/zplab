@@ -8,6 +8,7 @@ class _AndorExceptionBase
 public:
     explicit _AndorExceptionBase(std::string&& description_);
     explicit _AndorExceptionBase(const std::string& description_ = std::string(""));
+    explicit _AndorExceptionBase(const std::wstring& description_);
 
     const std::string& description() const;
 
@@ -21,6 +22,7 @@ class _AndorException
 public:
     _AndorException(std::string&& description_, const int& errorCode_);
     _AndorException(const std::string& description_, const int& errorCode_);
+    _AndorException(const std::wstring& description_, const int& errorCode_);
 
     const int& errorCode() const;
     const std::string& errorName() const;

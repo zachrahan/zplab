@@ -13,6 +13,11 @@ _AndorExceptionBase::_AndorExceptionBase(const std::string& description_)
 {
 }
 
+_AndorExceptionBase::_AndorExceptionBase(const std::wstring& description_)
+  : m_description(boost::locale::conv::utf_to_utf<char>(description_))
+{
+}
+
 const std::string& _AndorExceptionBase::description() const
 {
     return m_description;
@@ -26,6 +31,13 @@ _AndorException::_AndorException(std::string&& description_, const int& errorCod
 }
 
 _AndorException::_AndorException(const std::string& description_, const int& errorCode_)
+  : _AndorExceptionBase(description_),
+    m_errorCode(errorCode_)
+{
+    lookupErrorName(m_errorCode, m_errorName);
+}
+
+_AndorException::_AndorException(const std::wstring& description_, const int& errorCode_)
   : _AndorExceptionBase(description_),
     m_errorCode(errorCode_)
 {
