@@ -99,13 +99,14 @@ public:
     {
     public:
         _CallbackRegistrationToken() = delete;
+        ~_CallbackRegistrationToken();
         bool operator == (const _CallbackRegistrationToken& rhs) const;
         bool operator != (const _CallbackRegistrationToken& rhs) const;
     protected:
-        _CallbackRegistrationToken(_Camera& camera_, const Feature& feature_, const std::function<bool()>& callback_);
+        _CallbackRegistrationToken(_Camera& camera_, const Feature& feature_, const std::function<bool(Feature)>& callback_);
         _Camera& m_camera;
         Feature m_feature;
-        std::function<bool()> m_callback;
+        std::function<bool(Feature)> m_callback;
         bool m_precalled;
         friend _Camera;
     };
@@ -116,7 +117,7 @@ public:
     explicit _Camera(const AT_64& deviceIndex);
     virtual ~_Camera();
 
-    std::shared_ptr<_CallbackRegistrationToken> AT_RegisterFeatureCallback(const Feature& feature, const std::function<bool()>& callback);
+    std::shared_ptr<_CallbackRegistrationToken> AT_RegisterFeatureCallback(const Feature& feature, const std::function<bool(Feature)>& callback);
     std::shared_ptr<_CallbackRegistrationToken> AT_RegisterFeatureCallbackPyWrapper(const Feature& feature, py::object pyCallback);
     void AT_UnregisterFeatureCallback(const std::shared_ptr<_CallbackRegistrationToken>& crt);
 

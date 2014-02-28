@@ -3,18 +3,7 @@
 #include "_common.h"
 #include "_AndorException.h"
 #include "_Camera.h"
-
-// template<typename T>
-// struct DeleteWatcher
-// {
-//     std::string name;
-//     explicit DeleteWatcher(const std::string& name_) : name(name_) {}
-//     void operator () (T* p)
-//     {
-//         std::cerr << "DELETING " << name << std::endl;
-//         delete p;
-//     }
-// };
+#include "_GilScopedRelease.h"
 
 std::shared_ptr<std::vector<std::string>> _Camera::getDeviceNames()
 {
@@ -28,7 +17,6 @@ std::shared_ptr<std::vector<std::string>> _Camera::getDeviceNames()
     {
         throw _AndorExceptionBase("Andor API returned a negative value for device count.");
     }
-//  std::shared_ptr<std::vector<std::string>> ret(new std::vector<std::string>, DeleteWatcher<std::vector<std::string>>("device name vector"));
     std::shared_ptr<std::vector<std::string>> ret(new std::vector<std::string>);
     if(deviceCount > 0)
     {
@@ -164,7 +152,7 @@ int AT_EXP_CONV _Camera::atCallbackWrapper(AT_H dh, const AT_WC* calledFeatureNa
     }
     else
     {
-        if(!crt.m_callback())
+        if(!crt.m_callback(crt.m_feature))
         {
             // Any old error code that isn't zero should suffice, but this one is hopefully different from any used
             // by the Andor SDK and should thus be identifiable should it need to be.
@@ -174,7 +162,7 @@ int AT_EXP_CONV _Camera::atCallbackWrapper(AT_H dh, const AT_WC* calledFeatureNa
     return ret;
 }
 
-std::shared_ptr<_Camera::_CallbackRegistrationToken> _Camera::AT_RegisterFeatureCallback(const Feature& feature, const std::function<bool()>& callback)
+std::shared_ptr<_Camera::_CallbackRegistrationToken> _Camera::AT_RegisterFeatureCallback(const Feature& feature, const std::function<bool(Feature)>& callback)
 {
     std::ptrdiff_t fi{static_cast<std::ptrdiff_t>(feature)};
     std::shared_ptr<_CallbackRegistrationToken> crt{new _CallbackRegistrationToken{*this, feature, callback}};
@@ -189,18 +177,18 @@ std::shared_ptr<_Camera::_CallbackRegistrationToken> _Camera::AT_RegisterFeature
     return crt;
 }
 
-static bool AT_RegisterFeatureCallbackPyWrapperHelper(py::object& pyCallback)
+static bool AT_RegisterFeatureCallbackPyWrapperHelper(py::object& pyCallback, _Camera::Feature feature)
 {
-    return py::extract<bool>(pyCallback());
+    return py::extract<bool>(pyCallback(feature));
 }
 
 std::shared_ptr<_Camera::_CallbackRegistrationToken> _Camera::AT_RegisterFeatureCallbackPyWrapper(const Feature& feature, py::object pyCallback)
 {
     // The following should work, but does not compile on g++ 4.8.2-r1.
-//  AT_RegisterFeatureCallback(feature, [=]()mutable{return py::extract<bool>(pyCallback());});
+//  AT_RegisterFeatureCallback(feature, [=](Feature feature)mutable{return py::extract<bool>(pyCallback(feature));});
     // So we use a static wrapper function for executing the py::extract portion (the part that causes compilation
     // problems).
-    return AT_RegisterFeatureCallback(feature, [pyCallback]()mutable{return AT_RegisterFeatureCallbackPyWrapperHelper(pyCallback);});
+    return AT_RegisterFeatureCallback(feature, [pyCallback](Feature feature_)mutable{return AT_RegisterFeatureCallbackPyWrapperHelper(pyCallback, feature_);});
 }
 
 void _Camera::AT_UnregisterFeatureCallback(const std::shared_ptr<_CallbackRegistrationToken>& crt)
@@ -694,12 +682,18 @@ const wchar_t *_Camera::sm_featureNames[] =
     L"Vertically Center AOI"
 };
 
-_Camera::_CallbackRegistrationToken::_CallbackRegistrationToken(_Camera& camera_, const Feature& feature_, const std::function<bool()>& callback_)
+_Camera::_CallbackRegistrationToken::_CallbackRegistrationToken(_Camera& camera_, const Feature& feature_, const std::function<bool(Feature)>& callback_)
   : m_camera(camera_),
     m_feature(feature_),
     m_callback(callback_),
     m_precalled(false)
 {
+    std::wcerr << L"_Camera::_CallbackRegistrationToken::_CallbackRegistrationToken()  " << sm_featureNames[static_cast<std::ptrdiff_t>(m_feature)] << std::endl;
+}
+
+_Camera::_CallbackRegistrationToken::~_CallbackRegistrationToken()
+{
+    std::wcerr << L"_Camera::_CallbackRegistrationToken::~_CallbackRegistrationToken() " << sm_featureNames[static_cast<std::ptrdiff_t>(m_feature)] << std::endl;
 }
 
 bool _Camera::_CallbackRegistrationToken::operator == (const _CallbackRegistrationToken& rhs) const

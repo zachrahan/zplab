@@ -30,6 +30,7 @@ class ImageItem(QtWidgets.QGraphicsItem):
 class AndorManipMainWindow(QtWidgets.QMainWindow):
     def __init__(self, parent):
         super().__init__(parent)
+        self.settings = QtCore.QSettings('PincusLab', 'acquisition.andor.direct_manip')
         self.camera = None
 
         self.ui = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'direct_manip.ui'))[0]()
@@ -38,7 +39,7 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
 
         qglf = QtOpenGL.QGLFormat()
         # Our weakest target platform is Macmini6,1 which has Intel HD 4000 graphics supporting up to OpenGL 4.1 on OS X
-        qglf.setVersion(4, 1)
+        qglf.setVersion(4, 3)
         # QGraphicsView uses at least some OpenGL functionality deprecated in OpenGL 3.0 when manipulating the surface
         # owned by the QGLWidget
         qglf.setProfile(QtOpenGL.QGLFormat.CompatibilityProfile)
@@ -64,8 +65,47 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
             self.ui.andorDeviceListCombo,
             self.ui.refreshAndorDeviceListButton ]
 
+        self.restoreSettings()
+
     def closeEvent(self, event):
+        self.saveSettings()
         super().closeEvent(event)
+
+    def saveSettings(self):
+        self.settings.beginGroup("mainwindow")
+        self.settings.setValue("save name", self.fileName)
+        self.settings.setValue("save path", self.filePath)
+        if self.isMaximized():
+            self.settings.setValue("maximized", true);
+            self.settings.remove("size");
+            self.settings.remove("pos");
+        else:
+            self.settings.remove("maximized");
+            self.settings.setValue("size", self.size());
+            self.settings.setValue("pos", self.pos());
+        self.settings.endGroup()
+
+    def restoreSettings(self):
+        self.settings.beginGroup("mainwindow")
+        self.fileName = self.settings.value("save name", "")
+        self.filePath = self.settings.value("save path", "")
+        if self.settings.contains("maximized") and self.settings.value("maximized"):
+            self.showMaximized()
+        elif self.settings.contains("size") and type(self.settings.value("size")) is QtCore.QSize \
+         and self.settings.contains("pos") and type(self.settings.value("pos")) is QtCore.QPoint:
+            s = self.settings.value("size")
+            p = self.settings.value("pos")
+            r = QtCore.QRect(p, s)
+            dt = QtWidgets.QApplication.desktop()
+            # Only restore window geometry if the restored window would be completely on screen, avoiding the annoying
+            # scenario where the program was used on the bottom left of a large monitor attached to a laptop and then later
+            # started on the smaller laptop screen, causing the program window to be offscreen entirely.
+            for si in range(dt.screenCount()):
+                if dt.screenGeometry(si).contains(r):
+                    self.move(p)
+                    self.resize(s)
+                    break
+        self.settings.endGroup()
 
     def openImageClicked(self):
         fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self)
@@ -74,6 +114,9 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
             if impx.isNull():
                 QtWidgets.QMessageBox.critical(self, 'Failed to Load Image', 'Failed to load an image from "{}".'.format(fileName))
             else:
+                fi = QtCore.QFileInfo(fileName)
+                self.filePath = fi.absolutePath()
+                self.fileName = fi.fileName()
                 self._usePixmap(impx)
 
     def saveImageClicked(self):

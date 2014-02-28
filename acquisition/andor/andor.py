@@ -13,15 +13,19 @@ class Camera(_Camera):
         enumIndex = self.AT_GetEnumIndex(self.Feature.PixelEncoding)
         return self.AT_GetEnumStringByIndex(self.Feature.PixelEncoding, enumIndex)
 
+    def getEnumStrings(self, feature):
+        return [self.AT_GetEnumStringByIndex(feature, i) for i in range(self.AT_GetEnumCount(feature))]
+
     def acquireImage(self, exposureTime):
         # Exposure time
-        self.AT_SetFloat(self.Feature.ExposureTime, exposureTime)
+        exposureTime_ = exposureTime
+        minExposureTime = self.AT_GetFloat(self.Feature.ExposureTime)
+        if exposureTime_ < minExposureTime:
+            exposureTime_ = minExposureTime
+        self.AT_SetFloat(self.Feature.ExposureTime, exposureTime_)
 
-        # AOI binning
-#        if self.andorInstance.atcore.AT_SetInt(self.deviceHandle, 'AOIHBin', 1) != 0:
-#            raise AndorException('Failed to set horizontal binning.')
-#        if self.andorInstance.atcore.AT_SetInt(self.deviceHandle, 'AOIVBin', 1) != 0:
-#            raise AndorException('Failed to set vertical binning.')
+        # AOI binning 1x1 (no binning)
+        self.AT_SetEnumIndex(self.Feature.AOIBinning, 0)
 
         # AOI top left
         self.AT_SetInt(self.Feature.AOILeft, 1)
