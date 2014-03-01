@@ -46,7 +46,9 @@ BOOST_PYTHON_MODULE(_andor)
     try
     {
         // Initialize interpreter so that Python code can be executed from C++ and so that C++ code may otherwise access
-        // the CPython API
+        // the CPython API.  NB: this is not needed for a boost python module imported by an interpreter.  It is only
+        // required (and should only be done) by a stand-alone C++ application that _embeds_ an interpreter.
+        // Initializing in a module will cause subtle breakage such as inability to completely release the GIL from C++.
         Py_Initialize();
         PyEval_InitThreads();
         np::initialize();

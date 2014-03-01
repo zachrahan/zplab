@@ -5,6 +5,8 @@ import numpy as np
 from OpenGL import GL
 import os
 from PyQt5 import QtCore, QtGui, QtWidgets, QtOpenGL, uic
+import sys
+import time
 from acquisition.andor.andor import Camera
 from acquisition.andor.andor_exception import AndorException
 
@@ -27,7 +29,26 @@ class ImageItem(QtWidgets.QGraphicsItem):
         widget.drawTexture(self.boundingQRectF, self.textureId)
         painter.endNativePainting()
 
+class SingleImageAcquisitionThread(QtCore.QThread):
+    def __init__(self, andorManipMainWindow_, camera_, exposureTime_):
+        super().__init__()
+        self.andorManipMainWindow = andorManipMainWindow_
+        self.camera = camera_
+        self.exposureTime = exposureTime_
+
+    def run(self):
+        succeeded = None
+        try:
+            self.andorManipMainWindow.im16g = self.camera.acquireImage(self.exposureTime)
+            succeeded = True
+        except AndorException as e:
+            print(e, file=sys.stderr)
+            succeeded = False
+        self.andorManipMainWindow.singleImageAcquiredSignal.emit(succeeded)
+
 class AndorManipMainWindow(QtWidgets.QMainWindow):
+    singleImageAcquiredSignal = QtCore.pyqtSignal(bool)
+
     def __init__(self, parent):
         super().__init__(parent)
         self.settings = QtCore.QSettings('PincusLab', 'acquisition.andor.direct_manip')
@@ -39,7 +60,7 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
 
         qglf = QtOpenGL.QGLFormat()
         # Our weakest target platform is Macmini6,1 which has Intel HD 4000 graphics supporting up to OpenGL 4.1 on OS X
-        qglf.setVersion(4, 3)
+        qglf.setVersion(4, 1)
         # QGraphicsView uses at least some OpenGL functionality deprecated in OpenGL 3.0 when manipulating the surface
         # owned by the QGLWidget
         qglf.setProfile(QtOpenGL.QGLFormat.CompatibilityProfile)
@@ -65,6 +86,8 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
             self.ui.andorDeviceListCombo,
             self.ui.refreshAndorDeviceListButton ]
 
+        self.singleImageAcquiredSignal.connect(self.singleImageAcquired, QtCore.Qt.QueuedConnection)
+
         self.restoreSettings()
 
     def closeEvent(self, event):
@@ -76,7 +99,7 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
         self.settings.setValue("save name", self.fileName)
         self.settings.setValue("save path", self.filePath)
         if self.isMaximized():
-            self.settings.setValue("maximized", true);
+            self.settings.setValue("maximized", True);
             self.settings.remove("size");
             self.settings.remove("pos");
         else:
@@ -108,7 +131,7 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
         self.settings.endGroup()
 
     def openImageClicked(self):
-        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self)
+        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open image', self.filePath)
         if fileName is not None and fileName != '':
             impx = QtGui.QPixmap(fileName)
             if impx.isNull():
@@ -169,36 +192,45 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
     def testButtonClicked(self):
         QtWidgets.QMessageBox.information(self, 'Test Result', self.camera.getPixelEncoding())
 
+    def singleImageAcquired(self, succeeded):
+        del self.singleImageAcquisitionThread
+        if succeeded:
+            shape = self.im16g.shape
+
+            # Normalize and convert to 8-bit grayscale
+            im16gf = self.im16g.astype(np.float32)
+            del self.im16g
+            im16gf -= im16gf.min()
+            im16gf *= 0xff / im16gf.max()
+            im32argb = im16gf.astype(np.uint8)
+            del im16gf
+
+            # Convert to 32-bit color with ignored junk data in alpha channel
+            im32argb = np.repeat(im32argb, 4, axis=1)
+
+            # Display
+            imq = QtGui.QImage(im32argb.data, shape[1], shape[0], QtGui.QImage.Format_RGB32)
+            impx = QtGui.QPixmap.fromImage(imq)
+            # It should not be necessary to call detach here, but if this is not done, impx will continue
+            # to reference im32argb through imq - without increasing the reference count of either.  According
+            # to the Qt docs, QPixmap.fromImage copies the QImage's data, but this does not seem to actually
+            # be the case.  Perhaps Qt is too clever for its own good and inserts im32argb into the pixmap cache;
+            # calling detach forces QPixmap to copy its data out of the pixmap cache and thus works around the
+            # issue.
+            impx.detach()
+            del imq
+            del im32argb
+            self._usePixmap(impx)
+            del impx
+        self.ui.acquireButton.setEnabled(True)
+
     def acquireButtonClicked(self):
-        im16g = self.camera.acquireImage(self.ui.exposureTimeSpinBox.value())
-        shape = im16g.shape
-
-        # Normalize and convert to 8-bit grayscale
-        im16gf = im16g.astype(np.float32)
-        del im16g
-        im16gf -= im16gf.min()
-        im16gf *= 0xff / im16gf.max()
-        im32argb = im16gf.astype(np.uint8)
-        del im16gf
-
-        # Convert to 32-bit color with ignored junk data in alpha channel
-        im32argb = np.repeat(im32argb, 4, axis=1)
-
-        # Display
-        imq = QtGui.QImage(im32argb.data, shape[1], shape[0], QtGui.QImage.Format_RGB32)
-        impx = QtGui.QPixmap.fromImage(imq)
-        # It should not be necessary to call detach here, but if this is not done, impx will continue
-        # to reference im32argb through imq - without increasing the reference count of either.  According
-        # to the Qt docs, QPixmap.fromImage copies the QImage's data, but this does not seem to actually
-        # be the case.  Perhaps Qt is too clever for its own good and inserts im32argb into the pixmap cache;
-        # calling detach forces QPixmap to copy its data out of the pixmap cache and thus works around the
-        # issue.
-        impx.detach()
-        del imq
-        del im32argb
-        self._usePixmap(impx)
-        del impx
-
+        self.ui.acquireButton.setEnabled(False)
+        self.singleImageAcquisitionThread = SingleImageAcquisitionThread(self, self.camera, self.ui.exposureTimeSpinBox.value())
+        self.singleImageAcquisitionThread.start()
+        for x in range(30):
+            print("threading! {}".format(x))
+            time.sleep(0.1)
 
 
 def show(launcherDescription=None, moduleArgs=None):

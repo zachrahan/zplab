@@ -573,6 +573,7 @@ void _Camera::AT_QueueBuffer(np::ndarray buff)
 
 std::uintptr_t _Camera::AT_WaitBuffer(const unsigned int& timeout)
 {
+    _GilScopedRelease();
     int _buffSize;
     AT_U8* buff;
     int r = ::AT_WaitBuffer(m_dh, &buff, &_buffSize, timeout);
