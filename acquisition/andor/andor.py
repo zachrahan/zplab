@@ -16,6 +16,9 @@ class Camera(_Camera):
     def getEnumStrings(self, feature):
         return [self.AT_GetEnumStringByIndex(feature, i) for i in range(self.AT_GetEnumCount(feature))]
 
+    def getEnumString(self, feature):
+        return self.AT_GetEnumStringByIndex(feature, self.AT_GetEnumIndex(feature))
+
     def setExposureTime(self, exposureTime):
         '''Note that if exposureTime is less than the Camera's minimum exposure time as reported by the SDK, 
         then the minimum legal value is used.  Returns actual exposure time reported by SDK we set exposure time.'''
