@@ -12,21 +12,34 @@ from acquisition.andor.andor import Camera
 from acquisition.andor.andor_exception import AndorException
 
 class ImageItem(QtWidgets.QGraphicsItem):
-    def __init__(self, pixmap, parent = None):
+    def __init__(self, pixmap_, parent = None):
         super().__init__(parent)
-        self.pixmap = pixmap
+        self.pixmap = pixmap_
         self.textureId = None
+        self.textureIsStale = True
         self.boundingQRectF = QtCore.QRectF(0, 0, self.pixmap.width(), self.pixmap.height())
 
     def boundingRect(self):
         return self.boundingQRectF
 
+    def updateImage(self, pixmap_):
+        self.pixmap = pixmap_
+        self.textureIsStale = True
+        newBoundingQRectF = QtCore.QRectF(0, 0, self.pixmap.width(), self.pixmap.height())
+        if self.boundingQRectF != newBoundingQRectF:
+            self.prepareGeometryChange()
+            self.boundingQRectF = newBoundingQRectF
+        self.update()
+
     def paint(self, painter, option, widget):
         if widget is None:
             raise AndorException('ImageItem cache mode must be QGraphicsItem::NoCache.')
         painter.beginNativePainting()
-        if self.textureId is None:
+        if self.textureIsStale:
+            if self.textureId is not None:
+                widget.deleteTexture(self.textureId)
             self.textureId = widget.bindTexture(self.pixmap)
+            self.textureIsStale = False
         widget.drawTexture(self.boundingQRectF, self.textureId)
         painter.endNativePainting()
 
@@ -211,11 +224,11 @@ class AndorManipMainWindow(QtWidgets.QMainWindow):
         pass
 
     def _usePixmap(self, pixmap):
-        if self.imageItem is not None:
-            self.graphicsScene.removeItem(self.imageItem)
-            self.imageItem = None
-        self.imageItem = ImageItem(pixmap)
-        self.graphicsScene.addItem(self.imageItem)
+        if self.imageItem is None:
+            self.imageItem = ImageItem(pixmap)
+            self.graphicsScene.addItem(self.imageItem)
+        else:
+            self.imageItem.updateImage(pixmap)
         self.graphicsScene.setSceneRect(QtCore.QRectF(0, 0, pixmap.width(), pixmap.height()))
 
     def _display16BitGrayscale(self, im16g):
