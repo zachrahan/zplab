@@ -141,6 +141,9 @@
             <property name="text">
              <string>Exposure:</string>
             </property>
+            <property name="buddy">
+             <cstring>exposureTimeSpinBox</cstring>
+            </property>
            </widget>
           </item>
           <item>
@@ -168,6 +171,52 @@
          </layout>
         </item>
         <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <item>
+           <widget class="QLabel" name="actualExposureTimeLabel">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Reported Exposure:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLCDNumber" name="actualExposureTimeLcdDisplay">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="digitCount">
+             <number>9</number>
+            </property>
+            <property name="segmentStyle">
+             <enum>QLCDNumber::Filled</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
          <widget class="QPushButton" name="acquireButton">
           <property name="enabled">
            <bool>false</bool>
@@ -176,7 +225,68 @@
            <string>Expose for specified time and get resulting image</string>
           </property>
           <property name="text">
-           <string>Acquire</string>
+           <string>Acquire Single Image</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_5">
+          <item>
+           <widget class="QLabel" name="liveStreamBufferCountLabel">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Live Buffers:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="liveStreamBufferCountSpinBox">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="suffix">
+             <string/>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="value">
+             <number>5</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QPushButton" name="startStopLiveStreamButton">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Live Stream</string>
+          </property>
+          <property name="checkable">
+           <bool>false</bool>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+          <property name="autoExclusive">
+           <bool>false</bool>
+          </property>
+          <property name="default">
+           <bool>false</bool>
+          </property>
+          <property name="flat">
+           <bool>false</bool>
           </property>
          </widget>
         </item>
@@ -289,12 +399,44 @@
    <slot>acquireButtonClicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>869</x>
-     <y>346</y>
+     <x>831</x>
+     <y>381</y>
     </hint>
     <hint type="destinationlabel">
      <x>687</x>
      <y>355</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>startStopLiveStreamButton</sender>
+   <signal>clicked()</signal>
+   <receiver>AndorManipMainWindow</receiver>
+   <slot>startStopLiveStreamButtonClicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>833</x>
+     <y>416</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>721</x>
+     <y>384</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>exposureTimeSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>AndorManipMainWindow</receiver>
+   <slot>exposureTimeSpinBoxChanged(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>894</x>
+     <y>311</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>683</x>
+     <y>300</y>
     </hint>
    </hints>
   </connection>
@@ -307,5 +449,7 @@
   <slot>connectDisconnectAndorDeviceButtonClicked()</slot>
   <slot>testButtonClicked()</slot>
   <slot>acquireButtonClicked()</slot>
+  <slot>startStopLiveStreamButtonClicked()</slot>
+  <slot>exposureTimeSpinBoxChanged(double)</slot>
  </slots>
 </ui>

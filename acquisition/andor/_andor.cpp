@@ -45,11 +45,21 @@ BOOST_PYTHON_MODULE(_andor)
 {
     try
     {
-        // Initialize interpreter so that Python code can be executed from C++ and so that C++ code may otherwise access
-        // the CPython API.  NB: this is not needed for a boost python module imported by an interpreter.  It is only
-        // required (and should only be done) by a stand-alone C++ application that _embeds_ an interpreter.
-        // Initializing in a module will cause subtle breakage such as inability to completely release the GIL from C++.
-        Py_Initialize();
+        // This is not a stand-alone C++ application that embeds a Python interpreter (if it were, we would call
+        // Py_Initialize here).  This is a C++ module that must be loaded by an existing interpreter instance.
+        // Therefore, if the interpreter has not been initialized, something is amiss.
+        if(Py_IsInitialized() == 0)
+        {
+            std::cerr << "_andor Python module attempted to load while Python interpreter is not initialized (Py_IsInitialized() == 0).\n";
+            Py_Exit(-1);
+        }
+        // If the Python interpreter remains single threaded and no threads are made by this module that interpret
+        // Python code, then no GIL-related code is necessary and could be if-ed out for the special single-threaded
+        // case.  However, that would increase the complexity of the C++ code.  Instead, we ensure that Python threading
+        // is active, accepting the small speed hit incurred by manipulating the GIL even when executing in a single
+        // threaded context that does not benefit from our doing so.  If Python threading has been initialized by the
+        // time this module is loaded (ie, thread.Thread(..).start() has been called in Python), PyEval_InitThreads is a
+        // no-op.
         PyEval_InitThreads();
         np::initialize();
 

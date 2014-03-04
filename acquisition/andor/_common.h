@@ -16,6 +16,7 @@
 #include <boost/python/module.hpp>
 #include <boost/python/manage_new_object.hpp>
 #include <boost/utility.hpp>
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <iostream>
@@ -24,6 +25,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace py = boost::python;

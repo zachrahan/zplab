@@ -11,7 +11,7 @@ CPP_FILES := $(wildcard *.cpp)
 OBJS := $(patsubst %.cpp, %.o, $(CPP_FILES))
 CC = g++
 CPPFLAGS = -fPIC -std=c++11 -I/usr/include/python3.3 -I/usr/local/include -I/usr/local/include/boost -I/usr/local/pygccxml-svn/pyplusplus_dev/indexing_suite_v2 -Wall -O2 -march=native
-LDFLAGS = -fPIC -shared -L/usr/local/lib -lboost_python-3.3-mt -latcore -lpython3.3 -lboost_numpy -O2 -march=native
+LDFLAGS = -fPIC -shared -L/usr/local/lib -lboost_python-3.3-mt -latcore -lpython3.3 -lboost_numpy -lpthread -O2 -march=native
 
 all: _common.h.gch $(PROGRAM)
 
