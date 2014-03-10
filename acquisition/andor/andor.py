@@ -52,6 +52,7 @@ class Camera(_Camera):
 
         # Wait for acquisition to complete and verify that acquisition data was written to the acquisition buffer we queued
         acquiredBuffer = self.AT_WaitBuffer(acquisitionTimeout)
+        self.AT_Command(self.Feature.AcquisitionStop)
         if acquiredBuffer != imageBuffer.ctypes.data_as(ct.c_void_p).value:
             raise AndorException('Acquired image buffer has different address than queued image buffer.')
 
