@@ -4,7 +4,7 @@ import ctypes as ct
 import numpy as np
 from OpenGL import GL
 import os
-from PyQt5 import QtCore, QtGui, QtWidgets, QtOpenGL, uic
+from PyQt5 import QtCore, QtGui, QtWidgets, QtOpenGL
 import sys
 import threading
 import time
@@ -42,9 +42,10 @@ class ImageItem(QtWidgets.QGraphicsItem):
         painter.endNativePainting()
 
 class RisWidgetStandin(QtWidgets.QDialog):
-    def __init__(self, parent):
+    def __init__(self, parent = None):
         super().__init__(parent)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.setWindowTitle('RisWidgetStandin')
 
         self.graphicsView = QtWidgets.QGraphicsView(self)
 
