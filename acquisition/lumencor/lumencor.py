@@ -20,7 +20,7 @@ class Lumencor:
         'blue'  : bytearray.fromhex('53 1A 03 01 F0 00 50'),
         'teal'  : bytearray.fromhex('53 1A 03 02 F0 00 50') }
 
-    def __init__(self, serialPortDescriptor = '/dev/ttySptrX'):
+    def __init__(self, serialPortDescriptor = '/dev/ttySptrx'):
         self._serialPort = serial.Serial(serialPortDescriptor, 9600, timeout=1)
         if not self._serialPort.isOpen():
             raise LumencorException('Failed to open {}.'.format(serialPortDescriptor))
