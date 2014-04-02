@@ -1,0 +1,3 @@
+[submodule "ris_widget"]
+	path = ris_widget
+	url = https://github.com/erikhvatum/RisWidget.git
