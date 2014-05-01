@@ -17,8 +17,7 @@ def acquireFocusRangeStack(mmc, rangeobj, savePath, saveFileNamePrefix):
     if not savePathObj.exists() or not savePathObj.is_dir():
         raise AcquisitionException('acquireFocusRangeStack(..): Path "{}" does not exist or is not a directory.'.format(savePath))
 
-    idx = 0
-    for rangeval in rangeobj:
+    for idx, rangeval in enumerate(rangeobj):
         pos = mmc.getPosition('FocusDrive')
         print("Moving from {} to {}.".format(pos, rangeval))
         mmc.setPosition('FocusDrive', rangeval)
