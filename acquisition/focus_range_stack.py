@@ -6,6 +6,7 @@ import pandas
 from pandas import DataFrame
 from pathlib import Path
 import re
+import skimage.filter as skfilt
 import skimage.io as skio
 
 from acquisition.acquisition_exception import AcquisitionException
@@ -68,16 +69,83 @@ def convertNpysToPngs(path, prefix):
         print('Saving "{}" as "{}".'.format(str(frow[1].fpathObj), str(outfn)))
         skio.imsave(str(outfn), skio.Image(numpy.load(str(frow[1].fpathObj))))
 
-def computeFocusMeasure(ftable, rtable, focusMeasureName, focusMeasure):
+def computeFocusMeasure(ftable, rtable, focusMeasure):
     results = []
     for frow in ftable.iterrows():
         im = skio.imread(str(frow[1].fpngpathObj))
-        results.append(focusMeasure(im))
+        result, focusMeasureName = focusMeasure(im)
+        print(result, focusMeasureName)
+        results.append(result)
         print(str(frow[1].fpngpathObj) + str(': ') + str(results[-1]))
     if rtable is None:
         rtable = DataFrame({focusMeasureName: results}, index=list(ftable.z_pos))
     else:
-        if list(ftable.z_pos) != rtable.index:
-            raise AcquisitionException('computeFocusMeasure(ftable, rtable, focusMeasureName, focusMeasure): ftable and rtable Z positions do not match.')
+        if (list(ftable.z_pos) != rtable.index).any():
+            raise AcquisitionException('computeFocusMeasure(ftable, rtable, focusMeasure): ftable and rtable Z positions do not match.')
         rtable[focusMeasureName] = results
     return rtable
+
+class FMs:
+    def ss(r):
+        return (r**2).sum()
+
+    def sobel_h(im):
+        r = FMs.ss(skfilt.hsobel(im))
+        return r, "horizontal sobel"
+
+    def bilat_denoise__sobel_h(im):
+        r = FMs.ss(skfilt.hsobel(skfilt.denoise_bilateral(im)))
+        return r, "bilateral denoise + horizontal sobel"
+
+    def sobel_v(im):
+        r = FMs.ss(skfilt.vsobel(im))
+        return r, "vertical sobel"
+
+    def bilat_denoise__sobel_v(im):
+        r = FMs.ss(skfilt.hsobel(skfilt.denoise_bilateral(im)))
+        return r, "bilateral denoise + vertical sobel"
+
+    def canny(im):
+        r = FMs.ss(skfilt.canny(im))
+        return r, "canny"
+
+    def bottomhat(im):
+        r = FMs.ss(skfilt.rank.bottomhat(im, selem=numpy.array([[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[0,0,1,0,0]])))
+        return r, "bottomhat"
+
+    def entropy(im):
+        r = FMs.ss(skfilt.rank.bottomhat(im, selem=numpy.array([[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[0,0,1,0,0]])))
+        return r, "entropy"
+
+    def gaussian_0_5__entropy(im):
+        r = FMs.ss(skfilt.rank.bottomhat(skfilt.gaussian_filter(im, 0.5), selem=numpy.array([[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[0,0,1,0,0]])))
+        return r, "gaussian_0_5__entropy"
+
+    def gaussian_1__entropy(im):
+        r = FMs.ss(skfilt.rank.bottomhat(skfilt.gaussian_filter(im, 1), selem=numpy.array([[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[0,0,1,0,0]])))
+        return r, "gaussian_1__entropy"
+
+    def gaussian_2__entropy(im):
+        r = FMs.ss(skfilt.rank.bottomhat(skfilt.gaussian_filter(im, 2), selem=numpy.array([[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[0,0,1,0,0]])))
+        return r, "gaussian_2__entropy"
+
+    def gaussian_5__entropy(im):
+        r = FMs.ss(skfilt.rank.bottomhat(skfilt.gaussian_filter(im, 5), selem=numpy.array([[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[0,0,1,0,0]])))
+        return r, "gaussian_5__entropy"
+
+    def all(ftable):
+        rtable = None
+        for fm in [FMs.sobel_h,
+                   FMs.bilat_denoise__sobel_h,
+                   FMs.sobel_v,
+                   FMs.bilat_denoise__sobel_v,
+#                   FMs.canny,
+                   FMs.bottomhat,
+                   FMs.entropy,
+                   FMs.gaussian_0_5__entropy,
+                   FMs.gaussian_1__entropy,
+                   FMs.gaussian_2__entropy,
+                   FMs.gaussian_5__entropy]:
+            rtable = computeFocusMeasure(ftable, rtable, fm)
+        return rtable
+
