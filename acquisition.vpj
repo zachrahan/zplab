@@ -41,9 +41,9 @@
 			<F N="acquisition/microscope/microscope.py"/>
 		</Folder>
 		<F N="acquisition/__init__.py"/>
-		<F N="acquisition/acquire_focus_range_stack.py"/>
 		<F N="acquisition_direct_manip.py"/>
 		<F N="acquisition/acquisition_exception.py"/>
+		<F N="acquisition/focus_range_stack.py"/>
 	</Files>
 	<Config
 		Name="Debug"
