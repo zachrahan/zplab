@@ -72,11 +72,11 @@ def convertNpysToPngs(path, prefix):
 def computeFocusMeasure(ftable, rtable, focusMeasure):
     results = []
     for frow in ftable.iterrows():
-#       im = skio.imread(str(frow[1].fpngpathObj))
         im = numpy.load(str(frow[1].fpathObj)).astype(numpy.float32) / 65535
         result, focusMeasureName = focusMeasure(im)
         print('"{}"("{}"): {}'.format(focusMeasureName, str(frow[1].fpathObj), result))
         results.append(result)
+    # Normalize result list for focusMeasure to [0.0, 1.0] so that multiple focus measures can be conveniently plotted with the same Y axis
     if rtable is None:
         rtable = DataFrame({focusMeasureName: results}, index=list(ftable.z_pos))
     else:
@@ -86,6 +86,12 @@ def computeFocusMeasure(ftable, rtable, focusMeasure):
     return rtable
 
 class FMs:
+    structureElement = numpy.array([[0,0,1,0,0],
+                                    [0,1,1,1,0],
+                                    [1,1,1,1,1],
+                                    [0,1,1,1,0],
+                                    [0,0,1,0,0]])
+
     def ss(r):
         return (r**2).sum()
 
@@ -96,12 +102,12 @@ class FMs:
             r = numpy.NaN
         return r, "horizontal sobel"
 
-    def bilat_denoise__sobel_h(im):
+    def sobel_h__bilat_denoise(im):
         try:
             r = FMs.ss(skfilt.hsobel(skfilt.denoise_bilateral(im)))
         except ValueError as e:
             r = numpy.NaN
-        return r, "bilateral denoise + horizontal sobel"
+        return r, "horizontal sobel + bilateral denoise"
 
     def sobel_v(im):
         try:
@@ -110,75 +116,233 @@ class FMs:
             r = numpy.NaN
         return r, "vertical sobel"
 
-    def bilat_denoise__sobel_v(im):
+    def sobel_v__bilat_denoise(im):
         try:
             r = FMs.ss(skfilt.hsobel(skfilt.denoise_bilateral(im)))
         except ValueError as e:
             r = numpy.NaN
-        return r, "bilateral denoise + vertical sobel"
+        return r, "vertical sobel + bilateral denoise"
 
     def canny(im):
         try:
-            r = FMs.ss(skfilt.canny(im))
+            r = FMs.ss(skfilt.canny(im).astype(int))
         except ValueError as e:
             r = numpy.NaN
         return r, "canny"
 
     def bottomhat(im):
         try:
-            r = FMs.ss(skfilt.rank.bottomhat(im, selem=numpy.array([[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[0,0,1,0,0]])))
+            r = FMs.ss(skfilt.rank.bottomhat(im, structureElement))
         except ValueError as e:
             r = numpy.NaN
         return r, "bottomhat"
 
+    def bottomhat__gaussian_0_5(im):
+        try:
+            r = FMs.ss(skfilt.rank.bottomhat(skfilt.gaussian_filter(im, 0.5), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "bottomhat + gaussian 0.5"
+
+    def bottomhat__gaussian_1(im):
+        try:
+            r = FMs.ss(skfilt.rank.bottomhat(skfilt.gaussian_filter(im, 1), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "bottomhat + gaussian 1.0"
+
+    def bottomhat__gaussian_2(im):
+        try:
+            r = FMs.ss(skfilt.rank.bottomhat(skfilt.gaussian_filter(im, 2), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "bottomhat + gaussian 2.0"
+
+    def bottomhat__gaussian_5(im):
+        try:
+            r = FMs.ss(skfilt.rank.bottomhat(skfilt.gaussian_filter(im, 5), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "bottomhat + gaussian 5.0"
+
+    def tophat(im):
+        try:
+            r = FMs.ss(skfilt.rank.tophat(im, structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "tophat"
+
+    def tophat__gaussian_0_5(im):
+        try:
+            r = FMs.ss(skfilt.rank.tophat(skfilt.gaussian_filter(im, 0.5), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "tophat + gaussian 0.5"
+
+    def tophat__gaussian_1(im):
+        try:
+            r = FMs.ss(skfilt.rank.tophat(skfilt.gaussian_filter(im, 1), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "tophat + gaussian 1.0"
+
+    def tophat__gaussian_2(im):
+        try:
+            r = FMs.ss(skfilt.rank.tophat(skfilt.gaussian_filter(im, 2), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "tophat + gaussian 2.0"
+
+    def tophat__gaussian_5(im):
+        try:
+            r = FMs.ss(skfilt.rank.tophat(skfilt.gaussian_filter(im, 5), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "tophat + gaussian 5.0"
+
     def entropy(im):
         try:
-            r = FMs.ss(skfilt.rank.bottomhat(im, selem=numpy.array([[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[0,0,1,0,0]])))
+            r = FMs.ss(skfilt.rank.entropy(im, structureElement))
         except ValueError as e:
             r = numpy.NaN
         return r, "entropy"
 
-    def gaussian_0_5__entropy(im):
+    def entropy__gaussian_0_5(im):
         try:
-            r = FMs.ss(skfilt.rank.bottomhat(skfilt.gaussian_filter(im, 0.5), selem=numpy.array([[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[0,0,1,0,0]])))
+            r = FMs.ss(skfilt.rank.entropy(skfilt.gaussian_filter(im, 0.5), structureElement))
         except ValueError as e:
             r = numpy.NaN
-        return r, "gaussian_0_5__entropy"
+        return r, "entropy + gaussian 0.5"
 
-    def gaussian_1__entropy(im):
+    def entropy__gaussian_1(im):
         try:
-            r = FMs.ss(skfilt.rank.bottomhat(skfilt.gaussian_filter(im, 1), selem=numpy.array([[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[0,0,1,0,0]])))
+            r = FMs.ss(skfilt.rank.entropy(skfilt.gaussian_filter(im, 1), structureElement))
         except ValueError as e:
             r = numpy.NaN
-        return r, "gaussian_1__entropy"
+        return r, "entropy + gaussian 1.0"
 
-    def gaussian_2__entropy(im):
+    def entropy__gaussian_2(im):
         try:
-            r = FMs.ss(skfilt.rank.bottomhat(skfilt.gaussian_filter(im, 2), selem=numpy.array([[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[0,0,1,0,0]])))
+            r = FMs.ss(skfilt.rank.entropy(skfilt.gaussian_filter(im, 2), structureElement))
         except ValueError as e:
             r = numpy.NaN
-        return r, "gaussian_2__entropy"
+        return r, "entropy + gaussian 2.0"
 
-    def gaussian_5__entropy(im):
+    def entropy__gaussian_5(im):
         try:
-            r = FMs.ss(skfilt.rank.bottomhat(skfilt.gaussian_filter(im, 5), selem=numpy.array([[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[0,0,1,0,0]])))
+            r = FMs.ss(skfilt.rank.entropy(skfilt.gaussian_filter(im, 5), structureElement))
         except ValueError as e:
             r = numpy.NaN
-        return r, "gaussian_5__entropy"
+        return r, "entropy + gaussian 5.0"
+
+    def tophat__entropy(im):
+        try:
+            r = FMs.ss(skfilt.rank.tophat(skfilt.rank.entropy(im, structureElement), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "tophat + entropy"
+
+    def tophat__entropy__gaussian_0_5(im):
+        try:
+            r = FMs.ss(skfilt.rank.tophat(skfilt.rank.entropy(skfilt.gaussian_filter(im, 0.5), structureElement), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "tophat + entropy + gaussian 0.5"
+
+    def tophat__entropy__gaussian_1(im):
+        try:
+            r = FMs.ss(skfilt.rank.tophat(skfilt.rank.entropy(skfilt.gaussian_filter(im, 1), structureElement), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "tophat + entropy + gaussian 1.0"
+
+    def tophat__entropy__gaussian_2(im):
+        try:
+            r = FMs.ss(skfilt.rank.tophat(skfilt.rank.entropy(skfilt.gaussian_filter(im, 2), structureElement), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "tophat + entropy + gaussian 2.0"
+
+    def tophat__entropy__gaussian_5(im):
+        try:
+            r = FMs.ss(skfilt.rank.tophat(skfilt.rank.entropy(skfilt.gaussian_filter(im, 5), structureElement), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "tophat + entropy + gaussian 5.0"
+
+    def bottomhat__entropy(im):
+        try:
+            r = FMs.ss(skfilt.rank.bottomhat(skfilt.rank.entropy(im, structureElement), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "bottomhat + entropy"
+
+    def bottomhat__entropy__gaussian_0_5(im):
+        try:
+            r = FMs.ss(skfilt.rank.bottomhat(skfilt.rank.entropy(skfilt.gaussian_filter(im, 0.5), structureElement), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "bottomhat + entropy + gaussian 0.5"
+
+    def bottomhat__entropy__gaussian_1(im):
+        try:
+            r = FMs.ss(skfilt.rank.bottomhat(skfilt.rank.entropy(skfilt.gaussian_filter(im, 1), structureElement), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "bottomhat + entropy + gaussian 1.0"
+
+    def bottomhat__entropy__gaussian_2(im):
+        try:
+            r = FMs.ss(skfilt.rank.bottomhat(skfilt.rank.entropy(skfilt.gaussian_filter(im, 2), structureElement), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "bottomhat + entropy + gaussian 2.0"
+
+    def bottomhat__entropy__gaussian_5(im):
+        try:
+            r = FMs.ss(skfilt.rank.bottomhat(skfilt.rank.entropy(skfilt.gaussian_filter(im, 5), structureElement), structureElement))
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "bottomhat + entropy + gaussian 5.0"
 
     def all(ftable):
         rtable = None
         for fm in [FMs.sobel_h,
-                   FMs.bilat_denoise__sobel_h,
+                   FMs.sobel_h__bilat_denoise,
                    FMs.sobel_v,
-                   FMs.bilat_denoise__sobel_v,
-#                   FMs.canny,
+                   FMs.sobel_v__bilat_denoise,
+                   FMs.canny,
                    FMs.bottomhat,
+                   FMs.bottomhat__gaussian_0_5,
+                   FMs.bottomhat__gaussian_1,
+                   FMs.bottomhat__gaussian_2,
+                   FMs.bottomhat__gaussian_5,
+                   FMs.tophat,
+                   FMs.tophat__gaussian_0_5,
+                   FMs.tophat__gaussian_1,
+                   FMs.tophat__gaussian_2,
+                   FMs.tophat__gaussian_5,
                    FMs.entropy,
-                   FMs.gaussian_0_5__entropy,
-                   FMs.gaussian_1__entropy,
-                   FMs.gaussian_2__entropy,
-                   FMs.gaussian_5__entropy]:
+                   FMs.entropy__gaussian_0_5,
+                   FMs.entropy__gaussian_1,
+                   FMs.entropy__gaussian_2,
+                   FMs.entropy__gaussian_5,
+                   FMs.tophat__entropy,
+                   FMs.tophat__entropy__gaussian_0_5,
+                   FMs.tophat__entropy__gaussian_1,
+                   FMs.tophat__entropy__gaussian_2,
+                   FMs.tophat__entropy__gaussian_5,
+                   FMs.bottomhat__entropy,
+                   FMs.bottomhat__entropy__gaussian_0_5,
+                   FMs.bottomhat__entropy__gaussian_1,
+                   FMs.bottomhat__entropy__gaussian_2,
+                   FMs.bottomhat__entropy__gaussian_5]:
             rtable = computeFocusMeasure(ftable, rtable, fm)
         return rtable
 
+    def easyAll(path, prefix):
+        ftable = lsOrdered(path, prefix)
+        rtable = FMs.all(ftable)
+        storePath = Path(path) / (prefix + '.hdf5')
+        store = HDFStore(str(storePath))
+        store['rtable'] = rtable
