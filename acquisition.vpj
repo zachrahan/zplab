@@ -35,14 +35,17 @@
 			<F N="acquisition/lumencor/lumencor_exception.py"/>
 		</Folder>
 		<Folder
-			Name="microscope"
+			Name="leica_dm"
 			Filters="">
-			<F N="acquisition/microscope/__init__.py"/>
-			<F N="acquisition/microscope/microscope.py"/>
+			<F N="acquisition/leica_dm/__init__.py"/>
+			<F N="acquisition/leica_dm/camera_mm.py"/>
+			<F N="acquisition/leica_dm/microscope_mm.py"/>
+			<F N="acquisition/leica_dm/stage_mm.py"/>
 		</Folder>
 		<F N="acquisition/__init__.py"/>
 		<F N="acquisition_direct_manip.py"/>
 		<F N="acquisition/acquisition_exception.py"/>
+		<F N="acquisition/device.py"/>
 		<F N="acquisition/focus_range_stack.py"/>
 	</Files>
 	<Config
