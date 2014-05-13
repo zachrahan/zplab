@@ -94,6 +94,36 @@ public:
         _End
     };
 
+    enum class SimplePreAmp : int
+    {
+        _Begin = 0,
+        HighCapacity_12bit = _Begin,
+        LowNoise_12bit,
+        LowNoiseHighCapacity_16bit,
+        _End
+    };
+
+    enum class Shutter : int
+    {
+        _Begin = 0,
+        Rolling = _Begin,
+        Global,
+        _End
+    };
+
+    enum class TriggerMode : int
+    {
+        _Begin = 0,
+        Internal= _Begin,
+        ExternalLevelTransition,
+        ExternalStart,
+        ExternalExposure,
+        Software,
+        Advanced,
+        External,
+        _End
+    };
+
     class _CallbackRegistrationToken
       : boost::noncopyable
     {
@@ -116,6 +146,8 @@ public:
 
     explicit _Camera(const AT_64& deviceIndex);
     virtual ~_Camera();
+
+    /* Functions that map directly to Andor API calls */
 
     std::shared_ptr<_CallbackRegistrationToken> AT_RegisterFeatureCallback(const Feature& feature, const std::function<bool(Feature)>& callback);
     std::shared_ptr<_CallbackRegistrationToken> AT_RegisterFeatureCallbackPyWrapper(const Feature& feature, py::object pyCallback);
@@ -157,8 +189,22 @@ public:
     std::uintptr_t AT_WaitBuffer(const unsigned int& timeout);
     void AT_Flush();
 
+    /* Convenience functions that provide a more abstracted interface to the Andor API */
+
+    SimplePreAmp simplePreAmp() const;
+    void simplePreAmp(const SimplePreAmp& simplePreAmp_);
+
+    Shutter shutter() const;
+    void shutter(const Shutter& shutter_);
+
+    TriggerMode triggerMode() const;
+    void triggerMode(const TriggerMode& triggerMode_);
+
 protected:
     static const wchar_t *sm_featureNames[];
+    static const wchar_t *sm_simplePreAmpNames[];
+    static const wchar_t *sm_shutterNames[];
+    static const wchar_t *sm_triggerModeNames[];
 
     // Device handle
     AT_H m_dh;

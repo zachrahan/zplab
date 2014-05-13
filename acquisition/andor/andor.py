@@ -4,10 +4,13 @@ import ctypes as ct
 import numpy as np
 from acquisition.andor.andor_exception import AndorException
 from acquisition.andor._andor import _Camera
+from acquisition.device import Device
 
-class Camera(_Camera):
-    def __init__(self, deviceIndex):
-        super().__init__(deviceIndex)
+class Camera(_Camera, Device):
+    def __init__(self, deviceIndex, name='Andor Zyla 5.5'):
+        _Camera.__init__(self, deviceIndex)
+        Device.__init__(self, name)
+        self._appendTypeName('Andor.Camera')
 
     def getPixelEncoding(self):
         enumIndex = self.AT_GetEnumIndex(self.Feature.PixelEncoding)

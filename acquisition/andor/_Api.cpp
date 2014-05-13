@@ -8,7 +8,7 @@ std::unique_ptr<_Api> _Api::s_instance;
 
 _Api::_Api()
 {
-    std::cerr << "_Api::_Api()\n";
+//  std::cerr << "_Api::_Api()\n";
     int r = AT_InitialiseLibrary();
     if(r != AT_SUCCESS)
     {
@@ -18,7 +18,7 @@ _Api::_Api()
 
 _Api::~_Api()
 {
-    std::cerr << "_Api::~_Api()\n";
+//  std::cerr << "_Api::~_Api()\n";
     if(AT_FinaliseLibrary() != AT_SUCCESS)
     {
         std::cerr << "Note: call to finalize Andor SDK3 API failed (AT_FinaliseLibrary() != AT_SUCCESS).\n";
