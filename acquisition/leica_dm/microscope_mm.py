@@ -1,8 +1,8 @@
 # Copyright 2014 WUSTL ZPLAB
 # Erik Hvatum (ice.rikh@gmail.com)
 
+from acquisition.andor.andor import Camera
 from acquisition.device import Device
-from acquisition.leica_dm.camera_mm import Camera_mm
 from acquisition.leica_dm.stage_mm import Stage_mm
 import sys
 
@@ -20,12 +20,11 @@ class Microscope_mm(Device):
 
         if mmcore is None:
             self._mmcore = MMCorePy.CMMCore()
-            self._mmcore.loadSystemConfiguration("/mnt/scopearray/mm/ImageJ/MMConfig1.cfg")
-            self._mmcore.setConfig("acquisition mode", "5X brightfield")
+            self._mmcore.loadSystemConfiguration("/mnt/scopearray/mm/ImageJ/scope_only.cfg")
         else:
             self._mmcore = mmcore
 
-        self._camera = Camera_mm(self._mmcore)
+        self._camera = Camera(0)
         self._addSubDevice(self._camera)
         self._stage = Stage_mm(self._mmcore)
         self._addSubDevice(self._stage)
