@@ -48,7 +48,6 @@ class Lumencor(Device):
         'UV',
         'blue',
         'teal' ]
-#   _lampNamesToIndexes = dict(zip(Lumencor._lampNames, range(len(Lumencor._lampNames))))
     _lampDisableMasks = bytearray((0x01, 0x02, 0x04, 0x08, 0x20, 0x40))
     _lampDisableCommandBase = bytearray((0x4f, 0x00, 0x50))
     _lampPowerMasks = bytearray((0x08, 0x04, 0x02, 0x01, 0x01, 0x02))
@@ -112,7 +111,6 @@ class Lumencor(Device):
                 disablement &= 0x7f ^ Lumencor._lampDisableMasks[lampState.idx]
         # Only issue disablement command if disablement state has changed
         if disablement != self._disablement:
-            print('updating')
             c = Lumencor._lampDisableCommandBase.copy()
             c[1] = disablement
             self._write(c)
@@ -142,7 +140,7 @@ class Lumencor(Device):
             curPower = self._lampStates[lampName].power
             newPower = newLampState.power
             if newPower != curPower:
-#               if lampName in ['red', 'green', 'cyan', 'uv']:
+                #if lampName in ['red', 'green', 'cyan', 'uv']:
                 if newLampState.idx in range(4): # Same effect as line above, but faster
                     powerdict = power_rgcu
                 else:
@@ -169,3 +167,111 @@ class Lumencor(Device):
         updatePowers(Lumencor._lampRgcuPowerCommandBase, power_rgcu)
         updatePowers(Lumencor._lampBtPowerCommandBase, power_bt)
         self._updateDisablement()
+
+    @property
+    def redEnabled(self):
+        return self._lampStates['red'].enabled
+
+    @redEnabled.setter
+    def redEnabled(self, enabled):
+        scur = self.lampStates['red']
+        self.lampStates = {'red' : Lumencor.LampState(enabled, scur.power, scur.idx)}
+
+    @property
+    def redPower(self):
+        return self._lampStates['red'].power
+
+    @redPower.setter
+    def redPower(self, power):
+        scur = self.lampStates['red']
+        self.lampStates = {'red' : Lumencor.LampState(scur.enabled, power, scur.idx)}
+
+    @property
+    def greenEnabled(self):
+        return self._lampStates['green'].enabled
+
+    @greenEnabled.setter
+    def greenEnabled(self, enabled):
+        scur = self.lampStates['green']
+        self.lampStates = {'green' : Lumencor.LampState(enabled, scur.power, scur.idx)}
+
+    @property
+    def greenPower(self):
+        return self._lampStates['green'].power
+
+    @greenPower.setter
+    def greenPower(self, power):
+        scur = self.lampStates['green']
+        self.lampStates = {'green' : Lumencor.LampState(scur.enabled, power, scur.idx)}
+
+    @property
+    def cyanEnabled(self):
+        return self._lampStates['cyan'].enabled
+
+    @cyanEnabled.setter
+    def cyanEnabled(self, enabled):
+        scur = self.lampStates['cyan']
+        self.lampStates = {'cyan' : Lumencor.LampState(enabled, scur.power, scur.idx)}
+
+    @property
+    def cyanPower(self):
+        return self._lampStates['cyan'].power
+
+    @cyanPower.setter
+    def cyanPower(self, power):
+        scur = self.lampStates['cyan']
+        self.lampStates = {'cyan' : Lumencor.LampState(scur.enabled, power, scur.idx)}
+
+    @property
+    def UVEnabled(self):
+        return self._lampStates['UV'].enabled
+
+    @UVEnabled.setter
+    def UVEnabled(self, enabled):
+        scur = self.lampStates['UV']
+        self.lampStates = {'UV' : Lumencor.LampState(enabled, scur.power, scur.idx)}
+
+    @property
+    def UVPower(self):
+        return self._lampStates['UV'].power
+
+    @UVPower.setter
+    def UVPower(self, power):
+        scur = self.lampStates['UV']
+        self.lampStates = {'UV' : Lumencor.LampState(scur.enabled, power, scur.idx)}
+
+    @property
+    def blueEnabled(self):
+        return self._lampStates['blue'].enabled
+
+    @blueEnabled.setter
+    def blueEnabled(self, enabled):
+        scur = self.lampStates['blue']
+        self.lampStates = {'blue' : Lumencor.LampState(enabled, scur.power, scur.idx)}
+
+    @property
+    def bluePower(self):
+        return self._lampStates['blue'].power
+
+    @bluePower.setter
+    def bluePower(self, power):
+        scur = self.lampStates['blue']
+        self.lampStates = {'blue' : Lumencor.LampState(scur.enabled, power, scur.idx)}
+
+    @property
+    def tealEnabled(self):
+        return self._lampStates['teal'].enabled
+
+    @tealEnabled.setter
+    def tealEnabled(self, enabled):
+        scur = self.lampStates['teal']
+        self.lampStates = {'teal' : Lumencor.LampState(enabled, scur.power, scur.idx)}
+
+    @property
+    def tealPower(self):
+        return self._lampStates['teal'].power
+
+    @tealPower.setter
+    def tealPower(self, power):
+        scur = self.lampStates['teal']
+        self.lampStates = {'teal' : Lumencor.LampState(scur.enabled, power, scur.idx)}
