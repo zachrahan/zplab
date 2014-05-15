@@ -123,6 +123,104 @@ class Lumencor(Device):
         if len(r) == 2:
             return ((r[0] << 3) | (r[1] >> 5)) * 0.125
 
+    def enable(self, lampName=None, power=255):
+        '''lampName: If None or [], all lamps are disabled.  If a string, the named lamp is enabled, and all others are disabled.  If a list, the named
+        lamps are enabled, and all others are disabled.
+
+        power: If a single value, all named lamps are set to it.  If a list, then each element represents the power value for corresponding element of
+        lampName (so, if power is a list, then lampName must be a list with the same number of elements).'''
+        lampStates = self.lampStates
+
+        if lampName is None or (type(lampName) is not str and len(lampName) == 0):
+            # Empty lampName argument.  Disable all lamps.
+            for ln, ls in lampStates.items():
+                ls.enabled = False
+        elif type(lampName) is str:
+            # Single string lampName argument.  Enable the specified lamp and set its power; disable all other lamps.
+            if lampName not in lampStates:
+                raise ValueError('"{}" is not a valid lamp name.'.format(lampName))
+            for ln, ls in lampStates.items():
+                if lampName == ln:
+                    ls.enabled = True
+                    ls.power = power
+                else:
+                    ls.enabled = False
+        else:
+            # lampName is a list of lamp names.  All lamps not appearing in the list are disabled.  If power is a single value rather than a list,
+            # all named lamps powers are set to power.
+            for ln, ls in lampStates.items():
+                ls.enabled = False
+
+            powers = power
+            try:
+                lampNameCount = len(lampName)
+            except TypeError as e:
+                raise TypeError('lampName is neither a string, nor None, nor an empty indexable, nor an indexable container of strings.  ' +
+                                'Whatever it is, this function can not understand it.')
+            try:
+                if lampNameCount != len(powers):
+                    raise ValueError('If the lampName and power arguments are both lists, then they must have the same number of elements.')
+            except TypeError as e:
+                powers = [power for x in range(lampNameCount)]
+
+            for ln, lp in zip(lampName, powers):
+                ls = lampStates[ln]
+                ls.enabled = True
+                ls.power = lp
+            
+        self.lampStates = lampStates
+
+    def power(self, lampName, power=255):
+        '''The same idea as enable(..), except without enabling or disabling lamps.  Thus, if None or an empty list is supplied for lampName,
+        this function is a no-op.'''
+        lampStates = self.lampStates
+
+        if lampName is None or (type(lampName) is not str and len(lampName) == 0):
+            # Empty lampName argument.  Do nothing.
+            pass
+        elif type(lampName) is str:
+            # Single string lampName argument.  Set the specified lamp's power.
+            lampStates[lampName].power = power
+        else:
+            # lampName is a list of lamp names.  If power is a single value rather than a list, all named lamps powers are set to power.  Otherwise,
+            # each named lamp is set to the corresponding power element.
+            powers = power
+            try:
+                lampNameCount = len(lampName)
+            except TypeError as e:
+                raise TypeError('lampName is neither a string, nor None, nor an empty indexable, nor an indexable container of strings.  ' +
+                                'Whatever it is, this function can not understand it.')
+            try:
+                if lampNameCount != len(powers):
+                    raise ValueError('If the lampName and power arguments are both lists, then they must have the same number of elements.')
+            except TypeError as e:
+                powers = [power for x in range(lampNameCount)]
+
+            for ln, lp in zip(lampName, powers):
+                ls = lampStates[ln]
+                ls.power = lp
+            
+        self.lampStates = lampStates
+
+    def disable(self, lampName=None):
+        '''If lampName is None or an empty list, all lamps are disabled.  If lampName is a string or a non-empty list, then only the named lamp(s)
+        are disabled.'''
+        lampStates = self.lampStates
+
+        if lampName is None or (type(lampName) is not str and len(lampName) == 0):
+            # Empty lampName argument.  Disable all lamps.
+            for ln, ls in lampStates.items():
+                ls.enabled = False
+        elif type(lampName) is str:
+            # Single string lampName argument.  Disable the specified lamp.
+            lampStates[lampName].enabled = False
+        else:
+            # List of lampNames.  Disable specified lamps.
+            for ln in lampName:
+                lampStates[ln].enabled = False
+
+        self.lampStates = lampStates
+
     @property
     def lampStates(self):
         '''Returns a copy of the dict containing lamp names -> current lamp states.'''
