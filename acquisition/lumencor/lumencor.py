@@ -277,6 +277,14 @@ class Lumencor(Device):
             except AttributeError as e:
                 pass
 
+    def forceCompleteLumencorLampStatesChangedNotificationTo(self, observer):
+        lampStateChangesForObserver = {}
+        for ln, ls in self._lampStates.items():
+            lampStateChangesForObserver[ln] = {'enabled' : ls.enabled, 'power' : ls.power}
+        try:
+            observer.notifyLumencorLampStatesChanged(self, lampStateChangesForObserver)
+        except AttributeError as e:
+            pass
 
     @property
     def redEnabled(self):

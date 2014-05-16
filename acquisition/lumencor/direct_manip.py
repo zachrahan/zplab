@@ -35,7 +35,7 @@ class LumencorManipDialog(QtWidgets.QDialog):
             ccs.toggle.toggled.connect(ccs.slider.setEnabled)
             ccs.toggle.toggled.connect(ccs.spinBox.setEnabled)
             # Moving a slider changes the spinbox value
-            ccs.slider.sliderMoved.connect(ccs.spinBox.setValue)
+            ccs.slider.valueChanged.connect(ccs.spinBox.setValue)
             # Changes to spinbox move the slider
             ccs.spinBox.valueChanged.connect(ccs.slider.setValue)
             # Handle toggle by color name so color enable/disable command can be sent to lumencor box
@@ -46,28 +46,68 @@ class LumencorManipDialog(QtWidgets.QDialog):
             # drag both updates spinbox and sends change to lumencor, so sending change again would be redundant)
             ccs.spinBox.valueChanged.connect(lambda intensity, name = c, slider = ccs.slider: slider.isSliderDown() or self.handleSetNamedColorIntensity(name, intensity))
 
+        self.lumencorInstance.attachObserver(self)
+        # Update interface to reflect current state of Lumencor box (which may be something other than default if this dialog was
+        # attached to an existing Lumencor instance that has previously been manipulated)
+        self.lumencorInstance.forceCompleteLumencorLampStatesChangedNotificationTo(self)
+
         self.tempUpdateTimer = QtCore.QTimer(self)
         self.tempUpdateTimer.timeout.connect(self.handleTempUpdateTimerFired)
         self.tempUpdateTimer.start(2000)
 
     def closeEvent(self, event):
-        self.lumencorInstance.toggleAllColors(False)
+        self.lumencorInstance.detachObserver(self)
+        self.lumencorInstance.disable()
         super().closeEvent(event)
+        self.deleteLater()
 
     def handleToggleNamedColor(self, name, on):
-        self.lumencorInstance.toggleColor(name, on)
+        exec('self.lumencorInstance.{}Enabled = {}'.format(name, on))
 
     def handleSetNamedColorIntensity(self, name, intensity):
-        self.lumencorInstance.setColorIntensity(name, intensity)
+        exec('self.lumencorInstance.{}Power = {}'.format(name, intensity))
 
     def handleTempUpdateTimerFired(self):
-        temp = self.lumencorInstance.getTemp()
+        temp = self.lumencorInstance.temperature
         text = str()
         if temp is None:
             text = 'Temp: unavailable'
         else:
             text = 'Temp: {}ºC'.format(temp)
         self.ui.tempLabel.setText(text)
+
+    def handleMaxAllLamps(self):
+        lampStates = self.lumencorInstance.lampStates
+        for ln, ls in lampStates.items():
+            ls.power = 255
+        self.lumencorInstance.lampStates = lampStates
+
+    def handleZeroAllLamps(self):
+        lampStates = self.lumencorInstance.lampStates
+        for ln, ls in lampStates.items():
+            ls.power = 0
+        self.lumencorInstance.lampStates = lampStates
+
+    def handleEnableAllLamps(self):
+        lampStates = self.lumencorInstance.lampStates
+        for ln, ls in lampStates.items():
+            ls.enabled = True
+        self.lumencorInstance.lampStates = lampStates
+
+    def handleDisableAllLamps(self):
+        self.lumencorInstance.disable()
+
+    def notifyLumencorLampStatesChanged(self, lumencorInstance, lampStateChangesForObserver):
+        for name, changes in lampStateChangesForObserver.items():
+            ccs = self.colorControlSets[name]
+            if 'enabled' in changes:
+                if changes['enabled']:
+                    checkState = QtCore.Qt.Checked
+                else:
+                    checkState = QtCore.Qt.Unchecked
+                ccs.toggle.setCheckState(checkState)
+            if 'power' in changes:
+                ccs.slider.setValue(changes['power'])
 
 def show(lumencorInstance=None, launcherDescription=None, moduleArgs=None):
     import sys

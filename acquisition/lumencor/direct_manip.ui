@@ -860,9 +860,52 @@
       </spacer>
      </item>
      <item>
+      <widget class="QPushButton" name="enableAllButton">
+       <property name="text">
+        <string>Enable All</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="disableAllButton">
+       <property name="text">
+        <string>Disable All</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="maxAllButton">
+       <property name="text">
+        <string>Max All</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="zeroAllButton">
+       <property name="text">
+        <string>Zero All</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="exitButton">
        <property name="text">
         <string>Exit</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
        </property>
       </widget>
      </item>
@@ -889,6 +932,8 @@
   <tabstop>tealToggle</tabstop>
   <tabstop>tealSlider</tabstop>
   <tabstop>tealSpinBox</tabstop>
+  <tabstop>enableAllButton</tabstop>
+  <tabstop>disableAllButton</tabstop>
   <tabstop>exitButton</tabstop>
  </tabstops>
  <resources/>
@@ -909,5 +954,75 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>enableAllButton</sender>
+   <signal>clicked()</signal>
+   <receiver>LumencorDirectManipDialog</receiver>
+   <slot>handleEnableAllLamps()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>631</x>
+     <y>632</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>426</x>
+     <y>326</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>disableAllButton</sender>
+   <signal>clicked()</signal>
+   <receiver>LumencorDirectManipDialog</receiver>
+   <slot>handleDisableAllLamps()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>717</x>
+     <y>632</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>426</x>
+     <y>326</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>maxAllButton</sender>
+   <signal>clicked()</signal>
+   <receiver>LumencorDirectManipDialog</receiver>
+   <slot>handleMaxAllLamps()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>631</x>
+     <y>632</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>426</x>
+     <y>326</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>zeroAllButton</sender>
+   <signal>clicked()</signal>
+   <receiver>LumencorDirectManipDialog</receiver>
+   <slot>handleZeroAllLamps()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>717</x>
+     <y>632</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>426</x>
+     <y>326</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
+ <slots>
+  <slot>handleEnableAllLamps()</slot>
+  <slot>handleDisableAllLamps()</slot>
+  <slot>handleMaxAllLamps()</slot>
+  <slot>handleZeroAllLamps()</slot>
+ </slots>
 </ui>
