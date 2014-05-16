@@ -62,7 +62,6 @@ _Camera::_Camera(const AT_64& deviceIndex)
         o << "Failed to open Andor device with index " << deviceIndex << '.';
         throw _AndorException(o.str(), r);
     }
-    std::cerr << "_Camera::_Camera()\n";
 }
 
 _Camera::~_Camera()
@@ -74,7 +73,6 @@ _Camera::~_Camera()
         _AndorException::lookupErrorName(r, errorName);
         std::cerr << "WARNING: AT_Close failed with error #" << r << " (" << errorName << ").\n";
     }
-    std::cerr << "_Camera::~_Camera()\n";
 }
 
 int AT_EXP_CONV _Camera::atCallbackWrapper(AT_H dh, const AT_WC* calledFeatureName, void* crtvp)
@@ -602,6 +600,60 @@ void _Camera::AT_Flush()
     }
 }
 
+_Camera::SimplePreAmp _Camera::simplePreAmp() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::SimplePreAmpGainControl);
+    if(v < int(SimplePreAmp::_Begin) || v >= int(SimplePreAmp::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for SimplePreAmpGainControl, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(SimplePreAmp::_Begin) << ", " << static_cast<int>(SimplePreAmp::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return SimplePreAmp(v);
+}
+
+void _Camera::simplePreAmp(const SimplePreAmp& simplePreAmp_)
+{
+    AT_SetEnumIndex(Feature::SimplePreAmpGainControl, int(simplePreAmp_));
+}
+
+_Camera::Shutter _Camera::shutter() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::ElectronicShutteringMode);
+    if(v < int(Shutter::_Begin) || v >= int(Shutter::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for ElectronicShutteringMode, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(Shutter::_Begin) << ", " << static_cast<int>(Shutter::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return Shutter(v);
+}
+
+void _Camera::shutter(const Shutter& shutter_)
+{
+    AT_SetEnumIndex(Feature::ElectronicShutteringMode, int(shutter_));
+}
+
+_Camera::TriggerMode _Camera::triggerMode() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::TriggerMode);
+    if(v < int(TriggerMode::_Begin) || v >= int(TriggerMode::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for TriggerMode, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(TriggerMode::_Begin) << ", " << static_cast<int>(TriggerMode::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return TriggerMode(v);
+}
+
+void _Camera::triggerMode(const TriggerMode& triggerMode_)
+{
+    AT_SetEnumIndex(Feature::TriggerMode, int(triggerMode_));
+}
+
 const wchar_t *_Camera::sm_featureNames[] =
 {
     L"AccumulateCount",
@@ -682,6 +734,30 @@ const wchar_t *_Camera::sm_featureNames[] =
     L"TimestampClockReset",
     L"TriggerMode",
     L"VerticallyCenterAOI"
+};
+
+const wchar_t *_Camera::sm_simplePreAmpNames[] =
+{
+    L"12-bit (high well capacity)",
+    L"12-bit (low noise)",
+    L"16-bit (low noise & high well capacity)"
+};
+
+const wchar_t *_Camera::sm_shutterNames[] =
+{
+    L"Rolling",
+    L"Global"
+};
+
+const wchar_t *_Camera::sm_triggerModeNames[] =
+{
+    L"Internal",
+    L"External Level Transition",
+    L"External Start",
+    L"External Exposure",
+    L"Software",
+    L"Advanced",
+    L"External"
 };
 
 _Camera::_CallbackRegistrationToken::_CallbackRegistrationToken(_Camera& camera_, const Feature& feature_, const std::function<bool(Feature)>& callback_)

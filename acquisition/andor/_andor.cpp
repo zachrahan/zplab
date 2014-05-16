@@ -117,7 +117,18 @@ BOOST_PYTHON_MODULE(_andor)
             .def("AT_GetStringMaxLength", &_Camera::AT_GetStringMaxLength)
             .def("AT_QueueBuffer", &_Camera::AT_QueueBuffer)
             .def("AT_WaitBuffer", &_Camera::AT_WaitBuffer)
-            .def("AT_Flush", &_Camera::AT_Flush);
+            .def("AT_Flush", &_Camera::AT_Flush)
+            // The following properties have getters and setters that share overloaded function names and must therefore
+            // be described with fully qualified function pointers.
+            .add_property("simplePreAmp",
+                          (_Camera::SimplePreAmp (_Camera::*)() const) &_Camera::simplePreAmp,
+                          (void (_Camera::*)(const _Camera::SimplePreAmp&))&_Camera::simplePreAmp)
+            .add_property("shutter",
+                          (_Camera::Shutter (_Camera::*)() const) &_Camera::shutter,
+                          (void (_Camera::*)(const _Camera::Shutter&))&_Camera::shutter)
+            .add_property("triggerMode",
+                          (_Camera::TriggerMode (_Camera::*)() const) &_Camera::triggerMode,
+                          (void (_Camera::*)(const _Camera::TriggerMode&))&_Camera::triggerMode);
 
         class_<_Camera::_CallbackRegistrationToken, std::shared_ptr<_Camera::_CallbackRegistrationToken>, boost::noncopyable>("_CallbackRegistrationToken", no_init);
 
@@ -200,6 +211,24 @@ BOOST_PYTHON_MODULE(_andor)
             .value("TimestampClockReset", _Camera::Feature::TimestampClockReset)
             .value("TriggerMode", _Camera::Feature::TriggerMode)
             .value("VerticallyCenterAOI", _Camera::Feature::VerticallyCenterAOI);
+
+        enum_<_Camera::SimplePreAmp>("SimplePreAmp")
+            .value("HighCapacity_12bit", _Camera::SimplePreAmp::HighCapacity_12bit)
+            .value("LowNoise_12bit", _Camera::SimplePreAmp::LowNoise_12bit)
+            .value("LowNoiseHighCapacity_16bit", _Camera::SimplePreAmp::LowNoiseHighCapacity_16bit);
+
+        enum_<_Camera::Shutter>("Shutter")
+            .value("Rolling", _Camera::Shutter::Rolling)
+            .value("Global", _Camera::Shutter::Global);
+
+        enum_<_Camera::TriggerMode>("TriggerMode")
+            .value("Internal", _Camera::TriggerMode::Internal)
+            .value("ExternalLevelTransition", _Camera::TriggerMode::ExternalLevelTransition)
+            .value("ExternalStart", _Camera::TriggerMode::ExternalStart)
+            .value("ExternalExposure", _Camera::TriggerMode::ExternalExposure)
+            .value("Software", _Camera::TriggerMode::Software)
+            .value("Advanced", _Camera::TriggerMode::Advanced)
+            .value("External", _Camera::TriggerMode::External);
     }
     catch(error_already_set const&)
     {

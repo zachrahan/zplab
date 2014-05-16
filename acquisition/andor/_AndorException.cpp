@@ -21,7 +21,7 @@ _AndorExceptionBase::_AndorExceptionBase(const std::wstring& description_)
 const std::string& _AndorExceptionBase::description() const
 {
     return m_description;
-}v
+}
 
 _AndorException::_AndorException(std::string&& description_, const int& errorCode_)
   : _AndorExceptionBase(std::move(description_)),

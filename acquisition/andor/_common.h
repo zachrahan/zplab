@@ -18,6 +18,7 @@
 #include <boost/utility.hpp>
 #include <chrono>
 #include <cstdint>
+#include <cwchar>
 #include <functional>
 #include <iostream>
 #include <limits>
