@@ -164,7 +164,8 @@ void loop()
                                "    getPower\n"
                                "    power=[integer >= 0 and <= 255]\n"
                                "A command must be terminated by either CR (\\r), LF (\\n), or "
-                               "CRLF(\\r\\n).  All responses are terminated with LF (except for this one, which has a bunch of LFs).");
+                               "CRLF(\\r\\n).  All responses are terminated with CRLF (this very response contains "
+                               "multiple LFs, but only one CRLF, which appears at its end).");
             }
         }
     }

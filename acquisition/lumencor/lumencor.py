@@ -89,7 +89,7 @@ class Lumencor(Device):
         self._write(c)
 
     def _write(self, byteArray):
-        print(''.join('{:02x} '.format(x) for x in byteArray))
+#       print(''.join('{:02x} '.format(x) for x in byteArray))
         byteCountWritten = self._serialPort.write(byteArray)
         byteCount = len(byteArray)
         if byteCountWritten != byteCount:
@@ -277,7 +277,7 @@ class Lumencor(Device):
             except AttributeError as e:
                 pass
 
-    def forceCompleteLumencorLampStatesChangedNotificationTo(self, observer):
+    def forceComprehensiveObserverNotification(self, observer):
         lampStateChangesForObserver = {}
         for ln, ls in self._lampStates.items():
             lampStateChangesForObserver[ln] = {'enabled' : ls.enabled, 'power' : ls.power}
@@ -285,6 +285,7 @@ class Lumencor(Device):
             observer.notifyLumencorLampStatesChanged(self, lampStateChangesForObserver)
         except AttributeError as e:
             pass
+        super().forceComprehensiveObserverNotification(observer)
 
     @property
     def redEnabled(self):

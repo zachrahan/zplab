@@ -49,7 +49,7 @@ class LumencorManipDialog(QtWidgets.QDialog):
         self.lumencorInstance.attachObserver(self)
         # Update interface to reflect current state of Lumencor box (which may be something other than default if this dialog was
         # attached to an existing Lumencor instance that has previously been manipulated)
-        self.lumencorInstance.forceCompleteLumencorLampStatesChangedNotificationTo(self)
+        self.lumencorInstance.forceComprehensiveObserverNotification(self)
 
         self.tempUpdateTimer = QtCore.QTimer(self)
         self.tempUpdateTimer.timeout.connect(self.handleTempUpdateTimerFired)

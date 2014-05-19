@@ -61,10 +61,17 @@ class Device:
             raise DeviceException(self, 'The specified Observer instance is not in this Device\'s set of Observers.')
         self._observers.remove(observer)
 
+    # Useful to initialize a new observer's idea of a Device's state.  For example, a GUI with controls representing elements of a Device's state
+    # that updates those controls upon receipt of observer notifications can cause the relevant updates to be sent (and thus the controls to update)
+    # by calling forceComprehensiveObserverNotification(..).
+    def forceComprehensiveObserverNotification(self, observer):
+        for subDevice in self._subDevices:
+            subDevice.forceComprehensiveObserverNotification(observer)
+
 class DeviceException(AcquisitionException):
     def __init__(self, device, description):
+        super().__init__(description)
         self.device = device
-        self.description = description
 
     def __str__(self):
         return repr('{}: {}'.format(self.device.fancyName, self.description))

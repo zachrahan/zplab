@@ -26,13 +26,12 @@
 			<F N="acquisition/andor/Makefile"/>
 		</Folder>
 		<Folder
-			Name="lumencor"
+			Name="brightfield_led"
 			Filters="">
-			<F N="acquisition/lumencor/__init__.py"/>
-			<F N="acquisition/lumencor/direct_manip.py"/>
-			<F N="acquisition/lumencor/direct_manip.ui"/>
-			<F N="acquisition/lumencor/lumencor.py"/>
-			<F N="acquisition/lumencor/lumencor_exception.py"/>
+			<F N="acquisition/brightfield_led/__init__.py"/>
+			<F N="acquisition/brightfield_led/adafruit_atmega32u4/adafruit_atmega32u4.pde"/>
+			<F N="acquisition/brightfield_led/brightfield_led.py"/>
+			<F N="acquisition/brightfield_led/direct_manip.py"/>
 		</Folder>
 		<Folder
 			Name="leica_dm"
@@ -41,6 +40,15 @@
 			<F N="acquisition/leica_dm/camera_mm.py"/>
 			<F N="acquisition/leica_dm/microscope_mm.py"/>
 			<F N="acquisition/leica_dm/stage_mm.py"/>
+		</Folder>
+		<Folder
+			Name="lumencor"
+			Filters="">
+			<F N="acquisition/lumencor/__init__.py"/>
+			<F N="acquisition/lumencor/direct_manip.py"/>
+			<F N="acquisition/lumencor/direct_manip.ui"/>
+			<F N="acquisition/lumencor/lumencor.py"/>
+			<F N="acquisition/lumencor/lumencor_exception.py"/>
 		</Folder>
 		<F N="acquisition/__init__.py"/>
 		<F N="acquisition_direct_manip.py"/>
