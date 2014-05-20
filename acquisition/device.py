@@ -9,6 +9,7 @@ class Device:
         self._typeName = 'Device'
         self._subDevices = []
         self._observers = set()
+        self._block = True
 
     def _appendTypeName(self, typeName):
         self._typeName += '.' + typeName
@@ -28,6 +29,16 @@ class Device:
     @property
     def typeName(self):
         return self._typeName
+
+    @property
+    def block(self):
+        '''If true, forces operations that may be performed either asynchronously or synchronously to execute synchronously, in blocking fashion,
+        in the calling thread.'''
+        return self._block
+
+    @block.setter
+    def block(self, block):
+        self._block = bool(block)
 
     @property
     def subDevices(self):
