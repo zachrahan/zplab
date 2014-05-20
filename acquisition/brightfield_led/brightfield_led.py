@@ -7,6 +7,20 @@ import time
 from acquisition.device import Device, DeviceException
 
 class BrightfieldLed(Device):
+    '''This class is the API for communicating with an Arduino device programmed with the accompanying adafruit_atmega32u4.pde C++
+    source file.  All BrightfieldLed does is provide a convenient interface for switching on/off a single Arduino analog out pin and
+    controlling its voltage (which should be passed through a hardware lowpass filter).  So, nothing about this class is actually
+    specific to controlling of LED drivers, and it could be broken into a voltage controller interface class and a more general LED
+    controller class capable of sitting atop it.
+
+    Use this class's ok, enabled, and power properties to interact with the LED controller:
+
+    from acquisition.brightfield_led.brightfield_led import BrightfieldLed
+    bfl = BrightfieldLed()
+    print("ok? {}  enabled? {}  power: {}".format(bfl.ok, bfl.enabled, bfl.power))
+    bfl.enabled = True
+    bfl.power = 255
+    print("ok? {}  enabled? {}  power: {}".format(bfl.ok, bfl.enabled, bfl.power))'''
     _responseErrorRe = re.compile(r'Error: (.+)')
     _splitResponseRe = re.compile(r'(.+)(==|<-)(.+)')
 
@@ -14,7 +28,7 @@ class BrightfieldLed(Device):
         super().__init__(name)
         self._appendTypeName('BrightfieldLed')
         self._serialPort = serial.Serial(serialPortDescriptor, 9600, timeout=0.1)
-        self._lineTimeout = 100000.0
+        self._lineTimeout = 1.0
         if not self._serialPort.isOpen():
             raise DeviceException(self, 'Failed to open {}.'.format(serialPortDescriptor))
         self._buffer = ''
@@ -79,7 +93,7 @@ class BrightfieldLed(Device):
     def _write(self, out):
         if type(out) is str:
             out = out.encode('utf-8')
-        print(out.decode('utf-8'))
+#       print(out.decode('utf-8'))
         byteCountWritten = self._serialPort.write(out)
         byteCount = len(out)
         if byteCountWritten != byteCount:
