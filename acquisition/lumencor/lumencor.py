@@ -89,7 +89,7 @@ class Lumencor(Device):
         self._write(c)
 
     def _write(self, byteArray):
-        print(''.join('{:02x} '.format(x) for x in byteArray))
+#       print(''.join('{:02x} '.format(x) for x in byteArray))
         byteCountWritten = self._serialPort.write(byteArray)
         byteCount = len(byteArray)
         if byteCountWritten != byteCount:
@@ -231,15 +231,19 @@ class Lumencor(Device):
         '''Apply new lamp states contained in the lampStates argument, which should be a dict of lamp names to LampState objects.  The state of any lamp
         not appearing in the lampStates argument dict is not modified.  So, lumencoreinstance.lampStates = {} is a no-op.  The specified state changes
         are consolidated into the fewest number of serial commands required before being dispatched to the Lumencor hardware.'''
-        from IPython.core.debugger import Tracer; breakpoint1 = Tracer();
+        lampStateChangesForObserver = {}
         power_rgcu = {}
         power_bt = {}
         for lampName, newLampState in lampStates.items():
-            curPower = self._lampStates[lampName].power
+            curLampState = self._lampStates[lampName]
+            curPower = curLampState.power
             newPower = newLampState.power
             if newPower != curPower:
+                lampStateChangesForObserver[lampName] = {'power' : newPower}
+                if curLampState.enabled != newLampState.enabled:
+                    lampStateChangesForObserver[lampName]['enabled'] = newLampState.enabled
                 #if lampName in ['red', 'green', 'cyan', 'uv']:
-                if newLampState.idx in range(4): # Same effect as line above, but faster
+                if newLampState.idx in range(4): # Same effect as line above but faster
                     powerdict = power_rgcu
                 else:
                     powerdict = power_bt
@@ -249,9 +253,10 @@ class Lumencor(Device):
                     lampIdxs.append(newLampState.idx)
                 else:
                     powerdict[newPower] = [newLampState.idx]
-            lampState = self._lampStates[lampName]
-            lampState.enabled = newLampState.enabled
-            lampState.power = newLampState.power
+            elif curLampState.enabled != newLampState.enabled:
+                lampStateChangesForObserver[lampName] = {'enabled' : newLampState.enabled}
+            curLampState.enabled = newLampState.enabled
+            curLampState.power = newLampState.power
 
         def updatePowers(commandBase, powerdict):
             if len(powerdict) > 0:
@@ -265,6 +270,22 @@ class Lumencor(Device):
         updatePowers(Lumencor._lampRgcuPowerCommandBase, power_rgcu)
         updatePowers(Lumencor._lampBtPowerCommandBase, power_bt)
         self._updateDisablement()
+
+        for observer in self._observers:
+            try:
+                observer.notifyLumencorLampStatesChanged(self, lampStateChangesForObserver)
+            except AttributeError as e:
+                pass
+
+    def forceComprehensiveObserverNotification(self, observer):
+        lampStateChangesForObserver = {}
+        for ln, ls in self._lampStates.items():
+            lampStateChangesForObserver[ln] = {'enabled' : ls.enabled, 'power' : ls.power}
+        try:
+            observer.notifyLumencorLampStatesChanged(self, lampStateChangesForObserver)
+        except AttributeError as e:
+            pass
+        super().forceComprehensiveObserverNotification(observer)
 
     @property
     def redEnabled(self):

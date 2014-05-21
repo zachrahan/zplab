@@ -60,3 +60,35 @@ class Camera(_Camera, Device):
             raise AndorException('Acquired image buffer has different address than queued image buffer.')
 
         return imageBuffer[:self.AT_GetInt(self.Feature.AOIHeight), :self.AT_GetInt(self.Feature.AOIWidth)]
+
+    @property
+    def model(self):
+        return self.AT_GetString(self.Feature.CameraModel)
+
+    @property
+    def acquiring(self):
+        return self.AT_GetBool(self.Feature.CameraAcquiring)
+
+    @property
+    def exposureTime(self):
+        return self.AT_GetFloat(self.Feature.ExposureTime)
+
+    @exposureTime.setter
+    def exposureTime(self, exposureTime):
+        self.setExposureTime(exposureTime)
+
+    @property
+    def overlap(self):
+        return self.AT_GetBool(self.Feature.Overlap)
+
+    @overlap.setter
+    def overlap(self, overlap):
+        self.AT_SetBool(self.Feature.Overlap, overlap)
+
+    @property
+    def frameRate(self):
+        return self.AT_GetFloat(self.Feature.FrameRate)
+
+    @frameRate.setter
+    def frameRate(self, frameRate):
+        self.AT_SetFloat(self.Feature.FrameRate, frameRate)
