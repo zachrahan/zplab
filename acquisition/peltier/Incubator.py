@@ -21,11 +21,11 @@ class Incubator:
 		
 	def __init__(self, inPort=None, inTimeout=1, inWriteTimeout=1, inVerbose=False):
 		# Check for valid assignment for Incubator port
-		if inPort=None	# If no port, information provided, raise error
+		if inPort is None:	# If no port, information provided, raise error
 			raise RuntimeError('(Incubator.__init__()) No valid port supplied for incubator')
 		elif isinstance(inPort, serial.Serial):		# If a Serial object, directly copy it
 			self._port = inPort
-		elif:	# Otherwise, assume some valid system reference for port is given and instantiate with default timeout values
+		else:	# Otherwise, assume some valid system reference for port is given and instantiate with default timeout values
 			self._port = serial.Serial(port=inPort, baudrate=2400, timeout=0,writeTimeout=0)
 		
 		# Populate instance variables
@@ -62,12 +62,12 @@ class Incubator:
 		# Because of issues with some of Serial's read/write functionality, this handles all the necessary buffering and blocking
 		self.port.write(inMessage)
 		time.sleep(self.writeTimeout)
-		print(datetime.datetime.now()-starttime)
+#		print(datetime.datetime.now()-starttime)
 	
 	# Property for managing the port
 	def getPort(self):
 		return self._port	
-	def setPort(self, inPort)
+	def setPort(self, inPort):
 		self._port = inPort
 		self._port.flush()	# Flush the port
 		self._port.flushInput()

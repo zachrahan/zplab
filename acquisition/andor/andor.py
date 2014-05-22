@@ -69,6 +69,7 @@ class Camera(_Camera, Device):
     def acquiring(self):
         return self.AT_GetBool(self.Feature.CameraAcquiring)
 
+
     @property
     def exposureTime(self):
         return self.AT_GetFloat(self.Feature.ExposureTime)
@@ -78,12 +79,22 @@ class Camera(_Camera, Device):
         self.setExposureTime(exposureTime)
 
     @property
+    def minExposureTime(self):
+        return self.AT_GetFloatMin(self.Feature.ExposureTime)
+
+    @property
+    def maxExposureTime(self):
+        return self.AT_GetFloatMax(self.Feature.ExposureTime)
+
+
+    @property
     def overlap(self):
         return self.AT_GetBool(self.Feature.Overlap)
 
     @overlap.setter
     def overlap(self, overlap):
         self.AT_SetBool(self.Feature.Overlap, overlap)
+
 
     @property
     def frameRate(self):
@@ -92,3 +103,11 @@ class Camera(_Camera, Device):
     @frameRate.setter
     def frameRate(self, frameRate):
         self.AT_SetFloat(self.Feature.FrameRate, frameRate)
+
+    @property
+    def minFrameRate(self):
+        return self.AT_GetFloatMin(self.Feature.FrameRate)
+
+    @property
+    def maxFrameRate(self):
+        return self.AT_GetFloatMax(self.Feature.FrameRate)

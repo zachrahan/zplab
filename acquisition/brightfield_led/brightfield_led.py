@@ -1,6 +1,7 @@
 # Copyright 2014 WUSTL ZPLAB
 # Erik Hvatum (ice.rikh@gmail.com)
 
+from PyQt5 import QtCore
 import re
 import serial
 import time
@@ -21,12 +22,14 @@ class BrightfieldLed(Device):
     bfl.enabled = True
     bfl.power = 255
     print("ok? {}  enabled? {}  power: {}".format(bfl.ok, bfl.enabled, bfl.power))'''
+    enabledChanged = QtCore.pyqtSignal(bool)
+    powerChanged = QtCore.pyqtSignal(int)
+
     _responseErrorRe = re.compile(r'Error: (.+)')
     _splitResponseRe = re.compile(r'(.+)(==|<-)(.+)')
 
-    def __init__(self, serialPortDescriptor='/dev/ttyBflCntrlr', name='Brightfield LED Driver Controller'):
-        super().__init__(name)
-        self._appendTypeName('BrightfieldLed')
+    def __init__(self, parent=None, serialPortDescriptor='/dev/ttyBflCntrlr', deviceName='Brightfield LED Driver Controller'):
+        super().__init__(parent, deviceName)
         self._serialPort = serial.Serial(serialPortDescriptor, 9600, timeout=0.1)
         self._lineTimeout = 1.0
         if not self._serialPort.isOpen():
@@ -109,19 +112,6 @@ class BrightfieldLed(Device):
         rn, rd, rv = self._readResponse('power', '==')
         self._power = int(rv)
 
-    def forceComprehensiveObserverNotification(self, observer):
-        try:
-            observer.notifyBrightfieldLedEnablementChanged(self, self._enabled)
-        except AttributeError:
-            pass
-
-        try:
-            observer.notifyBrightfieldLedPowerChanged(self, self._power)
-        except AttributeError:
-            pass
-
-        super().forceComprehensiveObserverNotification(observer)
-
     @property
     def ok(self):
         try:
@@ -131,7 +121,7 @@ class BrightfieldLed(Device):
             return False
         return rv == 'true'
 
-    @property
+    @QtCore.pyqtProperty(bool, notify=enabledChanged)
     def enabled(self):
         return self._enabled
 
@@ -152,13 +142,9 @@ class BrightfieldLed(Device):
                     wantTo = 'disable'
                 raise DeviceException(self, 'Failed to {}.'.format(wantTo))
             self._enabled = nowEnabled
-            for observer in self._observers:
-                try:
-                    observer.notifyBrightfieldLedEnablementChanged(self, self._enabled)
-                except AttributeError:
-                    pass
+            self.enabledChanged.emit(self._enabled)
 
-    @property
+    @QtCore.pyqtProperty(int, notify=powerChanged)
     def power(self):
         return self._power
 
@@ -168,10 +154,6 @@ class BrightfieldLed(Device):
             self._write('power={}\n'.format(power))
             rn, rd, rv = self._readResponse('power', '<-')
             self._power = int(rv)
-            for observer in self._observers:
-                try:
-                    observer.notifyBrightfieldLedPowerChanged(self, self._power)
-                except AttributeError:
-                    pass
+            self.powerChanged.emit(self._power)
             if power != self._power:
                 raise DeviceException(self, 'Power did not change to requested value (wanted {}, got {}).'.format(power, self._power))
