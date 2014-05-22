@@ -114,6 +114,6 @@ def show(lumencorInstance=None, launcherDescription=None, moduleArgs=None):
         if args.port is None:
             lumencorInstance = Lumencor()
         else:
-            lumencorInstance = Lumencor(args.port)
+            lumencorInstance = Lumencor(serialPortDescriptor=args.port)
     dialog = LumencorManipDialog(None, lumencorInstance)
     sys.exit(dialog.exec_())

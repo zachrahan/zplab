@@ -64,6 +64,6 @@ def show(brightfieldLedInstance=None, launcherDescription=None, moduleArgs=None)
         if args.port is None:
             brightfieldLedInstance = BrightfieldLed()
         else:
-            brightfieldLedInstance = BrightfieldLed(args.port)
+            brightfieldLedInstance = BrightfieldLed(serialPortDescriptor=args.port)
     dialog = BrightfieldLedManipDialog(None, brightfieldLedInstance)
     sys.exit(dialog.exec_())

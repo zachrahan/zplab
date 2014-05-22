@@ -58,7 +58,7 @@ class Lumencor(Device):
     # Argument contains a dict of dicts: {"lampname" : {"propertyname" : newvalue}}
     lampStatesChanged = QtCore.pyqtSignal(dict)
 
-    def __init__(self, parent=None, serialPortDescriptor='/dev/ttySptrx', deviceName='Lumencor Spectra-X'):
+    def __init__(self, parent=None, deviceName='Lumencor Spectra-X', serialPortDescriptor='/dev/ttySptrx'):
         super().__init__(parent, deviceName)
         self._serialPort = serial.Serial(serialPortDescriptor, 9600, timeout=1)
         if not self._serialPort.isOpen():

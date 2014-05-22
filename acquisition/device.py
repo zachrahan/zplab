@@ -8,7 +8,7 @@ class Device(QtCore.QObject):
     deviceNameChanged = QtCore.pyqtSignal()
     blockChanged = QtCore.pyqtSignal()
 
-    def __init__(self, parent=None, deviceName=''):
+    def __init__(self, parent=None, deviceName='UNNAMED DEVICE'):
         super().__init__(parent)
         self.setObjectName(deviceName)
         self._block = True

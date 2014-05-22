@@ -28,7 +28,7 @@ class BrightfieldLed(Device):
     _responseErrorRe = re.compile(r'Error: (.+)')
     _splitResponseRe = re.compile(r'(.+)(==|<-)(.+)')
 
-    def __init__(self, parent=None, serialPortDescriptor='/dev/ttyBflCntrlr', deviceName='Brightfield LED Driver Controller'):
+    def __init__(self, parent=None, deviceName='Brightfield LED Driver Controller', serialPortDescriptor='/dev/ttyBflCntrlr'):
         super().__init__(parent, deviceName)
         self._serialPort = serial.Serial(serialPortDescriptor, 9600, timeout=0.1)
         self._lineTimeout = 1.0
