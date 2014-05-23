@@ -5,7 +5,7 @@ from PyQt5 import QtCore
 from acquisition.acquisition_exception import AcquisitionException
 
 class Device(QtCore.QObject):
-    deviceNameChanged = QtCore.pyqtSignal()
+    deviceNameChanged = QtCore.pyqtSignal(str)
     blockChanged = QtCore.pyqtSignal()
 
     def __init__(self, parent=None, deviceName='UNNAMED DEVICE'):
@@ -42,4 +42,4 @@ class DeviceException(AcquisitionException):
         self.device = device
 
     def __str__(self):
-        return repr('{}: {}'.format(self.device.fancyName, self.description))
+        return repr('{}: {}'.format(self.device.deviceName, self.description))
