@@ -2,15 +2,36 @@
 
 import ctypes as ct
 import numpy as np
+import threading
+from PyQt5 import QtCore
 from acquisition.andor.andor_exception import AndorException
 from acquisition.andor._andor import _Camera
-from acquisition.device import Device
+from acquisition.device import DeviceException, ThreadedDevice, ThreadedDeviceWorker
 
-class Camera(_Camera, Device):
-    def __init__(self, deviceIndex, name='Andor Zyla 5.5'):
-        _Camera.__init__(self, deviceIndex)
-        Device.__init__(self, name)
-        self._appendTypeName('Andor.Camera')
+class Camera(ThreadedDevice):
+    '''This class provides a Device wrapper around _Camera, which is a boost::python based C++ module that provides
+    an interface to the C Andor SDK3 API which is direct save for using enums in place of strings for identifying
+    commands and parameters.  References to these enums are provided by Camera for your convenience.  For example:
+
+    from acquisition.andor.andor import Camera
+    c = Camera(0)
+    # Long way
+    c.shutter = acquisition.andor._andor._Camera.Shutter.Global
+    # Convienent way
+    c.shutter = c.Global'''
+
+    Feature = _Camera.Feature
+    Shutter = _Camera.Shutter
+    SimplePreAmp = _Camera.SimplePreAmp
+    TemperatureStatus = _Camera.TemperatureStatus
+    TriggerMode = _Camera.TriggerMode
+
+    def __init__(self, parent=None, deviceName='Andor Zyla 5.5', andorDeviceIndex):
+        super().__init__(_CameraWorker(self), parent, deviceName)
+        self._camera = _Camera(andorDeviceIndex)
+        self._propLock = threading.RLock()
+        self._cmdLock = threading.RLock()
+        self._worker.readProps()
 
     def getPixelEncoding(self):
         enumIndex = self.AT_GetEnumIndex(self.Feature.PixelEncoding)
@@ -111,3 +132,12 @@ class Camera(_Camera, Device):
     @property
     def maxFrameRate(self):
         return self.AT_GetFloatMax(self.Feature.FrameRate)
+
+class _CameraWorker(ThreadedDeviceWorker):
+    def __init__(self, device):
+        super().__init__(device)
+
+    def initProps(self):
+        with self._device._cmdLock, self._device._propLock:
+            self._device._exposureTime = self._device._camera.AT_
+            self._device._minExposureTime = self._device._camera.AT_GetFloat(self._device.Feature.FrameRate)

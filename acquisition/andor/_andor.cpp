@@ -118,6 +118,7 @@ BOOST_PYTHON_MODULE(_andor)
             .def("AT_QueueBuffer", &_Camera::AT_QueueBuffer)
             .def("AT_WaitBuffer", &_Camera::AT_WaitBuffer)
             .def("AT_Flush", &_Camera::AT_Flush)
+            .add_property("temperatureStatus", &_Camera::temperatureStatus)
             // The following properties have getters and setters that share overloaded function names and must therefore
             // be described with fully qualified function pointers.
             .add_property("simplePreAmp",
@@ -229,6 +230,14 @@ BOOST_PYTHON_MODULE(_andor)
             .value("Software", _Camera::TriggerMode::Software)
             .value("Advanced", _Camera::TriggerMode::Advanced)
             .value("External", _Camera::TriggerMode::External);
+
+        enum_<_Camera::TemperatureStatus>("TemperatureStatus")
+            .value("CoolerOff", _Camera::TemperatureStatus::CoolerOff)
+            .value("Stabilized", _Camera::TemperatureStatus::Stabilized)
+            .value("Cooling", _Camera::TemperatureStatus::Cooling)
+            .value("Drift", _Camera::TemperatureStatus::Drift)
+            .value("NotStabilized", _Camera::TemperatureStatus::NotStabilized)
+            .value("Fault", _Camera::TemperatureStatus::Fault);
     }
     catch(error_already_set const&)
     {

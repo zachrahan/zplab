@@ -9,7 +9,7 @@ class Device(QtCore.QObject):
     blockChanged = QtCore.pyqtSignal()
 
     def __init__(self, parent=None, deviceName='UNNAMED DEVICE'):
-        super().__init__(parent)
+        QtCore.QObject.__init__(self, parent)
         self.setObjectName(deviceName)
         self._block = True
         self.objectNameChanged.connect(self.deviceNameChanged)
@@ -43,3 +43,65 @@ class DeviceException(AcquisitionException):
 
     def __str__(self):
         return repr('{}: {}'.format(self.device.deviceName, self.description))
+
+class ThreadedDevice(Device):
+    def __init__(self, worker, parent=None, deviceName='UNNAMED THREADED DEVICE'):
+        super().__init__(parent, deviceName)
+        self._worker = worker
+        self._thread = QtCore.QThread(self)
+        self._thread.setObjectName(self.deviceName + ' - DEVICE THREAD')
+        self._thread.finished.connect(self._thread.deleteLater, QtCore.Qt.QueuedConnection)
+        self.deviceNameChanged.connect(self._worker.deviceNameChangedSlot, QtCore.Qt.QueuedConnection)
+        self._thread.start()
+        self._worker.moveToThread(self._thread)
+        self.destroyed.connect(self._destroyedSlot)
+
+    def _destroyedSlot(self):
+        self._thread.quit()
+        self._thread.wait()
+
+class ThreadedDeviceWorker(QtCore.QObject):
+    def __init__(self, device):
+        # NB: A QObject can not be moved to another thread if it has a parent.  Otherwise, _DeviceWorker would be parented to its
+        # Device by replacing "None" with "device" in the following line.
+        super().__init__(None)
+        self.device = device
+
+    def deviceNameChangedSlot(self, deviceName):
+        self.setObjectName(deviceName + ' - DEVICE THREAD WORKER')
+        self.device._thread.setObjectName(deviceName + ' - DEVICE THREAD')
+
+#class OmniSyncPyQtSig(QtCore.QObject):
+#    '''As in, "omni-scynchronous".'''
+#    class _ArgsHolder:
+#        def __init__(self, *args, **kwargs):
+#            self._args = args
+#            self._kwargs = kwargs
+#
+#    class _RetHolder:
+#        def __init__(self, exception):
+#            self._exception = exception
+#            self._ret = None
+#
+#    class _BothHolder:
+#        def __init__(self, argsHolder):
+#            self._argsHolder = argsHolder
+#            self._retHolder = None
+#
+#    _asyncSignal = QtCore.pyqtSignal(_ArgsHolder)
+#    _asyncCompletionSignal = QtCore.pyqtSignal(_RetHolder)
+#    _syncSignal = QtCore.pyqtSignal(_BothHolder)
+#
+#    def __init__(self, device, handler):
+#        self._device = device
+#        self._handler = handler
+#
+#    def __call__(self, *args, **kwargs):
+#        bothHolder = self._BothHolder(self._ArgsHolder(*args, **kwargs))
+#        if self._device.block:
+#            self._syncSignal.emit(bothHolder)
+#            if bothHandler._retHolder._exception is not None:
+#                raise bothHandler._retHolder._exception
+#            return bothHandler._retHolder._ret
+#        else:
+#            self._asyncSignal.emit()

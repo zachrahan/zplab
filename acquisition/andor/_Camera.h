@@ -114,13 +114,25 @@ public:
     enum class TriggerMode : int
     {
         _Begin = 0,
-        Internal= _Begin,
+        Internal = _Begin,
         ExternalLevelTransition,
         ExternalStart,
         ExternalExposure,
         Software,
         Advanced,
         External,
+        _End
+    };
+
+    enum class TemperatureStatus : int
+    {
+        _Begin = 0,
+        CoolerOff = _Begin,
+        Stabilized,
+        Cooling,
+        Drift,
+        NotStabilized,
+        Fault,
         _End
     };
 
@@ -200,11 +212,14 @@ public:
     TriggerMode triggerMode() const;
     void triggerMode(const TriggerMode& triggerMode_);
 
+    TemperatureStatus temperatureStatus() const;
+
 protected:
     static const wchar_t *sm_featureNames[];
     static const wchar_t *sm_simplePreAmpNames[];
     static const wchar_t *sm_shutterNames[];
     static const wchar_t *sm_triggerModeNames[];
+    static const wchar_t *sm_temperatureStatusNames[];
 
     // Device handle
     AT_H m_dh;

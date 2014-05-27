@@ -654,6 +654,19 @@ void _Camera::triggerMode(const TriggerMode& triggerMode_)
     AT_SetEnumIndex(Feature::TriggerMode, int(triggerMode_));
 }
 
+_Camera::TemperatureStatus _Camera::temperatureStatus() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::TemperatureStatus);
+    if(v < int(TemperatureStatus::_Begin) || v >= int(TemperatureStatus::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for TemperatureStatus, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(TemperatureStatus::_Begin) << ", " << static_cast<int>(TemperatureStatus::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return TemperatureStatus(v);
+}
+
 const wchar_t *_Camera::sm_featureNames[] =
 {
     L"AccumulateCount",
@@ -758,6 +771,16 @@ const wchar_t *_Camera::sm_triggerModeNames[] =
     L"Software",
     L"Advanced",
     L"External"
+};
+
+const wchar_t *_Camera::sm_temperatureStatusNames[] =
+{
+    L"Cooler Off",
+    L"Stabilised",
+    L"Cooling",
+    L"Drift",
+    L"Not Stabilised",
+    L"Fault"
 };
 
 _Camera::_CallbackRegistrationToken::_CallbackRegistrationToken(_Camera& camera_, const Feature& feature_, const std::function<bool(Feature)>& callback_)
