@@ -129,7 +129,10 @@ BOOST_PYTHON_MODULE(_andor)
                           (void (_Camera::*)(const _Camera::Shutter&))&_Camera::shutter)
             .add_property("triggerMode",
                           (_Camera::TriggerMode (_Camera::*)() const) &_Camera::triggerMode,
-                          (void (_Camera::*)(const _Camera::TriggerMode&))&_Camera::triggerMode);
+                          (void (_Camera::*)(const _Camera::TriggerMode&))&_Camera::triggerMode)
+            .add_property("binning",
+                          (_Camera::Binning (_Camera::*)() const) &_Camera::binning,
+                          (void (_Camera::*)(const _Camera::Binning&))&_Camera::binning);
 
         class_<_Camera::_CallbackRegistrationToken, std::shared_ptr<_Camera::_CallbackRegistrationToken>, boost::noncopyable>("_CallbackRegistrationToken", no_init);
 
@@ -238,6 +241,13 @@ BOOST_PYTHON_MODULE(_andor)
             .value("Drift", _Camera::TemperatureStatus::Drift)
             .value("NotStabilized", _Camera::TemperatureStatus::NotStabilized)
             .value("Fault", _Camera::TemperatureStatus::Fault);
+
+        enum_<_Camera::Binning>("Binning")
+            .value("Bin_1x1", _Camera::Binning::Bin_1x1)
+            .value("Bin_2x2", _Camera::Binning::Bin_2x2)
+            .value("Bin_3x3", _Camera::Binning::Bin_3x3)
+            .value("Bin_4x4", _Camera::Binning::Bin_4x4)
+            .value("Bin_8x8", _Camera::Binning::Bin_8x8);
     }
     catch(error_already_set const&)
     {

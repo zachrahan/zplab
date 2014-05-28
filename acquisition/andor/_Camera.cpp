@@ -667,6 +667,24 @@ _Camera::TemperatureStatus _Camera::temperatureStatus() const
     return TemperatureStatus(v);
 }
 
+_Camera::Binning _Camera::binning() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::AOIBinning);
+    if(v < int(Binning::_Begin) || v >= int(Binning::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for AOIBinning, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(Binning::_Begin) << ", " << static_cast<int>(Binning::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return Binning(v);
+}
+
+void _Camera::binning(const Binning& binning_)
+{
+    AT_SetEnumIndex(Feature::AOIBinning, int(binning_));
+}
+
 const wchar_t *_Camera::sm_featureNames[] =
 {
     L"AccumulateCount",
@@ -781,6 +799,15 @@ const wchar_t *_Camera::sm_temperatureStatusNames[] =
     L"Drift",
     L"Not Stabilised",
     L"Fault"
+};
+
+const wchar_t *_Camera::sm_binningNames[] =
+{
+    L"1x1",
+    L"2x2",
+    L"3x3",
+    L"4x4",
+    L"8x8"
 };
 
 _Camera::_CallbackRegistrationToken::_CallbackRegistrationToken(_Camera& camera_, const Feature& feature_, const std::function<bool(Feature)>& callback_)

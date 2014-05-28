@@ -136,6 +136,17 @@ public:
         _End
     };
 
+    enum class Binning : int
+    {
+        _Begin = 0,
+        Bin_1x1 = _Begin,
+        Bin_2x2,
+        Bin_3x3,
+        Bin_4x4,
+        Bin_8x8,
+        _End
+    };
+
     class _CallbackRegistrationToken
       : boost::noncopyable
     {
@@ -214,12 +225,16 @@ public:
 
     TemperatureStatus temperatureStatus() const;
 
+    Binning binning() const;
+    void binning(const Binning& binning_);
+
 protected:
     static const wchar_t *sm_featureNames[];
     static const wchar_t *sm_simplePreAmpNames[];
     static const wchar_t *sm_shutterNames[];
     static const wchar_t *sm_triggerModeNames[];
     static const wchar_t *sm_temperatureStatusNames[];
+    static const wchar_t *sm_binningNames[];
 
     // Device handle
     AT_H m_dh;

@@ -25,6 +25,7 @@ class Camera(ThreadedDevice):
     SimplePreAmp = _Camera.SimplePreAmp
     TemperatureStatus = _Camera.TemperatureStatus
     TriggerMode = _Camera.TriggerMode
+    Binning = _Camera.Binning
 
     def __init__(self, parent=None, deviceName='Andor Zyla 5.5', andorDeviceIndex):
         super().__init__(_CameraWorker(self), parent, deviceName)
