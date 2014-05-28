@@ -685,6 +685,73 @@ void _Camera::binning(const Binning& binning_)
     AT_SetEnumIndex(Feature::AOIBinning, int(binning_));
 }
 
+_Camera::AuxiliaryOutSource _Camera::auxiliaryOutSource() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::AuxiliaryOutSource);
+    if(v < int(AuxiliaryOutSource::_Begin) || v >= int(AuxiliaryOutSource::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for AuxiliaryOutSource, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(AuxiliaryOutSource::_Begin) << ", " << static_cast<int>(AuxiliaryOutSource::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return AuxiliaryOutSource(v);
+}
+
+void _Camera::auxiliaryOutSource(const AuxiliaryOutSource& auxiliaryOutSource_)
+{
+    AT_SetEnumIndex(Feature::AuxiliaryOutSource, int(auxiliaryOutSource_));
+}
+
+_Camera::CycleMode _Camera::cycleMode() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::CycleMode);
+    if(v < int(CycleMode::_Begin) || v >= int(CycleMode::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for CycleMode, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(CycleMode::_Begin) << ", " << static_cast<int>(CycleMode::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return CycleMode(v);
+}
+
+void _Camera::cycleMode(const CycleMode& cycleMode_)
+{
+    AT_SetEnumIndex(Feature::CycleMode, int(cycleMode_));
+}
+
+_Camera::FanSpeed _Camera::fanSpeed() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::FanSpeed);
+    if(v < int(FanSpeed::_Begin) || v >= int(FanSpeed::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for FanSpeed, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(FanSpeed::_Begin) << ", " << static_cast<int>(FanSpeed::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return FanSpeed(v);
+}
+
+void _Camera::fanSpeed(const FanSpeed& fanSpeed_)
+{
+    AT_SetEnumIndex(Feature::FanSpeed, int(fanSpeed_));
+}
+
+_Camera::PixelEncoding _Camera::pixelEncoding() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::PixelEncoding);
+    if(v < int(PixelEncoding::_Begin) || v >= int(PixelEncoding::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for PixelEncoding, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(PixelEncoding::_Begin) << ", " << static_cast<int>(PixelEncoding::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return PixelEncoding(v);
+}
+
 const wchar_t *_Camera::sm_featureNames[] =
 {
     L"AccumulateCount",
@@ -808,6 +875,40 @@ const wchar_t *_Camera::sm_binningNames[] =
     L"3x3",
     L"4x4",
     L"8x8"
+};
+
+const wchar_t *_Camera::sm_auxiliaryOutSourceNames[] =
+{
+    L"FireRow1",
+    L"FireRowN",
+    L"FireAll",
+    L"FireAny"
+};
+
+const wchar_t *_Camera::sm_cycleModeNames[] =
+{
+    L"Fixed",
+    L"Continuous"
+};
+
+const wchar_t *_Camera::sm_fanSpeedNames[] =
+{
+    L"Off",
+    L"On"
+};
+
+const wchar_t *_Camera::sm_pixelEncodingNames[] =
+{
+    L"Mono12",
+    L"Mono12Packed",
+    L"Mono16",
+    L"RGB8Packed",
+    L"Mono12Coded",
+    L"Mono12CodedPacked",
+    L"Mono22Parallel",
+    L"Mono22PackedParallel",
+    L"Mono8",
+    L"Mono32"
 };
 
 _Camera::_CallbackRegistrationToken::_CallbackRegistrationToken(_Camera& camera_, const Feature& feature_, const std::function<bool(Feature)>& callback_)

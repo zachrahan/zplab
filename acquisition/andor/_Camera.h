@@ -147,6 +147,48 @@ public:
         _End
     };
 
+    enum class AuxiliaryOutSource : int
+    {
+        _Begin = 0,
+        FireRow1 = _Begin,
+        FireRowN,
+        FireAll,
+        FireAny,
+        _End
+    };
+
+    enum class CycleMode : int
+    {
+        _Begin = 0,
+        Fixed = _Begin,
+        Continuous,
+        _End
+    };
+
+    enum class FanSpeed : int
+    {
+        _Begin = 0,
+        Off = _Begin,
+        On,
+        _End
+    };
+
+    enum class PixelEncoding : int
+    {
+        _Begin = 0,
+        Mono12 = _Begin,
+        Mono12Packed,
+        Mono16,
+        RGB8Packed,
+        Mono12Coded,
+        Mono12CodedPacked,
+        Mono22Parallel,
+        Mono22PackedParallel,
+        Mono8,
+        Mono32,
+        _End
+    };
+
     class _CallbackRegistrationToken
       : boost::noncopyable
     {
@@ -228,6 +270,17 @@ public:
     Binning binning() const;
     void binning(const Binning& binning_);
 
+    AuxiliaryOutSource auxiliaryOutSource() const;
+    void auxiliaryOutSource(const AuxiliaryOutSource& auxiliaryOutSource_);
+
+    CycleMode cycleMode() const;
+    void cycleMode(const CycleMode& cycleMode_);
+
+    FanSpeed fanSpeed() const;
+    void fanSpeed(const FanSpeed& fanSpeed_);
+
+    PixelEncoding pixelEncoding() const;
+
 protected:
     static const wchar_t *sm_featureNames[];
     static const wchar_t *sm_simplePreAmpNames[];
@@ -235,6 +288,10 @@ protected:
     static const wchar_t *sm_triggerModeNames[];
     static const wchar_t *sm_temperatureStatusNames[];
     static const wchar_t *sm_binningNames[];
+    static const wchar_t *sm_auxiliaryOutSourceNames[];
+    static const wchar_t *sm_cycleModeNames[];
+    static const wchar_t *sm_fanSpeedNames[];
+    static const wchar_t *sm_pixelEncodingNames[];
 
     // Device handle
     AT_H m_dh;

@@ -119,20 +119,30 @@ BOOST_PYTHON_MODULE(_andor)
             .def("AT_WaitBuffer", &_Camera::AT_WaitBuffer)
             .def("AT_Flush", &_Camera::AT_Flush)
             .add_property("temperatureStatus", &_Camera::temperatureStatus)
+            .add_property("pixelEncoding", &_Camera::pixelEncoding)
             // The following properties have getters and setters that share overloaded function names and must therefore
             // be described with fully qualified function pointers.
             .add_property("simplePreAmp",
                           (_Camera::SimplePreAmp (_Camera::*)() const) &_Camera::simplePreAmp,
-                          (void (_Camera::*)(const _Camera::SimplePreAmp&))&_Camera::simplePreAmp)
+                          (void (_Camera::*)(const _Camera::SimplePreAmp&)) &_Camera::simplePreAmp)
             .add_property("shutter",
                           (_Camera::Shutter (_Camera::*)() const) &_Camera::shutter,
-                          (void (_Camera::*)(const _Camera::Shutter&))&_Camera::shutter)
+                          (void (_Camera::*)(const _Camera::Shutter&)) &_Camera::shutter)
             .add_property("triggerMode",
                           (_Camera::TriggerMode (_Camera::*)() const) &_Camera::triggerMode,
-                          (void (_Camera::*)(const _Camera::TriggerMode&))&_Camera::triggerMode)
+                          (void (_Camera::*)(const _Camera::TriggerMode&)) &_Camera::triggerMode)
             .add_property("binning",
                           (_Camera::Binning (_Camera::*)() const) &_Camera::binning,
-                          (void (_Camera::*)(const _Camera::Binning&))&_Camera::binning);
+                          (void (_Camera::*)(const _Camera::Binning&)) &_Camera::binning)
+            .add_property("auxiliaryOutSource",
+                          (_Camera::AuxiliaryOutSource (_Camera::*)() const) &_Camera::auxiliaryOutSource,
+                          (void (_Camera::*)(const _Camera::AuxiliaryOutSource&)) &_Camera::auxiliaryOutSource)
+            .add_property("cycleMode",
+                          (_Camera::CycleMode (_Camera::*)() const) &_Camera::cycleMode,
+                          (void (_Camera::*)(const _Camera::CycleMode&)) &_Camera::cycleMode)
+            .add_property("fanSpeed",
+                          (_Camera::FanSpeed (_Camera::*)() const) &_Camera::fanSpeed,
+                          (void (_Camera::*)(const _Camera::FanSpeed&)) &_Camera::fanSpeed);
 
         class_<_Camera::_CallbackRegistrationToken, std::shared_ptr<_Camera::_CallbackRegistrationToken>, boost::noncopyable>("_CallbackRegistrationToken", no_init);
 
@@ -248,6 +258,32 @@ BOOST_PYTHON_MODULE(_andor)
             .value("Bin_3x3", _Camera::Binning::Bin_3x3)
             .value("Bin_4x4", _Camera::Binning::Bin_4x4)
             .value("Bin_8x8", _Camera::Binning::Bin_8x8);
+
+        enum_<_Camera::AuxiliaryOutSource>("AuxiliaryOutSource")
+            .value("FireRow1", _Camera::AuxiliaryOutSource::FireRow1)
+            .value("FireRowN", _Camera::AuxiliaryOutSource::FireRowN)
+            .value("FireAll", _Camera::AuxiliaryOutSource::FireAll)
+            .value("FireAny", _Camera::AuxiliaryOutSource::FireAny);
+
+        enum_<_Camera::CycleMode>("CycleMode")
+            .value("Fixed", _Camera::CycleMode::Fixed)
+            .value("Continuous", _Camera::CycleMode::Continuous);
+
+        enum_<_Camera::FanSpeed>("FanSpeed")
+            .value("Off", _Camera::FanSpeed::Off)
+            .value("On", _Camera::FanSpeed::On);
+
+        enum_<_Camera::PixelEncoding>("PixelEncoding")
+            .value("Mono12", _Camera::PixelEncoding::Mono12)
+            .value("Mono12Packed", _Camera::PixelEncoding::Mono12Packed)
+            .value("Mono16", _Camera::PixelEncoding::Mono16)
+            .value("RGB8Packed", _Camera::PixelEncoding::RGB8Packed)
+            .value("Mono12Coded", _Camera::PixelEncoding::Mono12Coded)
+            .value("Mono12CodedPacked", _Camera::PixelEncoding::Mono12CodedPacked)
+            .value("Mono22Parallel", _Camera::PixelEncoding::Mono22Parallel)
+            .value("Mono22PackedParallel", _Camera::PixelEncoding::Mono22PackedParallel)
+            .value("Mono8", _Camera::PixelEncoding::Mono8)
+            .value("Mono32", _Camera::PixelEncoding::Mono32);
     }
     catch(error_already_set const&)
     {
