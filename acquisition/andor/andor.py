@@ -27,16 +27,19 @@ class Camera(ThreadedDevice):
         '''This function makes Andor API calls that tend to run slowly and so can take a second or two to complete.'''
         return list(_Camera.getDeviceNames())
 
+    AuxiliaryOutSource = _Camera.AuxiliaryOutSource
+    Binning = _Camera.Binning
+    CycleMode = _Camera.CycleMode
+    FanSpeed = _Camera.FanSpeed
     Feature = _Camera.Feature
+    PixelEncoding = _Camera.PixelEncoding
     Shutter = _Camera.Shutter
     SimplePreAmp = _Camera.SimplePreAmp
     TemperatureStatus = _Camera.TemperatureStatus
     TriggerMode = _Camera.TriggerMode
-    Binning = _Camera.Binning
-    AuxiliaryOutSource = _Camera.AuxiliaryOutSource
-    CycleMode = _Camera.CycleMode
-    FanSpeed = _Camera.FanSpeed
-    PixelEncoding = _Camera.PixelEncoding
+
+    # Much of the following code could be auto-generated at run time and, in fact, initially was.  However, it was tricky understand
+    # and trickier still to debug.
 
     accumulateCountChanged = QtCore.pyqtSignal(int)
     aoiHeightChanged = QtCore.pyqtSignal(int)
@@ -44,23 +47,23 @@ class Camera(ThreadedDevice):
     aoiStrideChanged = QtCore.pyqtSignal(int)
     aoiTopChanged = QtCore.pyqtSignal(int)
     aoiWidthChanged = QtCore.pyqtSignal(int)
-    bytesPerPixelChanged = QtCore.pyqtSignal(float) # \/
+    auxiliaryOutSourceChanged = QtCore.pyqtSignal(_Camera.AuxiliaryOutSource)
+    binningChanged = QtCore.pyqtSignal(_Camera.Binning)
+    bytesPerPixelChanged = QtCore.pyqtSignal(float)
+    cycleModeChanged = QtCore.pyqtSignal(_Camera.CycleMode)
     exposureTimeChanged = QtCore.pyqtSignal(float)
+    fanSpeedChanged = QtCore.pyqtSignal(_Camera.FanSpeed)
     frameCountChanged = QtCore.pyqtSignal(int)
     frameRateChanged = QtCore.pyqtSignal(float)
     imageSizeBytesChanged = QtCore.pyqtSignal(int)
+    pixelEncodingChanged = QtCore.pyqtSignal(_Camera.PixelEncoding)
     readoutTimeChanged = QtCore.pyqtSignal(float)
     sensorCoolingChanged = QtCore.pyqtSignal(bool)
+    shutterChanged = QtCore.pyqtSignal(_Camera.Shutter)
+    simplePreAmpChanged = QtCore.pyqtSignal(_Camera.SimplePreAmp)
     spuriousNoiseFilterChanged = QtCore.pyqtSignal(bool)
     timestampClockFrequencyChanged = QtCore.pyqtSignal(int)
-    simplePreAmpChanged = QtCore.pyqtSignal(_Camera.SimplePreAmp) # /\
-    shutterChanged = QtCore.pyqtSignal(_Camera.Shutter)
     triggerModeChanged = QtCore.pyqtSignal(_Camera.TriggerMode)
-    binningChanged = QtCore.pyqtSignal(_Camera.Binning)
-    auxiliaryOutSourceChanged = QtCore.pyqtSignal(_Camera.AuxiliaryOutSource)
-    cycleModeChanged = QtCore.pyqtSignal(_Camera.CycleMode)
-    fanSpeedChanged = QtCore.pyqtSignal(_Camera.FanSpeed)
-    pixelEncodingChanged = QtCore.pyqtSignal(_Camera.PixelEncoding)
 
     def __init__(self, parent=None, deviceName='Andor Zyla 5.5', andorDeviceIndex=0):
         super().__init__(_CameraWorker(self), parent, deviceName)
@@ -88,24 +91,40 @@ class Camera(ThreadedDevice):
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.AOITop, self._aoiTopCb))
             self._aoiWidth = self._camera.AT_GetInt(_Camera.Feature.AOIWidth)
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.AOIWidth, self._aoiWidthCb))
-            self._bytesPerPixel = self._camera.AT_GetFloat(_Camera.Feature.BytesPerPixel)
-            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.BytesPerPixel, self._bytesPerPixelCb))
-            self._simplePreAmp = self._camera.simplePreAmp
-            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.SimplePreAmpGainControl, self._simplePreAmpCb))
-            self._shutter = self._camera.shutter
-            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.ElectronicShutteringMode, self._shutterCb))
-            self._triggerMode = self._camera.triggerMode
-            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.TriggerMode, self._triggerModeCb))
-            self._binning = self._camera.binning
-            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.AOIBinning, self._binningCb))
             self._auxiliaryOutSource = self._camera.auxiliaryOutSource
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.AuxiliaryOutSource, self._auxiliaryOutSourceCb))
+            self._binning = self._camera.binning
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.AOIBinning, self._binningCb))
+            self._bytesPerPixel = self._camera.AT_GetFloat(_Camera.Feature.BytesPerPixel)
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.BytesPerPixel, self._bytesPerPixelCb))
             self._cycleMode = self._camera.cycleMode
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.CycleMode, self._cycleModeCb))
+            self._exposureTime = self._camera.AT_GetFloat(_Camera.Feature.ExposureTime)
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.ExposureTime, self._exposureTimeCb))
             self._fanSpeed = self._camera.fanSpeed
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.FanSpeed, self._fanSpeedCb))
+            self._frameCount = self._camera.AT_GetInt(_Camera.Feature.FrameCount)
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.FrameCount, self._frameCountCb))
+            self._frameRate = self._camera.AT_GetFloat(_Camera.Feature.FrameRate)
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.FrameRate, self._frameRateCb))
+            self._imageSizeBytes = self._camera.AT_GetInt(_Camera.Feature.ImageSizeBytes)
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.ImageSizeBytes, self._imageSizeBytesCb))
             self._pixelEncoding = self._camera.pixelEncoding
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.PixelEncoding, self._pixelEncodingCb))
+            self._readoutTime = self._camera.AT_GetFloat(_Camera.Feature.ReadoutTime)
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.ReadoutTime, self._readoutTimeCb))
+            self._sensorCooling = self._camera.AT_GetBool(_Camera.Feature.SensorCooling)
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.SensorCooling, self._sensorCoolingCb))
+            self._shutter = self._camera.shutter
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.ElectronicShutteringMode, self._shutterCb))
+            self._simplePreAmp = self._camera.simplePreAmp
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.SimplePreAmpGainControl, self._simplePreAmpCb))
+            self._spuriousNoiseFilter = self._camera.AT_GetBool(_Camera.Feature.SpuriousNoiseFilter)
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.SpuriousNoiseFilter, self._spuriousNoiseFilterCb))
+            self._timestampClockFrequency = self._camera.AT_GetInt(_Camera.Feature.TimestampClockFrequency)
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.TimestampClockFrequency, self._timestampClockFrequencyCb))
+            self._triggerMode = self._camera.triggerMode
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.TriggerMode, self._triggerModeCb))
 
     def _destroyedSlot(self):
         with self._cmdLock:
@@ -149,6 +168,7 @@ class Camera(ThreadedDevice):
 
 
     @QtCore.pyqtProperty(int)
+    def timestampClock(self):
         '''As with sensorTemperature, this property's value is not cached and each read causes the current value to be
         retrieved from the camera.'''
         with self._cmdLock:
@@ -251,63 +271,20 @@ class Camera(ThreadedDevice):
             self.aoiWidthChanged.emit(self._aoiWidth)
 
 
-    @QtCore.pyqtProperty(float)
-    def bytesPerPixel(self):
+    @QtCore.pyqtProperty(_Camera.AuxiliaryOutSource, notify=auxiliaryOutSourceChanged)
+    def auxiliaryOutSource(self):
         with self._propLock:
-            return self._bytesPerPixel
+            return self._auxiliaryOutSource
 
-    def _bytesPerPixelCb(self, feature):
-        with self._propLock, self._cmdLock:
-            self._bytesPerPixel = self._camera.AT_GetFloat(_Camera.Feature.BytesPerPixel)
-            self.bytesPerPixelChanged.emit(self._bytesPerPixel)
-
-
-    @QtCore.pyqtProperty(_Camera.SimplePreAmp, notify=simplePreAmpChanged)
-    def simplePreAmp(self):
-        with self._propLock:
-            return self._simplePreAmp
-
-    @simplePreAmp.setter
-    def simplePreAmp(self, simplePreAmp):
+    @auxiliaryOutSource.setter
+    def auxiliaryOutSource(self, auxiliaryOutSource):
         with self._cmdLock:
-            self._camera.simplePreAmp = simplePreAmp
+            self._camera.auxiliaryOutSource = auxiliaryOutSource
 
-    def _simplePreAmpCb(self, feature):
+    def _auxiliaryOutSourceCb(self, feature):
         with self._propLock, self._cmdLock:
-            self._simplePreAmp = self._camera.simplePreAmp
-            self.simplePreAmpChanged.emit(self._simplePreAmp)
-
-
-    @QtCore.pyqtProperty(_Camera.Shutter, notify=shutterChanged)
-    def shutter(self):
-        with self._propLock:
-            return self._shutter
-
-    @shutter.setter
-    def shutter(self, shutter):
-        with self._cmdLock:
-            self._camera.shutter = shutter
-
-    def _shutterCb(self, feature):
-        with self._propLock, self._cmdLock:
-            self._shutter = self._camera.shutter
-            self.shutterChanged.emit(self._shutter)
-
-
-    @QtCore.pyqtProperty(_Camera.TriggerMode, notify=triggerModeChanged)
-    def triggerMode(self):
-        with self._propLock:
-            return self._triggerMode
-
-    @triggerMode.setter
-    def triggerMode(self, triggerMode):
-        with self._cmdLock:
-            self._camera.triggerMode = triggerMode
-
-    def _triggerModeCb(self, feature):
-        with self._propLock, self._cmdLock:
-            self._triggerMode = self._camera.triggerMode
-            self.triggerModeChanged.emit(self._triggerMode)
+            self._auxiliaryOutSource = self._camera.auxiliaryOutSource
+            self.auxiliaryOutSourceChanged.emit(self._auxiliaryOutSource)
 
 
     @QtCore.pyqtProperty(_Camera.Binning, notify=binningChanged)
@@ -326,20 +303,15 @@ class Camera(ThreadedDevice):
             self.binningChanged.emit(self._binning)
 
 
-    @QtCore.pyqtProperty(_Camera.AuxiliaryOutSource, notify=auxiliaryOutSourceChanged)
-    def auxiliaryOutSource(self):
+    @QtCore.pyqtProperty(float)
+    def bytesPerPixel(self):
         with self._propLock:
-            return self._auxiliaryOutSource
+            return self._bytesPerPixel
 
-    @auxiliaryOutSource.setter
-    def auxiliaryOutSource(self, auxiliaryOutSource):
-        with self._cmdLock:
-            self._camera.auxiliaryOutSource = auxiliaryOutSource
-
-    def _auxiliaryOutSourceCb(self, feature):
+    def _bytesPerPixelCb(self, feature):
         with self._propLock, self._cmdLock:
-            self._auxiliaryOutSource = self._camera.auxiliaryOutSource
-            self.auxiliaryOutSourceChanged.emit(self._auxiliaryOutSource)
+            self._bytesPerPixel = self._camera.AT_GetFloat(_Camera.Feature.BytesPerPixel)
+            self.bytesPerPixelChanged.emit(self._bytesPerPixel)
 
 
     @QtCore.pyqtProperty(_Camera.CycleMode, notify=cycleModeChanged)
@@ -358,6 +330,22 @@ class Camera(ThreadedDevice):
             self.cycleModeChanged.emit(self._cycleMode)
 
 
+    @QtCore.pyqtProperty(float)
+    def exposureTime(self):
+        with self._propLock:
+            return self._exposureTime
+
+    @exposureTime.setter
+    def exposureTime(self, exposureTime):
+        with self._cmdLock:
+            self._camera.AT_SetFloat(_Camera.Feature.ExposureTime, exposureTime)
+
+    def _exposureTimeCb(self, feature):
+        with self._propLock, self._cmdLock:
+            self._exposureTime = self._camera.AT_GetFloat(_Camera.Feature.ExposureTime)
+            self.exposureTimeChanged.emit(self._exposureTime)
+
+
     @QtCore.pyqtProperty(_Camera.FanSpeed, notify=fanSpeedChanged)
     def fanSpeed(self):
         with self._propLock:
@@ -374,6 +362,54 @@ class Camera(ThreadedDevice):
             self.fanSpeedChanged.emit(self._fanSpeed)
 
 
+    @QtCore.pyqtProperty(int)
+    def frameCount(self):
+        with self._propLock:
+            return self._frameCount
+
+    @frameCount.setter
+    def frameCount(self, frameCount):
+        with self._cmdLock:
+            self._camera.AT_SetInt(_Camera.Feature.FrameCount, frameCount)
+
+    def _frameCountCb(self, feature):
+        with self._propLock, self._cmdLock:
+            self._frameCount = self._camera.AT_GetInt(_Camera.Feature.FrameCount)
+            self.frameCountChanged.emit(self._frameCount)
+
+
+    @QtCore.pyqtProperty(float)
+    def frameRate(self):
+        with self._propLock:
+            return self._frameRate
+
+    @frameRate.setter
+    def frameRate(self, frameRate):
+        with self._cmdLock:
+            self._camera.AT_SetFloat(_Camera.Feature.FrameRate, frameRate)
+
+    def _frameRateCb(self, feature):
+        with self._propLock, self._cmdLock:
+            self._frameRate = self._camera.AT_GetFloat(_Camera.Feature.FrameRate)
+            self.frameRateChanged.emit(self._frameRate)
+
+
+    @QtCore.pyqtProperty(int)
+    def imageSizeBytes(self):
+        with self._propLock:
+            return self._imageSizeBytes
+
+    @imageSizeBytes.setter
+    def imageSizeBytes(self, imageSizeBytes):
+        with self._cmdLock:
+            self._camera.AT_SetInt(_Camera.Feature.ImageSizeBytes, imageSizeBytes)
+
+    def _imageSizeBytesCb(self, feature):
+        with self._propLock, self._cmdLock:
+            self._imageSizeBytes = self._camera.AT_GetInt(_Camera.Feature.ImageSizeBytes)
+            self.imageSizeBytesChanged.emit(self._imageSizeBytes)
+
+
     @QtCore.pyqtProperty(_Camera.PixelEncoding, notify=pixelEncodingChanged)
     def pixelEncoding(self):
         '''Note that PixelEncoding is not set directly; it depends upon the current value of SimplePreAmp.'''
@@ -386,24 +422,121 @@ class Camera(ThreadedDevice):
             self.pixelEncodingChanged.emit(self._pixelEncoding)
 
 
-#   def getPixelEncoding(self):
-#       enumIndex = self._camera.AT_GetEnumIndex(self.Feature.PixelEncoding)
-#       return self._camera.AT_GetEnumStringByIndex(self.Feature.PixelEncoding, enumIndex)
-#
-#   def getEnumStrings(self, feature):
-#       return [self._camera.AT_GetEnumStringByIndex(feature, i) for i in range(self._camera.AT_GetEnumCount(feature))]
-#
-#   def getEnumString(self, feature):
-#       return self._camera.AT_GetEnumStringByIndex(feature, self._camera.AT_GetEnumIndex(feature))
-#
-#   def setExposureTime(self, exposureTime):
-#       '''Note that if exposureTime is less than the Camera's minimum exposure time as reported by the SDK,
-#       then the minimum legal value is used.  Returns actual exposure time reported by SDK we set exposure time.'''
-#       minExposureTime = self._camera.AT_GetFloatMin(self.Feature.ExposureTime)
-#       if exposureTime < minExposureTime:
-#           exposureTime = minExposureTime
-#       self._camera.AT_SetFloat(self.Feature.ExposureTime, exposureTime)
-#       return self._camera.AT_GetFloat(self.Feature.ExposureTime)
+
+    @QtCore.pyqtProperty(float)
+    def readoutTime(self):
+        with self._propLock:
+            return self._readoutTime
+
+    @readoutTime.setter
+    def readoutTime(self, readoutTime):
+        with self._cmdLock:
+            self._camera.AT_SetFloat(_Camera.Feature.ReadoutTime, readoutTime)
+
+    def _readoutTimeCb(self, feature):
+        with self._propLock, self._cmdLock:
+            self._readoutTime = self._camera.AT_GetFloat(_Camera.Feature.ReadoutTime)
+            self.readoutTimeChanged.emit(self._readoutTime)
+
+
+    @QtCore.pyqtProperty(bool)
+    def sensorCooling(self):
+        with self._propLock:
+            return self._sensorCooling
+
+    @sensorCooling.setter
+    def sensorCooling(self, sensorCooling):
+        with self._cmdLock:
+            self._camera.AT_SetBool(_Camera.Feature.SensorCooling, sensorCooling)
+
+    def _sensorCoolingCb(self, feature):
+        with self._propLock, self._cmdLock:
+            self._sensorCooling = self._camera.AT_GetBool(_Camera.Feature.SensorCooling)
+            self.sensorCoolingChanged.emit(self._sensorCooling)
+
+
+    @QtCore.pyqtProperty(_Camera.Shutter, notify=shutterChanged)
+    def shutter(self):
+        with self._propLock:
+            return self._shutter
+
+    @shutter.setter
+    def shutter(self, shutter):
+        with self._cmdLock:
+            self._camera.shutter = shutter
+
+    def _shutterCb(self, feature):
+        with self._propLock, self._cmdLock:
+            self._shutter = self._camera.shutter
+            self.shutterChanged.emit(self._shutter)
+
+
+    @QtCore.pyqtProperty(_Camera.SimplePreAmp, notify=simplePreAmpChanged)
+    def simplePreAmp(self):
+        with self._propLock:
+            return self._simplePreAmp
+
+    @simplePreAmp.setter
+    def simplePreAmp(self, simplePreAmp):
+        with self._cmdLock:
+            self._camera.simplePreAmp = simplePreAmp
+
+    def _simplePreAmpCb(self, feature):
+        with self._propLock, self._cmdLock:
+            self._simplePreAmp = self._camera.simplePreAmp
+            self.simplePreAmpChanged.emit(self._simplePreAmp)
+
+
+    @QtCore.pyqtProperty(bool)
+    def spuriousNoiseFilter(self):
+        with self._propLock:
+            return self._spuriousNoiseFilter
+
+    @spuriousNoiseFilter.setter
+    def spuriousNoiseFilter(self, spuriousNoiseFilter):
+        with self._cmdLock:
+            self._camera.AT_SetBool(_Camera.Feature.SpuriousNoiseFilter, spuriousNoiseFilter)
+
+    def _spuriousNoiseFilterCb(self, feature):
+        with self._propLock, self._cmdLock:
+            self._spuriousNoiseFilter = self._camera.AT_GetBool(_Camera.Feature.SpuriousNoiseFilter)
+            self.spuriousNoiseFilterChanged.emit(self._spuriousNoiseFilter)
+
+
+    @QtCore.pyqtProperty(int)
+    def timestampClockFrequency(self):
+        with self._propLock:
+            return self._timestampClockFrequency
+
+    @imageSizeBytes.setter
+    def timestampClockFrequency(self, timestampClockFrequency):
+        with self._cmdLock:
+            self._camera.AT_SetInt(_Camera.Feature.TimestampClockFrequency, timestampClockFrequency)
+
+    def _timestampClockFrequencyCb(self, feature):
+        with self._propLock, self._cmdLock:
+            self._timestampClockFrequency = self._camera.AT_GetInt(_Camera.Feature.TimestampClockFrequency)
+            self.timestampClockFrequencyChanged.emit(self._timestampClockFrequency)
+
+
+    @QtCore.pyqtProperty(_Camera.TriggerMode, notify=triggerModeChanged)
+    def triggerMode(self):
+        with self._propLock:
+            return self._triggerMode
+
+    @triggerMode.setter
+    def triggerMode(self, triggerMode):
+        with self._cmdLock:
+            self._camera.triggerMode = triggerMode
+
+    def _triggerModeCb(self, feature):
+        with self._propLock, self._cmdLock:
+            self._triggerMode = self._camera.triggerMode
+            self.triggerModeChanged.emit(self._triggerMode)
+
+
+    def getEnumStrings(self, feature):
+        return [self._camera.AT_GetEnumStringByIndex(feature, i) for i in range(self._camera.AT_GetEnumCount(feature))]
 
     def makeAcquisitionBuffer(self):
         aoiStride = self._camera.AT_GetInt(self.Feature.AOIStride)
@@ -434,57 +567,6 @@ class Camera(ThreadedDevice):
             raise AndorException('Acquired image buffer has different address than queued image buffer.')
 
         return imageBuffer[:self._camera.AT_GetInt(self.Feature.AOIHeight), :self._camera.AT_GetInt(self.Feature.AOIWidth)]
-
-#   @property
-#   def model(self):
-#       return self._camera.AT_GetString(self.Feature.CameraModel)
-#
-#   @property
-#   def acquiring(self):
-#       return self._camera.AT_GetBool(self.Feature.CameraAcquiring)
-#
-#
-#   @property
-#   def exposureTime(self):
-#       return self._camera.AT_GetFloat(self.Feature.ExposureTime)
-#
-#   @exposureTime.setter
-#   def exposureTime(self, exposureTime):
-#       self.setExposureTime(exposureTime)
-#
-#   @property
-#   def minExposureTime(self):
-#       return self._camera.AT_GetFloatMin(self.Feature.ExposureTime)
-#
-#   @property
-#   def maxExposureTime(self):
-#       return self._camera.AT_GetFloatMax(self.Feature.ExposureTime)
-#
-#
-#   @property
-#   def overlap(self):
-#       return self._camera.AT_GetBool(self.Feature.Overlap)
-#
-#   @overlap.setter
-#   def overlap(self, overlap):
-#       self._camera.AT_SetBool(self.Feature.Overlap, overlap)
-#
-#
-#   @property
-#   def frameRate(self):
-#       return self._camera.AT_GetFloat(self.Feature.FrameRate)
-#
-#   @frameRate.setter
-#   def frameRate(self, frameRate):
-#       self._camera.AT_SetFloat(self.Feature.FrameRate, frameRate)
-#
-#   @property
-#   def minFrameRate(self):
-#       return self._camera.AT_GetFloatMin(self.Feature.FrameRate)
-#
-#   @property
-#   def maxFrameRate(self):
-#       return self._camera.AT_GetFloatMax(self.Feature.FrameRate)
 
 class _CameraWorker(ThreadedDeviceWorker):
     def __init__(self, device):
