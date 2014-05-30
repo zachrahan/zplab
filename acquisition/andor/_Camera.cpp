@@ -5,6 +5,12 @@
 #include "_Camera.h"
 #include "_GilScopedRelease.h"
 
+void _Camera::staticInit()
+{
+    py::object weakRefPackage{py::import("weakref")};
+    sm_WeakMethod.reset(new py::object(weakRefPackage.attr("WeakMethod")));
+}
+
 std::shared_ptr<std::vector<std::string>> _Camera::getDeviceNames()
 {
     AT_64 deviceCount;
@@ -177,11 +183,13 @@ std::shared_ptr<_Camera::_CallbackRegistrationToken> _Camera::AT_RegisterFeature
 
 static bool AT_RegisterFeatureCallbackPyWrapperHelper(py::object& pyCallback, _Camera::Feature feature)
 {
-    return py::extract<bool>(pyCallback(feature));
+    return py::extract<bool>(pyCallback()(feature));
 }
 
 std::shared_ptr<_Camera::_CallbackRegistrationToken> _Camera::AT_RegisterFeatureCallbackPyWrapper(const Feature& feature, py::object pyCallback)
 {
+    // Equivalent to the Python code pyCallback = weakref.WeakMethod(pyCallback)
+    pyCallback = (*sm_WeakMethod)(pyCallback);
     // The following should work, but does not compile on g++ 4.8.2-r1.
 //  AT_RegisterFeatureCallback(feature, [=](Feature feature)mutable{return py::extract<bool>(pyCallback(feature));});
     // So we use a static wrapper function for executing the py::extract portion (the part that causes compilation
@@ -751,6 +759,8 @@ _Camera::PixelEncoding _Camera::pixelEncoding() const
     }
     return PixelEncoding(v);
 }
+
+std::unique_ptr<py::object> _Camera::sm_WeakMethod;
 
 const wchar_t *_Camera::sm_featureNames[] =
 {

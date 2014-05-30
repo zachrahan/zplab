@@ -54,9 +54,8 @@ class ThreadedDevice(Device):
         self.deviceNameChanged.connect(self._worker.deviceNameChangedSlot, QtCore.Qt.QueuedConnection)
         self._thread.start()
         self._worker.moveToThread(self._thread)
-        self.destroyed.connect(self._destroyedSlot)
 
-    def _destroyedSlot(self):
+    def __del__(self):
         self._thread.quit()
         self._thread.wait()
 
@@ -70,38 +69,3 @@ class ThreadedDeviceWorker(QtCore.QObject):
     def deviceNameChangedSlot(self, deviceName):
         self.setObjectName(deviceName + ' - DEVICE THREAD WORKER')
         self.device._thread.setObjectName(deviceName + ' - DEVICE THREAD')
-
-#class OmniSyncPyQtSig(QtCore.QObject):
-#    '''As in, "omni-scynchronous".'''
-#    class _ArgsHolder:
-#        def __init__(self, *args, **kwargs):
-#            self._args = args
-#            self._kwargs = kwargs
-#
-#    class _RetHolder:
-#        def __init__(self, exception):
-#            self._exception = exception
-#            self._ret = None
-#
-#    class _BothHolder:
-#        def __init__(self, argsHolder):
-#            self._argsHolder = argsHolder
-#            self._retHolder = None
-#
-#    _asyncSignal = QtCore.pyqtSignal(_ArgsHolder)
-#    _asyncCompletionSignal = QtCore.pyqtSignal(_RetHolder)
-#    _syncSignal = QtCore.pyqtSignal(_BothHolder)
-#
-#    def __init__(self, device, handler):
-#        self._device = device
-#        self._handler = handler
-#
-#    def __call__(self, *args, **kwargs):
-#        bothHolder = self._BothHolder(self._ArgsHolder(*args, **kwargs))
-#        if self._device.block:
-#            self._syncSignal.emit(bothHolder)
-#            if bothHandler._retHolder._exception is not None:
-#                raise bothHandler._retHolder._exception
-#            return bothHandler._retHolder._ret
-#        else:
-#            self._asyncSignal.emit()

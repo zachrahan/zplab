@@ -6,7 +6,7 @@ import threading
 from PyQt5 import QtCore
 from acquisition.andor.andor_exception import AndorException
 from acquisition.andor._andor import _Camera
-from acquisition.device import DeviceException, ThreadedDevice, ThreadedDeviceWorker
+from acquisition.device import Device, DeviceException, ThreadedDevice, ThreadedDeviceWorker
 
 class Camera(ThreadedDevice):
     '''This class provides a Device wrapper around _Camera, which is a boost::python based C++ module that provides
@@ -56,6 +56,10 @@ class Camera(ThreadedDevice):
     frameCountChanged = QtCore.pyqtSignal(int)
     frameRateChanged = QtCore.pyqtSignal(float)
     imageSizeBytesChanged = QtCore.pyqtSignal(int)
+    maxInterfaceTransferRateChanged = QtCore.pyqtSignal(float)
+    metadataEnabledChanged = QtCore.pyqtSignal(bool)
+    metadataTimestampEnabledChanged = QtCore.pyqtSignal(bool)
+    overlapChanged = QtCore.pyqtSignal(bool)
     pixelEncodingChanged = QtCore.pyqtSignal(_Camera.PixelEncoding)
     readoutTimeChanged = QtCore.pyqtSignal(float)
     sensorCoolingChanged = QtCore.pyqtSignal(bool)
@@ -109,6 +113,14 @@ class Camera(ThreadedDevice):
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.FrameRate, self._frameRateCb))
             self._imageSizeBytes = self._camera.AT_GetInt(_Camera.Feature.ImageSizeBytes)
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.ImageSizeBytes, self._imageSizeBytesCb))
+            self._maxInterfaceTransferRate = self._camera.AT_GetFloat(_Camera.Feature.MaxInterfaceTransferRate)
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.MaxInterfaceTransferRate, self._maxInterfaceTransferRateCb))
+            self._metadataEnabled = self._camera.AT_GetBool(_Camera.Feature.MetadataEnable)
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.MetadataEnable, self._metadataEnabledCb))
+            self._metadataTimestampEnabled = self._camera.AT_GetBool(_Camera.Feature.MetadataTimestamp)
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.MetadataTimestamp, self._metadataTimestampEnabledCb))
+            self._overlap = self._camera.AT_GetBool(_Camera.Feature.Overlap)
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.Overlap, self._overlapCb))
             self._pixelEncoding = self._camera.pixelEncoding
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.PixelEncoding, self._pixelEncodingCb))
             self._readoutTime = self._camera.AT_GetFloat(_Camera.Feature.ReadoutTime)
@@ -126,17 +138,18 @@ class Camera(ThreadedDevice):
             self._triggerMode = self._camera.triggerMode
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.TriggerMode, self._triggerModeCb))
 
-    def _destroyedSlot(self):
+    def __del__(self):
         with self._cmdLock:
             for crt in self._callbackTokens:
                 self._camera.AT_UnregisterFeatureCallback(crt)
+            self._callbackTokens = []
             try:
                 # Attempt to stop acquisition in case device thread is blocking on AT_WaitBuffer(..) that would never
                 # otherwise complete
                 self._camera.AT_Command(self.Feature.AcquisitionStop)
             except AndorException as e:
                 pass
-        super()._destroyedSlot()
+        ThreadedDevice.__del__(self)
 
 
     @QtCore.pyqtProperty(str)
@@ -175,7 +188,7 @@ class Camera(ThreadedDevice):
             return self._camera.AT_GetInt(_Camera.Feature.TimestampClock)
 
 
-    @QtCore.pyqtProperty(int)
+    @QtCore.pyqtProperty(int, notify=accumulateCountChanged)
     def accumulateCount(self):
         with self._propLock:
             return self._accumulateCount
@@ -189,9 +202,10 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._accumulateCount = self._camera.AT_GetInt(_Camera.Feature.AccumulateCount)
             self.accumulateCountChanged.emit(self._accumulateCount)
+        return True
 
 
-    @QtCore.pyqtProperty(int)
+    @QtCore.pyqtProperty(int, notify=aoiHeightChanged)
     def aoiHeight(self):
         with self._propLock:
             return self._aoiHeight
@@ -205,9 +219,10 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._aoiHeight = self._camera.AT_GetInt(_Camera.Feature.AOIHeight)
             self.aoiHeightChanged.emit(self._aoiHeight)
+        return True
 
 
-    @QtCore.pyqtProperty(int)
+    @QtCore.pyqtProperty(int, notify=aoiLeftChanged)
     def aoiLeft(self):
         with self._propLock:
             return self._aoiLeft
@@ -221,9 +236,10 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._aoiLeft = self._camera.AT_GetInt(_Camera.Feature.AOILeft)
             self.aoiLeftChanged.emit(self._aoiLeft)
+        return True
 
 
-    @QtCore.pyqtProperty(int)
+    @QtCore.pyqtProperty(int, notify=aoiStrideChanged)
     def aoiStride(self):
         with self._propLock:
             return self._aoiStride
@@ -237,9 +253,10 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._aoiStride = self._camera.AT_GetInt(_Camera.Feature.AOIStride)
             self.aoiStrideChanged.emit(self._aoiStride)
+        return True
 
 
-    @QtCore.pyqtProperty(int)
+    @QtCore.pyqtProperty(int, notify=aoiTopChanged)
     def aoiTop(self):
         with self._propLock:
             return self._aoiTop
@@ -253,9 +270,10 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._aoiTop = self._camera.AT_GetInt(_Camera.Feature.AOITop)
             self.aoiTopChanged.emit(self._aoiTop)
+        return True
 
 
-    @QtCore.pyqtProperty(int)
+    @QtCore.pyqtProperty(int, notify=aoiWidthChanged)
     def aoiWidth(self):
         with self._propLock:
             return self._aoiWidth
@@ -269,6 +287,7 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._aoiWidth = self._camera.AT_GetInt(_Camera.Feature.AOIWidth)
             self.aoiWidthChanged.emit(self._aoiWidth)
+        return True
 
 
     @QtCore.pyqtProperty(_Camera.AuxiliaryOutSource, notify=auxiliaryOutSourceChanged)
@@ -285,6 +304,7 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._auxiliaryOutSource = self._camera.auxiliaryOutSource
             self.auxiliaryOutSourceChanged.emit(self._auxiliaryOutSource)
+        return True
 
 
     @QtCore.pyqtProperty(_Camera.Binning, notify=binningChanged)
@@ -301,9 +321,10 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._binning = self._camera.binning
             self.binningChanged.emit(self._binning)
+        return True
 
 
-    @QtCore.pyqtProperty(float)
+    @QtCore.pyqtProperty(float, notify=bytesPerPixelChanged)
     def bytesPerPixel(self):
         with self._propLock:
             return self._bytesPerPixel
@@ -312,6 +333,7 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._bytesPerPixel = self._camera.AT_GetFloat(_Camera.Feature.BytesPerPixel)
             self.bytesPerPixelChanged.emit(self._bytesPerPixel)
+        return True
 
 
     @QtCore.pyqtProperty(_Camera.CycleMode, notify=cycleModeChanged)
@@ -328,9 +350,10 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._cycleMode = self._camera.cycleMode
             self.cycleModeChanged.emit(self._cycleMode)
+        return True
 
 
-    @QtCore.pyqtProperty(float)
+    @QtCore.pyqtProperty(float, notify=exposureTimeChanged)
     def exposureTime(self):
         with self._propLock:
             return self._exposureTime
@@ -344,6 +367,7 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._exposureTime = self._camera.AT_GetFloat(_Camera.Feature.ExposureTime)
             self.exposureTimeChanged.emit(self._exposureTime)
+        return True
 
 
     @QtCore.pyqtProperty(_Camera.FanSpeed, notify=fanSpeedChanged)
@@ -360,9 +384,10 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._fanSpeed = self._camera.fanSpeed
             self.fanSpeedChanged.emit(self._fanSpeed)
+        return True
 
 
-    @QtCore.pyqtProperty(int)
+    @QtCore.pyqtProperty(int, notify=frameCountChanged)
     def frameCount(self):
         with self._propLock:
             return self._frameCount
@@ -376,9 +401,10 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._frameCount = self._camera.AT_GetInt(_Camera.Feature.FrameCount)
             self.frameCountChanged.emit(self._frameCount)
+        return True
 
 
-    @QtCore.pyqtProperty(float)
+    @QtCore.pyqtProperty(float, notify=frameRateChanged)
     def frameRate(self):
         with self._propLock:
             return self._frameRate
@@ -392,9 +418,10 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._frameRate = self._camera.AT_GetFloat(_Camera.Feature.FrameRate)
             self.frameRateChanged.emit(self._frameRate)
+        return True
 
 
-    @QtCore.pyqtProperty(int)
+    @QtCore.pyqtProperty(int, notify=imageSizeBytesChanged)
     def imageSizeBytes(self):
         with self._propLock:
             return self._imageSizeBytes
@@ -408,6 +435,70 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._imageSizeBytes = self._camera.AT_GetInt(_Camera.Feature.ImageSizeBytes)
             self.imageSizeBytesChanged.emit(self._imageSizeBytes)
+        return True
+
+
+    @QtCore.pyqtProperty(float, notify=maxInterfaceTransferRateChanged)
+    def maxInterfaceTransferRate(self):
+        with self._propLock:
+            return self._maxInterfaceTransferRate
+
+    def _maxInterfaceTransferRateCb(self, feature):
+        with self._propLock, self._cmdLock:
+            self._maxInterfaceTransferRate = self._camera.AT_GetFloat(_Camera.Feature.MaxInterfaceTransferRate)
+            self.maxInterfaceTransferRateChanged.emit(self._maxInterfaceTransferRate)
+        return True
+
+
+    @QtCore.pyqtProperty(bool, notify=metadataEnabledChanged)
+    def metadataEnabled(self):
+        with self._propLock:
+            return self._metadataEnabled
+
+    @metadataEnabled.setter
+    def metadataEnabled(self, metadataEnabled):
+        with self._cmdLock:
+            self._camera.AT_SetBool(_Camera.Feature.MetadataEnable, metadataEnabled)
+
+    def _metadataEnabledCb(self, feature):
+        with self._propLock, self.cmdLock:
+            self._metadataEnabled = self._camera.AT_GetBool(_Camera.Feature.MetadataEnable)
+            self.metadataEnabledChanged.emit(self._metadataEnabled)
+        return True
+
+
+    @QtCore.pyqtProperty(bool, notify=metadataTimestampEnabledChanged)
+    def metadataTimestampEnabled(self):
+        with self._propLock:
+            return self._metadataTimestampEnabled
+
+    @metadataTimestampEnabled.setter
+    def metadataTimestampEnabled(self, metadataTimestampEnabled):
+        with self._cmdLock:
+            self._camera.AT_SetBool(_Camera.Feature.MetadataTimestamp, metadataTimestampEnabled)
+
+    def _metadataTimestampEnabledCb(self, Feature):
+        with self._propLock, self._cmdLock:
+            self._metadataTimestampEnabled = self._camera.AT_GetBool(_Camera.Feature.MetadataTimestamp)
+            self.metadataTimestampEnabledChanged.emit(self._metadataTimestampEnabled)
+        return True
+
+
+    @QtCore.pyqtProperty(bool, notify=overlapChanged)
+    def overlap(self):
+        with self._propLock:
+            return self._overlap
+
+    @overlap.setter
+    def overlap(self, overlap):
+        with self._cmdLock:
+            self._camera.AT_SetBool(_Camera.Feature.Overlap, overlap)
+
+    def _overlapCb(self, feature):
+        with self._propLock, self._cmdLock:
+            self._overlap = self._camera.AT_GetBool(_Camera.Feature.Overlap)
+            self.overlapChanged.emit(self._overlap)
+        return True
 
 
     @QtCore.pyqtProperty(_Camera.PixelEncoding, notify=pixelEncodingChanged)
@@ -420,10 +511,10 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._pixelEncoding = self._camera.pixelEncoding
             self.pixelEncodingChanged.emit(self._pixelEncoding)
+        return True
 
 
-
-    @QtCore.pyqtProperty(float)
+    @QtCore.pyqtProperty(float, notify=readoutTimeChanged)
     def readoutTime(self):
         with self._propLock:
             return self._readoutTime
@@ -437,9 +528,10 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._readoutTime = self._camera.AT_GetFloat(_Camera.Feature.ReadoutTime)
             self.readoutTimeChanged.emit(self._readoutTime)
+        return True
 
 
-    @QtCore.pyqtProperty(bool)
+    @QtCore.pyqtProperty(bool, notify=sensorCoolingChanged)
     def sensorCooling(self):
         with self._propLock:
             return self._sensorCooling
@@ -453,6 +545,7 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._sensorCooling = self._camera.AT_GetBool(_Camera.Feature.SensorCooling)
             self.sensorCoolingChanged.emit(self._sensorCooling)
+        return True
 
 
     @QtCore.pyqtProperty(_Camera.Shutter, notify=shutterChanged)
@@ -469,6 +562,7 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._shutter = self._camera.shutter
             self.shutterChanged.emit(self._shutter)
+        return True
 
 
     @QtCore.pyqtProperty(_Camera.SimplePreAmp, notify=simplePreAmpChanged)
@@ -485,9 +579,10 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._simplePreAmp = self._camera.simplePreAmp
             self.simplePreAmpChanged.emit(self._simplePreAmp)
+        return True
 
 
-    @QtCore.pyqtProperty(bool)
+    @QtCore.pyqtProperty(bool, notify=spuriousNoiseFilterChanged)
     def spuriousNoiseFilter(self):
         with self._propLock:
             return self._spuriousNoiseFilter
@@ -501,9 +596,10 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._spuriousNoiseFilter = self._camera.AT_GetBool(_Camera.Feature.SpuriousNoiseFilter)
             self.spuriousNoiseFilterChanged.emit(self._spuriousNoiseFilter)
+        return True
 
 
-    @QtCore.pyqtProperty(int)
+    @QtCore.pyqtProperty(int, notify=timestampClockFrequencyChanged)
     def timestampClockFrequency(self):
         with self._propLock:
             return self._timestampClockFrequency
@@ -517,6 +613,7 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._timestampClockFrequency = self._camera.AT_GetInt(_Camera.Feature.TimestampClockFrequency)
             self.timestampClockFrequencyChanged.emit(self._timestampClockFrequency)
+        return True
 
 
     @QtCore.pyqtProperty(_Camera.TriggerMode, notify=triggerModeChanged)
@@ -533,6 +630,7 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._triggerMode = self._camera.triggerMode
             self.triggerModeChanged.emit(self._triggerMode)
+        return True
 
 
     def getEnumStrings(self, feature):
@@ -568,11 +666,18 @@ class Camera(ThreadedDevice):
 
         return imageBuffer[:self._camera.AT_GetInt(self.Feature.AOIHeight), :self._camera.AT_GetInt(self.Feature.AOIWidth)]
 
+    QtCore.Q_ENUMS(AuxiliaryOutSource)
+    QtCore.Q_ENUMS(Binning)
+    QtCore.Q_ENUMS(CycleMode)
+    QtCore.Q_ENUMS(FanSpeed)
+    QtCore.Q_ENUMS(Feature)
+    QtCore.Q_ENUMS(PixelEncoding)
+    QtCore.Q_ENUMS(Shutter)
+    QtCore.Q_ENUMS(SimplePreAmp)
+    QtCore.Q_ENUMS(TemperatureStatus)
+    QtCore.Q_ENUMS(TriggerMode)
+
 class _CameraWorker(ThreadedDeviceWorker):
     def __init__(self, device):
         super().__init__(device)
 
-#   def initProps(self):
-#       with self._device._cmdLock, self._device._propLock:
-#           self._device._exposureTime = self._device._camera.AT_
-#           self._device._minExposureTime = self._device._camera.AT_GetFloat(self._device.Feature.FrameRate)

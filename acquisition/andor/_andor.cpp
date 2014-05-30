@@ -62,6 +62,7 @@ BOOST_PYTHON_MODULE(_andor)
         // no-op.
         PyEval_InitThreads();
         np::initialize();
+        _Camera::staticInit();
 
         // Import our Python exception module
         object andorExceptionPackage{import("acquisition.andor.andor_exception")};

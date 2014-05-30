@@ -206,6 +206,7 @@ public:
         friend _Camera;
     };
 
+    static void staticInit();
     static std::shared_ptr<std::vector<std::string>> getDeviceNames();
     static const wchar_t* lookupFeatureName(const Feature& feature);
 
@@ -282,6 +283,7 @@ public:
     PixelEncoding pixelEncoding() const;
 
 protected:
+    static std::unique_ptr<py::object> sm_WeakMethod;
     static const wchar_t *sm_featureNames[];
     static const wchar_t *sm_simplePreAmpNames[];
     static const wchar_t *sm_shutterNames[];
