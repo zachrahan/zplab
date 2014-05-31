@@ -9,7 +9,7 @@ using namespace boost::python;
 
 static void andorExceptionBaseTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorExceptionBase& _andorExceptionBase)
 {
-    std::cerr << "static void andorExceptionBaseTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorExceptionBase& _andorExceptionBase)\n";
+//  std::cerr << "static void andorExceptionBaseTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorExceptionBase& _andorExceptionBase)\n";
     // The following line is roughly equivalent to the python "andorException = 
     // AndorException(_andorExceptionBase.description())"
     object andorException{ (*andorExceptionType)(_andorExceptionBase.description().c_str()) };
@@ -18,27 +18,27 @@ static void andorExceptionBaseTranslator(const std::shared_ptr<object>& andorExc
 
 static void andorExceptionTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorException& _andorException)
 {
-    std::cerr << "static void andorExceptionTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorException& _andorException)\n";
+//  std::cerr << "static void andorExceptionTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorException& _andorException)\n";
     // The following line is roughly equivalent to the python "andorException = 
     // AndorException(_andorException.description(), _andorException.errorCode(), _andorException.errorName())"
     object andorException{ (*andorExceptionType)(_andorException.description().c_str(), _andorException.errorCode(), _andorException.errorName().c_str()) };
     PyErr_SetObject(andorExceptionType->ptr(), andorException.ptr() );
 }
 
-static std::string test()
-{
-    return std::string("Héllø ∑ô¡™£¢d!");
-}
+// static std::string test()
+// {
+//  return std::string("Héllø ∑ô¡™£¢d!");
+// }
 
-static unsigned long testndarray(np::ndarray a)
-{
+// static unsigned long testndarray(np::ndarray a)
+// {
 //  std::cout << py::extract<const char*>(py::str(a)) << std::endl;
-    const Py_intptr_t* strides = a.get_strides();
-    *reinterpret_cast<float*>(a.get_data() + 2 * strides[0] + 1 * strides[1]) += 5.1f;
-    unsigned long m(std::numeric_limits<unsigned long>::max());
-    std::cout << m << std::endl;
-    return m;
-}
+//  const Py_intptr_t* strides = a.get_strides();
+//  *reinterpret_cast<float*>(a.get_data() + 2 * strides[0] + 1 * strides[1]) += 5.1f;
+//  unsigned long m(std::numeric_limits<unsigned long>::max());
+//  std::cout << m << std::endl;
+//  return m;
+// }
 
 // Note that this block is executed by the Python interpreter when this module is loaded
 BOOST_PYTHON_MODULE(_andor)
@@ -79,8 +79,8 @@ BOOST_PYTHON_MODULE(_andor)
         // Initialize Andor SDK3 API library
         _Api::instantiate();
 
-        def("test", test);
-        def("testndarray", testndarray);
+//      def("test", test);
+//      def("testndarray", testndarray);
 
         class_< std::vector<std::string>, std::shared_ptr<std::vector<std::string>> >("StringVector")
             .def( vector_indexing_suite<std::vector<std::string> >());
@@ -122,7 +122,7 @@ BOOST_PYTHON_MODULE(_andor)
             .add_property("temperatureStatus", &_Camera::temperatureStatus)
             .add_property("pixelEncoding", &_Camera::pixelEncoding)
             // The following properties have getters and setters that share overloaded function names and must therefore
-            // be described with fully qualified function pointers.
+            // be addressed with fully qualified function pointer types.
             .add_property("simplePreAmp",
                           (_Camera::SimplePreAmp (_Camera::*)() const) &_Camera::simplePreAmp,
                           (void (_Camera::*)(const _Camera::SimplePreAmp&)) &_Camera::simplePreAmp)
@@ -143,7 +143,10 @@ BOOST_PYTHON_MODULE(_andor)
                           (void (_Camera::*)(const _Camera::CycleMode&)) &_Camera::cycleMode)
             .add_property("fanSpeed",
                           (_Camera::FanSpeed (_Camera::*)() const) &_Camera::fanSpeed,
-                          (void (_Camera::*)(const _Camera::FanSpeed&)) &_Camera::fanSpeed);
+                          (void (_Camera::*)(const _Camera::FanSpeed&)) &_Camera::fanSpeed)
+            .add_property("ioSelector",
+                          (_Camera::IOSelector (_Camera::*)() const) &_Camera::ioSelector,
+                          (void (_Camera::*)(const _Camera::IOSelector&)) &_Camera::ioSelector);
 
         class_<_Camera::_CallbackRegistrationToken, std::shared_ptr<_Camera::_CallbackRegistrationToken>, boost::noncopyable>("_CallbackRegistrationToken", no_init);
 
@@ -285,6 +288,16 @@ BOOST_PYTHON_MODULE(_andor)
             .value("Mono22PackedParallel", _Camera::PixelEncoding::Mono22PackedParallel)
             .value("Mono8", _Camera::PixelEncoding::Mono8)
             .value("Mono32", _Camera::PixelEncoding::Mono32);
+
+        enum_<_Camera::IOSelector>("IOSelector")
+            .value("Fire1", _Camera::IOSelector::Fire1)
+            .value("FireN", _Camera::IOSelector::FireN)
+            .value("AuxOut1", _Camera::IOSelector::AuxOut1)
+            .value("Arm", _Camera::IOSelector::Arm)
+            .value("AuxOut2", _Camera::IOSelector::AuxOut2)
+            .value("SpareInput", _Camera::IOSelector::SpareInput)
+            .value("ExternalTrigger", _Camera::IOSelector::ExternalTrigger)
+            .value("FireNand1", _Camera::IOSelector::FireNand1);
     }
     catch(error_already_set const&)
     {

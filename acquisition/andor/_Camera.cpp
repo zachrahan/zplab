@@ -760,6 +760,24 @@ _Camera::PixelEncoding _Camera::pixelEncoding() const
     return PixelEncoding(v);
 }
 
+_Camera::IOSelector _Camera::ioSelector() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::IOSelector);
+    if(v < int(IOSelector::_Begin) || v >= int(IOSelector::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for IOSelector, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(IOSelector::_Begin) << ", " << static_cast<int>(IOSelector::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return IOSelector(v);
+}
+
+void _Camera::ioSelector(const IOSelector& ioSelector_)
+{
+    AT_SetEnumIndex(Feature::IOSelector, int(ioSelector_));
+}
+
 std::unique_ptr<py::object> _Camera::sm_WeakMethod;
 
 const wchar_t *_Camera::sm_featureNames[] =
@@ -921,18 +939,30 @@ const wchar_t *_Camera::sm_pixelEncodingNames[] =
     L"Mono32"
 };
 
+const wchar_t *_Camera::sm_IOSelectorNames[] =
+{
+    L"Fire 1",
+    L"Fire N",
+    L"Aux Out 1",
+    L"Arm",
+    L"Aux Out 2",
+    L"Spare Input",
+    L"External Trigger",
+    L"Fire N and 1"
+};
+
 _Camera::_CallbackRegistrationToken::_CallbackRegistrationToken(_Camera& camera_, const Feature& feature_, const std::function<bool(Feature)>& callback_)
   : m_camera(camera_),
     m_feature(feature_),
     m_callback(callback_),
     m_precalled(false)
 {
-    std::wcerr << L"_Camera::_CallbackRegistrationToken::_CallbackRegistrationToken()  " << sm_featureNames[static_cast<std::ptrdiff_t>(m_feature)] << std::endl;
+//  std::wcerr << L"_Camera::_CallbackRegistrationToken::_CallbackRegistrationToken()  " << sm_featureNames[static_cast<std::ptrdiff_t>(m_feature)] << std::endl;
 }
 
 _Camera::_CallbackRegistrationToken::~_CallbackRegistrationToken()
 {
-    std::wcerr << L"_Camera::_CallbackRegistrationToken::~_CallbackRegistrationToken() " << sm_featureNames[static_cast<std::ptrdiff_t>(m_feature)] << std::endl;
+//  std::wcerr << L"_Camera::_CallbackRegistrationToken::~_CallbackRegistrationToken() " << sm_featureNames[static_cast<std::ptrdiff_t>(m_feature)] << std::endl;
 }
 
 bool _Camera::_CallbackRegistrationToken::operator == (const _CallbackRegistrationToken& rhs) const

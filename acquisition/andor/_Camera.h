@@ -189,6 +189,20 @@ public:
         _End
     };
 
+    enum class IOSelector : int
+    {
+        _Begin = 0,
+        Fire1 = _Begin,
+        FireN,
+        AuxOut1,
+        Arm,
+        AuxOut2,
+        SpareInput,
+        ExternalTrigger,
+        FireNand1,
+        _End
+    };
+
     class _CallbackRegistrationToken
       : boost::noncopyable
     {
@@ -282,6 +296,9 @@ public:
 
     PixelEncoding pixelEncoding() const;
 
+    IOSelector ioSelector() const;
+    void ioSelector(const IOSelector& ioSelector_);
+
 protected:
     static std::unique_ptr<py::object> sm_WeakMethod;
     static const wchar_t *sm_featureNames[];
@@ -294,6 +311,7 @@ protected:
     static const wchar_t *sm_cycleModeNames[];
     static const wchar_t *sm_fanSpeedNames[];
     static const wchar_t *sm_pixelEncodingNames[];
+    static const wchar_t *sm_IOSelectorNames[];
 
     // Device handle
     AT_H m_dh;

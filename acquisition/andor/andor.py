@@ -20,6 +20,12 @@ class Camera(ThreadedDevice):
     # Convienent way
     c.shutter = c.Global
 
+    There is generally a 1:1 mapping between properties presented by this class and Andor feature names described
+    in the Andor SDK reference.  However, this is not the case for IO inversion, which this class abstracts.  In detail,
+    the Andor API allows selection of which pin to invert (IOSelector feature) and provides for toggling whether the
+    selected pin is inverted (IOInvert feature).  This presents IO inversion through the property ioInversion as a dict
+    mapping pin enum value to inversion state, eg: {Camera.IOSelector.Fire1 : True, Camera.IOSelector.FireN : False, ...}
+
     Note that for this device, the device thread is used only for AT_WaitBuffer() calls.'''
 
     @staticmethod
@@ -32,6 +38,7 @@ class Camera(ThreadedDevice):
     CycleMode = _Camera.CycleMode
     FanSpeed = _Camera.FanSpeed
     Feature = _Camera.Feature
+    IOSelector = _Camera.IOSelector
     PixelEncoding = _Camera.PixelEncoding
     Shutter = _Camera.Shutter
     SimplePreAmp = _Camera.SimplePreAmp
@@ -56,6 +63,7 @@ class Camera(ThreadedDevice):
     frameCountChanged = QtCore.pyqtSignal(int)
     frameRateChanged = QtCore.pyqtSignal(float)
     imageSizeBytesChanged = QtCore.pyqtSignal(int)
+    ioInversionChanged = QtCore.pyqtSignal(dict)
     maxInterfaceTransferRateChanged = QtCore.pyqtSignal(float)
     metadataEnabledChanged = QtCore.pyqtSignal(bool)
     metadataTimestampEnabledChanged = QtCore.pyqtSignal(bool)
@@ -113,6 +121,15 @@ class Camera(ThreadedDevice):
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.FrameRate, self._frameRateCb))
             self._imageSizeBytes = self._camera.AT_GetInt(_Camera.Feature.ImageSizeBytes)
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.ImageSizeBytes, self._imageSizeBytesCb))
+            self._ioInversion = {}
+            for pin in _Camera.IOSelector.values.values():
+                self._camera.ioSelector = pin
+                self._ioInversion[pin] = self._camera.AT_GetBool(_Camera.Feature.IOInvert)
+            self._inverting = False
+            self._ioInvert = self._camera.AT_GetBool(_Camera.Feature.IOInvert);
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.IOInvert, self._ioInvertCb))
+            self._ioSelector = self._camera.ioSelector
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.IOSelector, self._ioSelectorCb))
             self._maxInterfaceTransferRate = self._camera.AT_GetFloat(_Camera.Feature.MaxInterfaceTransferRate)
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.MaxInterfaceTransferRate, self._maxInterfaceTransferRateCb))
             self._metadataEnabled = self._camera.AT_GetBool(_Camera.Feature.MetadataEnable)
@@ -438,6 +455,47 @@ class Camera(ThreadedDevice):
         return True
 
 
+    @QtCore.pyqtProperty(dict, notify=ioInversionChanged)
+    def ioInversion(self):
+        with self._propLock:
+            return self._ioInversion.copy()
+
+    @ioInversion.setter
+    def ioInversion(self, ioInversion):
+        with self._propLock:
+            modified = False
+            with self._cmdLock:
+                self._inverting = True
+                for ios, newIoi in ioInversion.items():
+                    curIoi = self._ioInversion[ios]
+                    if curIoi != newIoi:
+                        if self._ioSelector != ios:
+                            self._camera.ioSelector = ios
+                            self._ioSelector = ios
+                        self._camera.AT_SetBool(_Camera.Feature.IOInvert, newIoi)
+                        self._ioInversion[ios] = newIoi
+                        modified = True
+                self._inverting = False
+            if modified:
+                self.ioInversionChanged.emit(self._ioInversion.copy())
+
+    def _ioInvertCb(self, feature):
+        if not self._inverting:
+            with self._propLock, self._cmdLock:
+                curIoi = self._ioInversion[self._ioSelector]
+                newIoi = self._camera.AT_GetBool(_Camera.Feature.IOInvert)
+                if curIoi != newIoi:
+                    self._ioInversion[self._ioSelector] = newIoi
+                    self.ioInversionChanged.emit(self._ioInversion.copy())
+        return True
+
+    def _ioSelectorCb(self, feature):
+        if not self._inverting:
+            with self._propLock, self._cmdLock:
+                self._ioSelector = self._camera.ioSelector
+        return True
+
+
     @QtCore.pyqtProperty(float, notify=maxInterfaceTransferRateChanged)
     def maxInterfaceTransferRate(self):
         with self._propLock:
@@ -671,6 +729,7 @@ class Camera(ThreadedDevice):
     QtCore.Q_ENUMS(CycleMode)
     QtCore.Q_ENUMS(FanSpeed)
     QtCore.Q_ENUMS(Feature)
+#   QtCore.Q_ENUMS(IOSelector)
     QtCore.Q_ENUMS(PixelEncoding)
     QtCore.Q_ENUMS(Shutter)
     QtCore.Q_ENUMS(SimplePreAmp)
