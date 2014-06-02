@@ -78,6 +78,8 @@ class Camera(ThreadedDevice):
     triggerModeChanged = QtCore.pyqtSignal(_Camera.TriggerMode)
 
     def __init__(self, parent=None, deviceName='Andor Zyla 5.5', andorDeviceIndex=0):
+        '''Note: The deviceName argument sets the .deviceName property; it does not act as a criterion for choosing which Andor camera 
+        to open.  That is controlled by the andorDeviceIndex argument exclusively.'''
         super().__init__(_CameraWorker(self), parent, deviceName)
         self._camera = _Camera(andorDeviceIndex)
         self._propLock = threading.RLock()
@@ -187,6 +189,11 @@ class Camera(ThreadedDevice):
     @QtCore.pyqtProperty(int)
     def sensorWidth(self):
         return self._sensorWidth
+
+
+    @QtCore.pyqtProperty(str)
+    def serialNumber(self):
+        return self._serialNumber
 
 
     @QtCore.pyqtProperty(float)
