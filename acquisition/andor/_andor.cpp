@@ -1,5 +1,5 @@
 ﻿// Copyright 2014 WUSTL ZPLAB
-
+#include <csignal>
 #include "_common.h"
 #include "_AndorException.h"
 #include "_Api.h"
@@ -233,11 +233,13 @@ BOOST_PYTHON_MODULE(_andor)
         enum_<_Camera::SimplePreAmp>("SimplePreAmp")
             .value("HighCapacity_12bit", _Camera::SimplePreAmp::HighCapacity_12bit)
             .value("LowNoise_12bit", _Camera::SimplePreAmp::LowNoise_12bit)
-            .value("LowNoiseHighCapacity_16bit", _Camera::SimplePreAmp::LowNoiseHighCapacity_16bit);
+            .value("LowNoiseHighCapacity_16bit", _Camera::SimplePreAmp::LowNoiseHighCapacity_16bit)
+            .export_values();
 
         enum_<_Camera::Shutter>("Shutter")
             .value("Rolling", _Camera::Shutter::Rolling)
-            .value("Global", _Camera::Shutter::Global);
+            .value("Global", _Camera::Shutter::Global)
+            .export_values();
 
         enum_<_Camera::TriggerMode>("TriggerMode")
             .value("Internal", _Camera::TriggerMode::Internal)
@@ -246,7 +248,8 @@ BOOST_PYTHON_MODULE(_andor)
             .value("ExternalExposure", _Camera::TriggerMode::ExternalExposure)
             .value("Software", _Camera::TriggerMode::Software)
             .value("Advanced", _Camera::TriggerMode::Advanced)
-            .value("External", _Camera::TriggerMode::External);
+            .value("External", _Camera::TriggerMode::External)
+            .export_values();
 
         enum_<_Camera::TemperatureStatus>("TemperatureStatus")
             .value("CoolerOff", _Camera::TemperatureStatus::CoolerOff)
@@ -254,28 +257,33 @@ BOOST_PYTHON_MODULE(_andor)
             .value("Cooling", _Camera::TemperatureStatus::Cooling)
             .value("Drift", _Camera::TemperatureStatus::Drift)
             .value("NotStabilized", _Camera::TemperatureStatus::NotStabilized)
-            .value("Fault", _Camera::TemperatureStatus::Fault);
+            .value("Fault", _Camera::TemperatureStatus::Fault)
+            .export_values();
 
         enum_<_Camera::Binning>("Binning")
             .value("Bin_1x1", _Camera::Binning::Bin_1x1)
             .value("Bin_2x2", _Camera::Binning::Bin_2x2)
             .value("Bin_3x3", _Camera::Binning::Bin_3x3)
             .value("Bin_4x4", _Camera::Binning::Bin_4x4)
-            .value("Bin_8x8", _Camera::Binning::Bin_8x8);
+            .value("Bin_8x8", _Camera::Binning::Bin_8x8)
+            .export_values();
 
         enum_<_Camera::AuxiliaryOutSource>("AuxiliaryOutSource")
             .value("FireRow1", _Camera::AuxiliaryOutSource::FireRow1)
             .value("FireRowN", _Camera::AuxiliaryOutSource::FireRowN)
             .value("FireAll", _Camera::AuxiliaryOutSource::FireAll)
-            .value("FireAny", _Camera::AuxiliaryOutSource::FireAny);
+            .value("FireAny", _Camera::AuxiliaryOutSource::FireAny)
+            .export_values();
 
         enum_<_Camera::CycleMode>("CycleMode")
             .value("Fixed", _Camera::CycleMode::Fixed)
-            .value("Continuous", _Camera::CycleMode::Continuous);
+            .value("Continuous", _Camera::CycleMode::Continuous)
+            .export_values();
 
         enum_<_Camera::FanSpeed>("FanSpeed")
             .value("Off", _Camera::FanSpeed::Off)
-            .value("On", _Camera::FanSpeed::On);
+            .value("On", _Camera::FanSpeed::On)
+            .export_values();
 
         enum_<_Camera::PixelEncoding>("PixelEncoding")
             .value("Mono12", _Camera::PixelEncoding::Mono12)
@@ -287,7 +295,8 @@ BOOST_PYTHON_MODULE(_andor)
             .value("Mono22Parallel", _Camera::PixelEncoding::Mono22Parallel)
             .value("Mono22PackedParallel", _Camera::PixelEncoding::Mono22PackedParallel)
             .value("Mono8", _Camera::PixelEncoding::Mono8)
-            .value("Mono32", _Camera::PixelEncoding::Mono32);
+            .value("Mono32", _Camera::PixelEncoding::Mono32)
+            .export_values();
 
         enum_<_Camera::IOSelector>("IOSelector")
             .value("Fire1", _Camera::IOSelector::Fire1)
@@ -297,7 +306,8 @@ BOOST_PYTHON_MODULE(_andor)
             .value("AuxOut2", _Camera::IOSelector::AuxOut2)
             .value("SpareInput", _Camera::IOSelector::SpareInput)
             .value("ExternalTrigger", _Camera::IOSelector::ExternalTrigger)
-            .value("FireNand1", _Camera::IOSelector::FireNand1);
+            .value("FireNand1", _Camera::IOSelector::FireNand1)
+            .export_values();
     }
     catch(error_already_set const&)
     {

@@ -35,16 +35,21 @@ class CameraManipDialog(Qt.QDialog):
             exec(evalStr.format(propName), {'self':self, 'propName':propName})
 
         def addComboProp(propName):
-            enumName = propName[0].upper() + propName[1:]
+            if propName == 'ioSelector':
+                enumName = 'IOSelector'
+            else:
+                enumName = propName[0].upper() + propName[1:]
             es = eval('[(name, int(value)) for name, value in self.cameraInstance.{}.names.items()]'.format(enumName), {'self':self})
             es.sort(key=lambda both: both[1])
             evalStr = ''
             for e in es:
                 evalStr += 'self.ui.{}Combo.addItem("{}")\n'.format(propName, e[0])
             evalStr+= 'self.ui.{0}Combo.setCurrentIndex(int(self.cameraInstance.{0}))\n'
-            evalStr+= 'print("self.ui.{0}Combo.currentIndexChanged[int].connect(lambda value, self=self, propName=propName: '
-            evalStr+= 'self.cameraInstance.setProperty(propName, self.cameraInstance.{1}(value)))")\n'
-#           evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, self=self: self.ui.{0}Combo.setCurrentIndex(int(value)))'
+            evalStr+= 'def onChange(value):\n'
+#           evalStr+= '    print("{0}", value)\n'
+            evalStr+= '    self.cameraInstance.{0} = self.cameraInstance._camera.{1}(value)\n'
+            evalStr+= 'self.ui.{0}Combo.currentIndexChanged[int].connect(onChange)\n'
+            evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, self=self: self.ui.{0}Combo.setCurrentIndex(int(value)))\n'
 #           evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, self=self: print("{0}:", value))'
             exec(evalStr.format(propName, enumName), {'self':self, 'propName':propName})
 
