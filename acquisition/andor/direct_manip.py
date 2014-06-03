@@ -22,6 +22,8 @@ class CameraManipDialog(Qt.QDialog):
         self.ui.interfaceTypeEdit.setText(self.cameraInstance.interfaceType)
         self.ui.sensorWidthEdit.setText(str(self.cameraInstance.sensorWidth))
         self.ui.sensorHeightEdit.setText(str(self.cameraInstance.sensorHeight))
+        self.ui.pixelWidthEdit.setText(str(self.cameraInstance.pixelWidth))
+        self.ui.pixelHeightEdit.setText(str(self.cameraInstance.pixelHeight))
 
         def addSpinBoxProp(propName):
             evalStr = 'self.ui.{0}SpinBox.setValue(self.cameraInstance.{0})\n'
@@ -46,12 +48,26 @@ class CameraManipDialog(Qt.QDialog):
                 evalStr += 'self.ui.{}Combo.addItem("{}")\n'.format(propName, e[0])
             evalStr+= 'self.ui.{0}Combo.setCurrentIndex(int(self.cameraInstance.{0}))\n'
             evalStr+= 'def onChange(value):\n'
-#           evalStr+= '    print("{0}", value)\n'
             evalStr+= '    self.cameraInstance.{0} = self.cameraInstance._camera.{1}(value)\n'
             evalStr+= 'self.ui.{0}Combo.currentIndexChanged[int].connect(onChange)\n'
             evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, self=self: self.ui.{0}Combo.setCurrentIndex(int(value)))\n'
-#           evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, self=self: print("{0}:", value))'
             exec(evalStr.format(propName, enumName), {'self':self, 'propName':propName})
+
+        def addRoEnumProp(propName):
+            enumName = propName[0].upper() + propName[1:]
+            es = eval('[(name, int(value)) for name, value in self.cameraInstance.{}.names.items()]'.format(enumName), {'self':self})
+            es.sort(key=lambda both: both[1])
+            names = [e[0] for e in es]
+            del enumName, es
+            evalStr = 'self.ui.{0}Edit.setText(names[int(self.cameraInstance.{0})])\n'
+            evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, self=self, names=names: self.ui.{0}Edit.setText(names[int(value)]))'
+            exec(evalStr.format(propName), {'self':self, 'names':names})
+
+        def addCheckBoxProp(propName):
+            evalStr = 'self.ui.{0}CheckBox.setCheckState(Qt.Qt.Checked if self.cameraInstance.{0} else Qt.Qt.Unchecked)\n'
+            evalStr+= 'self.ui.{0}CheckBox.toggled.connect(lambda value, self=self, propName=propName: self.cameraInstance.setProperty(propName, value))\n'
+            evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, self=self: self.ui.{0}CheckBox.setCheckState(Qt.Qt.Checked if value else Qt.Qt.Unchecked))'
+            exec(evalStr.format(propName), {'self':self, 'propName':propName, 'Qt':Qt})
 
         addSpinBoxProp('accumulateCount')
         addSpinBoxProp('aoiLeft')
@@ -60,6 +76,32 @@ class CameraManipDialog(Qt.QDialog):
         addSpinBoxProp('aoiHeight')
         addRoEditProp('aoiStride')
         addComboProp('auxiliaryOutSource')
+        addComboProp('binning')
+        addRoEditProp('bytesPerPixel')
+        addComboProp('cycleMode')
+        addSpinBoxProp('exposureTime')
+        addComboProp('fanSpeed')
+        addSpinBoxProp('frameCount')
+        addSpinBoxProp('frameRate')
+        addRoEditProp('imageSizeBytes')
+        addComboProp('ioSelector')
+        addCheckBoxProp('ioInvert')
+        addRoEditProp('maxInterfaceTransferRate')
+        addCheckBoxProp('metadataEnabled')
+        addCheckBoxProp('metadataTimestampEnabled')
+        addCheckBoxProp('overlap')
+        addRoEnumProp('pixelEncoding')
+        addComboProp('pixelReadoutRate')
+        addRoEditProp('readoutTime')
+        addCheckBoxProp('sensorCooling')
+        addComboProp('shutter')
+        addComboProp('simplePreAmp')
+        addCheckBoxProp('spuriousNoiseFilter')
+        addSpinBoxProp('timestampClockFrequency')
+        addComboProp('triggerMode')
+
+        self.ui.resetTimestampClockButton.clicked.connect(self.cameraInstance.commandTimestampClockReset)
+        self.ui.softwareTriggerButton.clicked.connect(self.cameraInstance.commandSoftwareTrigger)
 
 def show(cameraInstance=None, launcherDescription=None, moduleArgs=None):
     import sys

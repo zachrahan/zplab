@@ -146,7 +146,10 @@ BOOST_PYTHON_MODULE(_andor)
                           (void (_Camera::*)(const _Camera::FanSpeed&)) &_Camera::fanSpeed)
             .add_property("ioSelector",
                           (_Camera::IOSelector (_Camera::*)() const) &_Camera::ioSelector,
-                          (void (_Camera::*)(const _Camera::IOSelector&)) &_Camera::ioSelector);
+                          (void (_Camera::*)(const _Camera::IOSelector&)) &_Camera::ioSelector)
+            .add_property("pixelReadoutRate",
+                          (_Camera::PixelReadoutRate (_Camera::*)() const) &_Camera::pixelReadoutRate,
+                          (void (_Camera::*)(const _Camera::PixelReadoutRate&)) &_Camera::pixelReadoutRate);
 
         class_<_Camera::_CallbackRegistrationToken, std::shared_ptr<_Camera::_CallbackRegistrationToken>, boost::noncopyable>("_CallbackRegistrationToken", no_init);
 
@@ -307,6 +310,13 @@ BOOST_PYTHON_MODULE(_andor)
             .value("SpareInput", _Camera::IOSelector::SpareInput)
             .value("ExternalTrigger", _Camera::IOSelector::ExternalTrigger)
             .value("FireNand1", _Camera::IOSelector::FireNand1)
+            .export_values();
+
+        enum_<_Camera::PixelReadoutRate>("PixelReadoutRate")
+            .value("Rate_10MHz", _Camera::PixelReadoutRate::Rate_10MHz)
+            .value("Rate_100MHz", _Camera::PixelReadoutRate::Rate_100MHz)
+            .value("Rate_200MHz", _Camera::PixelReadoutRate::Rate_200MHz)
+            .value("Rate_300MHz", _Camera::PixelReadoutRate::Rate_300MHz)
             .export_values();
     }
     catch(error_already_set const&)

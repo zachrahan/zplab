@@ -203,6 +203,16 @@ public:
         _End
     };
 
+    enum class PixelReadoutRate : int
+    {
+        _Begin = 0,
+        Rate_10MHz = _Begin,
+        Rate_100MHz,
+        Rate_200MHz,
+        Rate_300MHz,
+        _End
+    };
+
     class _CallbackRegistrationToken
       : boost::noncopyable
     {
@@ -299,6 +309,9 @@ public:
     IOSelector ioSelector() const;
     void ioSelector(const IOSelector& ioSelector_);
 
+    PixelReadoutRate pixelReadoutRate() const;
+    void pixelReadoutRate(const PixelReadoutRate& pixelReadoutRate_);
+
 protected:
     static std::unique_ptr<py::object> sm_WeakMethod;
     static const wchar_t *sm_featureNames[];
@@ -312,6 +325,7 @@ protected:
     static const wchar_t *sm_fanSpeedNames[];
     static const wchar_t *sm_pixelEncodingNames[];
     static const wchar_t *sm_IOSelectorNames[];
+    static const wchar_t *sm_pixelReadoutRateNames[];
 
     // Device handle
     AT_H m_dh;

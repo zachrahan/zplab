@@ -37,6 +37,7 @@ class Camera(ThreadedDevice):
     Feature = _Camera.Feature
     IOSelector = _Camera.IOSelector
     PixelEncoding = _Camera.PixelEncoding
+    PixelReadoutRate = _Camera.PixelReadoutRate
     Shutter = _Camera.Shutter
     SimplePreAmp = _Camera.SimplePreAmp
     TemperatureStatus = _Camera.TemperatureStatus
@@ -67,6 +68,7 @@ class Camera(ThreadedDevice):
     metadataTimestampEnabledChanged = QtCore.pyqtSignal(bool)
     overlapChanged = QtCore.pyqtSignal(bool)
     pixelEncodingChanged = QtCore.pyqtSignal(_Camera.PixelEncoding)
+    pixelReadoutRateChanged = QtCore.pyqtSignal(_Camera.PixelReadoutRate)
     readoutTimeChanged = QtCore.pyqtSignal(float)
     sensorCoolingChanged = QtCore.pyqtSignal(bool)
     shutterChanged = QtCore.pyqtSignal(_Camera.Shutter)
@@ -87,6 +89,8 @@ class Camera(ThreadedDevice):
             # Cached properties that do not change and therefore only need to be read once
             self._cameraModel = self._camera.AT_GetString(_Camera.Feature.CameraModel)
             self._interfaceType = self._camera.AT_GetString(_Camera.Feature.InterfaceType)
+            self._pixelHeight = self._camera.AT_GetFloat(_Camera.Feature.PixelHeight)
+            self._pixelWidth = self._camera.AT_GetFloat(_Camera.Feature.PixelWidth)
             self._sensorHeight = self._camera.AT_GetInt(_Camera.Feature.SensorHeight)
             self._sensorWidth = self._camera.AT_GetInt(_Camera.Feature.SensorWidth)
             self._serialNumber = self._camera.AT_GetString(_Camera.Feature.SerialNumber)
@@ -135,6 +139,8 @@ class Camera(ThreadedDevice):
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.Overlap, self._overlapCb))
             self._pixelEncoding = self._camera.pixelEncoding
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.PixelEncoding, self._pixelEncodingCb))
+            self._pixelReadoutRate = self._camera.pixelReadoutRate
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.PixelReadoutRate, self._pixelReadoutRateCb))
             self._readoutTime = self._camera.AT_GetFloat(_Camera.Feature.ReadoutTime)
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.ReadoutTime, self._readoutTimeCb))
             self._sensorCooling = self._camera.AT_GetBool(_Camera.Feature.SensorCooling)
@@ -163,6 +169,14 @@ class Camera(ThreadedDevice):
                 pass
         ThreadedDevice.__del__(self)
 
+    def commandSoftwareTrigger(self):
+        with self._cmdLock:
+            self._camera.AT_Command(_Camera.Feature.SoftwareTrigger)
+
+    def commandTimestampClockReset(self):
+        with self._cmdLock:
+            self._camera.AT_Command(_Camera.Feature.TimestampClockReset)
+
 
     @QtCore.pyqtProperty(str)
     def cameraModel(self):
@@ -172,6 +186,16 @@ class Camera(ThreadedDevice):
     @QtCore.pyqtProperty(str)
     def interfaceType(self):
         return self._interfaceType
+
+
+    @QtCore.pyqtProperty(float)
+    def pixelHeight(self):
+        return self._pixelHeight
+
+
+    @QtCore.pyqtProperty(float)
+    def pixelWidth(self):
+        return self._pixelWidth
 
 
     @QtCore.pyqtProperty(int)
@@ -320,7 +344,6 @@ class Camera(ThreadedDevice):
             self._auxiliaryOutSourceCb(_Camera.Feature.AuxiliaryOutSource)
 
     def _auxiliaryOutSourceCb(self, feature):
-        print("hello!")
         with self._propLock, self._cmdLock:
             self._auxiliaryOutSource = self._camera.auxiliaryOutSource
             self.auxiliaryOutSourceChanged.emit(self._auxiliaryOutSource)
@@ -515,7 +538,7 @@ class Camera(ThreadedDevice):
             self._camera.AT_SetBool(_Camera.Feature.MetadataEnable, metadataEnabled)
 
     def _metadataEnabledCb(self, feature):
-        with self._propLock, self.cmdLock:
+        with self._propLock, self._cmdLock:
             self._metadataEnabled = self._camera.AT_GetBool(_Camera.Feature.MetadataEnable)
             self.metadataEnabledChanged.emit(self._metadataEnabled)
         return True
@@ -565,6 +588,23 @@ class Camera(ThreadedDevice):
         with self._propLock, self._cmdLock:
             self._pixelEncoding = self._camera.pixelEncoding
             self.pixelEncodingChanged.emit(self._pixelEncoding)
+        return True
+
+
+    @QtCore.pyqtProperty(_Camera.PixelReadoutRate, notify=pixelReadoutRateChanged)
+    def pixelReadoutRate(self):
+        with self._propLock:
+            return self._pixelReadoutRate
+
+    @pixelReadoutRate.setter
+    def pixelReadoutRate(self, pixelReadoutRate):
+        with self._cmdLock:
+            self._camera.pixelReadoutRate = pixelReadoutRate
+
+    def _pixelReadoutRateCb(self, feature):
+        with self._propLock, self._cmdLock:
+            self._pixelReadoutRate = self._camera.pixelReadoutRate
+            self.pixelReadoutRateChanged.emit(self._pixelReadoutRate)
         return True
 
 
@@ -727,6 +767,7 @@ class Camera(ThreadedDevice):
     QtCore.Q_ENUMS(Feature)
     QtCore.Q_ENUMS(IOSelector)
     QtCore.Q_ENUMS(PixelEncoding)
+    QtCore.Q_ENUMS(PixelReadoutRate)
     QtCore.Q_ENUMS(Shutter)
     QtCore.Q_ENUMS(SimplePreAmp)
     QtCore.Q_ENUMS(TemperatureStatus)

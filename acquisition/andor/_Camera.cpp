@@ -778,6 +778,24 @@ void _Camera::ioSelector(const IOSelector& ioSelector_)
     AT_SetEnumIndex(Feature::IOSelector, int(ioSelector_));
 }
 
+_Camera::PixelReadoutRate _Camera::pixelReadoutRate() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::PixelReadoutRate);
+    if(v < int(PixelReadoutRate::_Begin) || v >= int(PixelReadoutRate::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for PixelReadoutRate, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(PixelReadoutRate::_Begin) << ", " << static_cast<int>(PixelReadoutRate::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return PixelReadoutRate(v);
+}
+
+void _Camera::pixelReadoutRate(const PixelReadoutRate& pixelReadoutRate_)
+{
+    AT_SetEnumIndex(Feature::PixelReadoutRate, int(pixelReadoutRate_));
+}
+
 std::unique_ptr<py::object> _Camera::sm_WeakMethod;
 
 const wchar_t *_Camera::sm_featureNames[] =
@@ -949,6 +967,14 @@ const wchar_t *_Camera::sm_IOSelectorNames[] =
     L"Spare Input",
     L"External Trigger",
     L"Fire N and 1"
+};
+
+const wchar_t *_Camera::sm_pixelReadoutRateNames[] =
+{
+    L"Rate_10MHz",
+    L"Rate_100MHz",
+    L"Rate_200MHz",
+    L"Rate_300MHz"
 };
 
 _Camera::_CallbackRegistrationToken::_CallbackRegistrationToken(_Camera& camera_, const Feature& feature_, const std::function<bool(Feature)>& callback_)
