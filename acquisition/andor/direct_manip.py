@@ -27,13 +27,13 @@ class CameraManipDialog(Qt.QDialog):
 
         def addSpinBoxProp(propName):
             evalStr = 'self.ui.{0}SpinBox.setValue(self.cameraInstance.{0})\n'
-            evalStr+= 'self.ui.{0}SpinBox.valueChanged.connect(lambda value, self=self, propName=propName: self.cameraInstance.setProperty(propName, value))\n'
-            evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, self=self: self.ui.{0}SpinBox.setValue(value))'
+            evalStr+= 'self.ui.{0}SpinBox.valueChanged.connect(lambda value, cameraInstance=self.cameraInstance, propName=propName: cameraInstance.setProperty(propName, value))\n'
+            evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, spinBox=self.ui.{0}SpinBox: spinBox.setValue(value))'
             exec(evalStr.format(propName), {'self':self, 'propName':propName})
 
         def addRoEditProp(propName):
             evalStr = 'self.ui.{0}Edit.setText(str(self.cameraInstance.{0}))\n'
-            evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, self=self: self.ui.{0}Edit.setText(str(value)))'
+            evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, edit=self.ui.{0}Edit: edit.setText(str(value)))'
             exec(evalStr.format(propName), {'self':self, 'propName':propName})
 
         def addComboProp(propName):
@@ -46,12 +46,12 @@ class CameraManipDialog(Qt.QDialog):
             evalStr = ''
             for e in es:
                 evalStr += 'self.ui.{}Combo.addItem("{}")\n'.format(propName, e[0])
-            evalStr+= 'self.ui.{0}Combo.setCurrentIndex(int(self.cameraInstance.{0}))\n'
+            evalStr+= 'self.ui.{0}Combo.setCurrentIndex(int(cameraInstance.{0}))\n'
             evalStr+= 'def onChange(value):\n'
-            evalStr+= '    self.cameraInstance.{0} = self.cameraInstance._camera.{1}(value)\n'
+            evalStr+= '    cameraInstance.{0} = cameraInstance._camera.{1}(value)\n'
             evalStr+= 'self.ui.{0}Combo.currentIndexChanged[int].connect(onChange)\n'
-            evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, self=self: self.ui.{0}Combo.setCurrentIndex(int(value)))\n'
-            exec(evalStr.format(propName, enumName), {'self':self, 'propName':propName})
+            evalStr+= 'cameraInstance.{0}Changed.connect(lambda value, combo=self.ui.{0}Combo: combo.setCurrentIndex(int(value)))\n'
+            exec(evalStr.format(propName, enumName), {'self':self, 'propName':propName, 'cameraInstance':self.cameraInstance})
 
         def addRoEnumProp(propName):
             enumName = propName[0].upper() + propName[1:]
@@ -59,14 +59,14 @@ class CameraManipDialog(Qt.QDialog):
             es.sort(key=lambda both: both[1])
             names = [e[0] for e in es]
             del enumName, es
-            evalStr = 'self.ui.{0}Edit.setText(names[int(self.cameraInstance.{0})])\n'
-            evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, self=self, names=names: self.ui.{0}Edit.setText(names[int(value)]))'
-            exec(evalStr.format(propName), {'self':self, 'names':names})
+            evalStr = 'self.ui.{0}Edit.setText(names[int(cameraInstance.{0})])\n'
+            evalStr+= 'cameraInstance.{0}Changed.connect(lambda value, edit=self.ui.{0}Edit, names=names: edit.setText(names[int(value)]))'
+            exec(evalStr.format(propName), {'self':self, 'names':names, 'cameraInstance':self.cameraInstance})
 
         def addCheckBoxProp(propName):
             evalStr = 'self.ui.{0}CheckBox.setCheckState(Qt.Qt.Checked if self.cameraInstance.{0} else Qt.Qt.Unchecked)\n'
-            evalStr+= 'self.ui.{0}CheckBox.toggled.connect(lambda value, self=self, propName=propName: self.cameraInstance.setProperty(propName, value))\n'
-            evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, self=self: self.ui.{0}CheckBox.setCheckState(Qt.Qt.Checked if value else Qt.Qt.Unchecked))'
+            evalStr+= 'self.ui.{0}CheckBox.toggled.connect(lambda value, cameraInstance=self.cameraInstance, propName=propName: cameraInstance.setProperty(propName, value))\n'
+            evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, checkBox=self.ui.{0}CheckBox, Qt=Qt: checkBox.setCheckState(Qt.Qt.Checked if value else Qt.Qt.Unchecked))'
             exec(evalStr.format(propName), {'self':self, 'propName':propName, 'Qt':Qt})
 
         addSpinBoxProp('accumulateCount')
@@ -103,9 +103,17 @@ class CameraManipDialog(Qt.QDialog):
         self.ui.resetTimestampClockButton.clicked.connect(self.cameraInstance.commandTimestampClockReset)
         self.ui.softwareTriggerButton.clicked.connect(self.cameraInstance.commandSoftwareTrigger)
 
+    def closeEvent(self, event):
+        super().closeEvent(event)
+        self.deleteLater()
+
+    def __del__(self):
+        print('DEL!!!!!!!!!!!!!')
+
 def show(cameraInstance=None, launcherDescription=None, moduleArgs=None):
-    import sys
     import argparse
+    import sys
+    import gc
 
     parser = argparse.ArgumentParser(launcherDescription)
     parser.add_argument('--andor-device-index', type=int, help="The index of the Andor camera you wish to manipulate.  For example, if " +
@@ -120,4 +128,8 @@ def show(cameraInstance=None, launcherDescription=None, moduleArgs=None):
         else:
             cameraInstance = Camera(andorDeviceIndex=args.andorDeviceIndex)
     dialog = CameraManipDialog(None, cameraInstance)
-    sys.exit(dialog.exec_())
+    ret = dialog.exec_()
+    del dialog
+    del cameraInstance
+    gc.collect()
+    sys.exit(ret)
