@@ -4,15 +4,17 @@
 from PyQt5 import QtCore, QtSerialPort
 import re
 import sys
-from acquisition.device import Device, DeviceException
+from acquisition.device import Device, DeviceException, ThreadedDevice, ThreadedDeviceWorker
+from acquisition.dm6000b.subdevices.stage import Stage
+from acquisition.dm6000b.response import Response, InvalidResponseException, TruncatedResponseException
 
-class Dm6000b(Device):
+class Dm6000b(ThreadedDevice):
     # Signals used to command _DeviceWorker
     _workerSendLineSignal = QtCore.pyqtSignal(str)
 
     def __init__(self, parent=None, deviceName='Leica DM6000B', serialPortDescriptor='/dev/ttyScope', timeout=1.0):
         '''timeout unit is seconds.'''
-        super().__init__(parent, deviceName)
+        super().__init__(_Dm6000bWorker(self), parent, deviceName)
 
         # Note: QSerialPortInfo, which handles locating the serial port device from a serial port descriptor string, prepends
         # "/dev/" to the descriptor string.  PySerial does not do this, so we generally use full paths which include the /dev/
@@ -34,36 +36,37 @@ class Dm6000b(Device):
         if not serialPort.setFlowControl(serialPort.SoftwareControl):
             raise DeviceException(self, 'Failed to set serial port {} to software flow control.'.format(serialPortDescriptor))
 
-        self._worker = _DeviceWorker(self, serialPort)
-        self._thread = QtCore.QThread(self)
-        self._thread.setObjectName(self.deviceName + ' - DEVICE THREAD')
-        self._thread.finished.connect(self._thread.deleteLater, QtCore.Qt.QueuedConnection)
-        self.deviceNameChanged.connect(self._worker.deviceNameChangedSlot, QtCore.Qt.QueuedConnection)
         self._workerSendLineSignal.connect(self._worker.sendLineSlot, QtCore.Qt.QueuedConnection)
-        self._worker.receivedLineSignal.connect(self._workerReceivedLineSlot, QtCore.Qt.QueuedConnection)
-        self._thread.start()
-        self._worker.moveToThread(self._thread)
+        self._worker.receivedUnhandledLineSignal.connect(self._workerReceivedUnhandledLineSlot, QtCore.Qt.BlockingQueuedConnection)
+
+        self._idsToSubdevices = {}
+
+        self.stage = Stage(self)
+
+        self._worker.initPort(serialPort)
 
     def __del__(self):
         self._thread.quit()
         self._thread.wait()
 
-    def _workerReceivedLineSlot(self, line):
-        print('Got line: "{}".'.format(line))
+    def _workerReceivedUnhandledLineSlot(self, line):
+        print('Received unhandled response from "{}":\n\t"{}".'.format(self.deviceName, line))
 
-
-class _DeviceWorker(QtCore.QObject):
+class _Dm6000bWorker(ThreadedDeviceWorker):
     # Signals used to notify Device
-    receivedLineSignal = QtCore.pyqtSignal(str)
+    receivedUnhandledLineSignal = QtCore.pyqtSignal(str)
 
-    def __init__(self, device, serialPort):
-        # NB: A QObject can not be moved to another thread if it has a parent.  Otherwise, _DeviceWorker would be parented to its
-        # Device by replacing "None" with "device" in the following line.
-        super().__init__(None)
-        self.device = device
+    def __init__(self, device):
+        super().__init__(device)
+
+    def initPort(self, serialPort):
+        '''The serial port is opened and set up on the main thread so that if an error occurs, an exception can be thrown
+        that will unwind back to the Dm6000b(..) constructor call in the users's code.  Because we don't really want to
+        instantiate QSerialPort in Dm6000b.__init__(..) before calling Dm6000b's super().__init__(..), the QSerialPort instance
+        is not available to pass to _Dm6000bWorker's constructor.  Thus, this function, to be called by Dm6000b after the
+        parent class's construction.'''
         self.serialPort = serialPort
-        # It is convenient to parent the serialPort to the worker so that the serialPort object is automatically moved to another
-        # thread along with _DeviceWorker
+        self.serialPort.moveToThread(self.device._thread)
         self.serialPort.setParent(self)
         self.serialPort.error.connect(self.serialPortErrorSlot, QtCore.Qt.DirectConnection)
         self.serialPort.readyRead.connect(self.serialPortBytesReadySlot, QtCore.Qt.DirectConnection)
@@ -74,7 +77,11 @@ class _DeviceWorker(QtCore.QObject):
 
     def serialPortBytesReadySlot(self):
         inba = self.serialPort.readAll()
-        #TODO: actually do something when there's an error rather than silently slacking off
+        # Note: Serial port errors are handled by serialPortErrorSlot which has already been called during execution of the readAll
+        # in the line above if an error occurred.  If an exception was thrown by serialPortErrorSlot, it passes through the readAll
+        # and causes this function to exit (notice readAll is not in a try block).  If an exception was not thrown but the serial port
+        # remains in a bad state, whatever is in the serial port buffer is assumed to be junk and is ignored (the condition of the if
+        # statement below evaluates to false and inba goes out of scope without being parsed).
         if self.serialPort.error() == self.serialPort.NoError:
             prevBufLen = len(self.buffer)
             self.buffer += inba.data().decode('utf-8')
@@ -87,11 +94,12 @@ class _DeviceWorker(QtCore.QObject):
             else:
                 line = self.buffer[:crLoc]
                 self.buffer = self.buffer[crLoc + 1:]
-                self.receivedLineSignal.emit(line)
-
-    def deviceNameChangedSlot(self, deviceName):
-        self.setObjectName(deviceName + ' - DEVICE THREAD WORKER')
-        self.device._thread.setObjectName(deviceName + ' - DEVICE THREAD')
+                response = Response(self.device, line)
+                if response.id in self.device._idsToSubdevices:
+                    self.device._idsToSubdevices[response.id]._responseReceivedSignal.emit(response)
+                else:
+                    self.receivedUnhandledLineSignal.emit(line)
 
     def sendLineSlot(self, line):
         self.serialPort.write(line + '\r')
+
