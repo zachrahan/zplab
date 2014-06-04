@@ -1,28 +1,33 @@
 #!/usr/bin/env python
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import Qt
 import sys
+from acquisition.andor.andor import Camera
+from acquisition.andor.direct_manip import CameraManipDialog
 from acquisition.brightfield_led.brightfield_led import BrightfieldLed
 from acquisition.brightfield_led.direct_manip import BrightfieldLedManipDialog
 from acquisition.lumencor.lumencor import Lumencor
 from acquisition.lumencor.direct_manip import LumencorManipDialog
 
-app = QtWidgets.QApplication(sys.argv)
+app = Qt.QApplication(sys.argv)
 
-md = QtWidgets.QDialog()
-md.setLayout(QtWidgets.QHBoxLayout())
+multiManip = Qt.QDialog()
+multiManip.setLayout(Qt.QHBoxLayout())
 
-l = Lumencor()
-ld = LumencorManipDialog(md, l)
-ld.setWindowFlags(QtCore.Qt.FramelessWindowHint)
-ld.setFocusPolicy(QtCore.Qt.NoFocus)
-md.layout().addWidget(ld)
+def addDirectManip(deviceType, manipType):
+    device = deviceType()
+    groupBox = Qt.QGroupBox(multiManip)
+    multiManip.layout().addWidget(groupBox)
+    groupBox.setLayout(Qt.QHBoxLayout())
+    manip = manipType(groupBox, device)
+    groupBox.setTitle(manip.windowTitle())
+    manip.setWindowFlags(Qt.Qt.FramelessWindowHint)
+    manip.setFocusPolicy(Qt.Qt.NoFocus)
+    groupBox.layout().addWidget(manip)
 
-b = BrightfieldLed()
-bd = BrightfieldLedManipDialog(md, b)
-bd.setWindowFlags(QtCore.Qt.FramelessWindowHint)
-bd.setFocusPolicy(QtCore.Qt.NoFocus)
-md.layout().addWidget(bd)
+addDirectManip(Lumencor, LumencorManipDialog)
+addDirectManip(BrightfieldLed, BrightfieldLedManipDialog)
+addDirectManip(Camera, CameraManipDialog)
 
-md.show()
+multiManip.show()
 exit(app.exec_())
