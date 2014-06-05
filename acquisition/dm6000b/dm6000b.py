@@ -5,8 +5,8 @@ from PyQt5 import QtCore, QtSerialPort
 import re
 import sys
 from acquisition.device import Device, DeviceException, ThreadedDevice, ThreadedDeviceWorker
-from acquisition.dm6000b.subdevices.stage import Stage
-from acquisition.dm6000b.response import Response, InvalidResponseException, TruncatedResponseException
+from acquisition.dm6000b.function_units.stage import Stage
+from acquisition.dm6000b.packet import Packet, InvalidPacketReceivedException, TruncatedPacketReceivedException
 
 class Dm6000b(ThreadedDevice):
     # Signals used to command _DeviceWorker
@@ -39,9 +39,12 @@ class Dm6000b(ThreadedDevice):
         self._workerSendLineSignal.connect(self._worker.sendLineSlot, QtCore.Qt.QueuedConnection)
         self._worker.receivedUnhandledLineSignal.connect(self._workerReceivedUnhandledLineSlot, QtCore.Qt.BlockingQueuedConnection)
 
-        self._idsToSubdevices = {}
+        # Maps "function unit" code -> subdevice to which responses from the scope with that function unit code should be routed
+        self._funitSubdevices = {}
 
-        self.stage = Stage(self)
+        self.stageX = Stage(self, 'Stage X Axis', 72)
+        self.stageY = Stage(self, 'Stage Y Axis', 73)
+        self.stageZ = Stage(self, 'Stage Z Axis', 71)
 
         self._worker.initPort(serialPort)
 
@@ -94,9 +97,9 @@ class _Dm6000bWorker(ThreadedDeviceWorker):
             else:
                 line = self.buffer[:crLoc]
                 self.buffer = self.buffer[crLoc + 1:]
-                response = Response(self.device, line)
-                if response.id in self.device._idsToSubdevices:
-                    self.device._idsToSubdevices[response.id]._responseReceivedSignal.emit(response)
+                response = Packet(self.device, line)
+                if response.funitCode in self.device._funitSubdevices:
+                    self.device._funitSubdevices[response.funitCode]._packetReceivedSignal.emit(response)
                 else:
                     self.receivedUnhandledLineSignal.emit(line)
 

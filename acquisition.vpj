@@ -56,17 +56,17 @@
 			Name="dm6000b"
 			Filters="">
 			<Folder
-				Name="subdevices"
+				Name="function_units"
 				Filters="">
-				<F N="acquisition/dm6000b/subdevices/__init__.py"/>
-				<F N="acquisition/dm6000b/subdevices/filter_turret.py"/>
-				<F N="acquisition/dm6000b/subdevices/objective_turret.py"/>
-				<F N="acquisition/dm6000b/subdevices/stage.py"/>
-				<F N="acquisition/dm6000b/subdevices/subdevice.py"/>
+				<F N="acquisition/dm6000b/function_units/__init__.py"/>
+				<F N="acquisition/dm6000b/function_units/filter_turret.py"/>
+				<F N="acquisition/dm6000b/function_units/objective_turret.py"/>
+				<F N="acquisition/dm6000b/function_units/stage.py"/>
 			</Folder>
 			<F N="acquisition/dm6000b/__init__.py"/>
 			<F N="acquisition/dm6000b/dm6000b.py"/>
-			<F N="acquisition/dm6000b/response.py"/>
+			<F N="acquisition/dm6000b/function_unit.py"/>
+			<F N="acquisition/dm6000b/packet.py"/>
 		</Folder>
 		<Folder
 			Name="root"
