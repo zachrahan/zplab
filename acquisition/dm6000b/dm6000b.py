@@ -11,6 +11,7 @@ from acquisition.dm6000b.packet import Packet, InvalidPacketReceivedException, T
 class Dm6000b(ThreadedDevice):
     # Signals used to command _DeviceWorker
     _workerSendLineSignal = QtCore.pyqtSignal(str)
+    _workerSendPacketSignal = QtCore.pyqtSignal(Packet)
 
     def __init__(self, parent=None, deviceName='Leica DM6000B', serialPortDescriptor='/dev/ttyScope', timeout=1.0):
         '''timeout unit is seconds.'''
@@ -37,6 +38,7 @@ class Dm6000b(ThreadedDevice):
             raise DeviceException(self, 'Failed to set serial port {} to software flow control.'.format(serialPortDescriptor))
 
         self._workerSendLineSignal.connect(self._worker.sendLineSlot, QtCore.Qt.QueuedConnection)
+        self._workerSendPacketSignal.connect(self._worker.sendPacketSlot, QtCore.Qt.QueuedConnection)
         self._worker.receivedUnhandledLineSignal.connect(self._workerReceivedUnhandledLineSlot, QtCore.Qt.BlockingQueuedConnection)
 
         # Maps "function unit" code -> subdevice to which responses from the scope with that function unit code should be routed
@@ -54,6 +56,14 @@ class Dm6000b(ThreadedDevice):
 
     def _workerReceivedUnhandledLineSlot(self, line):
         print('Received unhandled response from "{}":\n\t"{}".'.format(self.deviceName, line))
+
+    def waitForReady(self, timeout=None):
+        '''Block until Device State changes from Busy.  Calling this function from a thread other than that owning
+        the Dm6000b is not safe and will create a race condition likely resulting in this function never returning.
+        NB: the thread owning the Dm6000b instance and the Dm6000b instance's worker thread are not to be confused.
+        Somehow calling waitForReady(..) from the worker thread is also unsafe.'''
+        for subdevice in self._funitSubdevices.values():
+            subdevice.waitForReady(timeout)
 
 class _Dm6000bWorker(ThreadedDeviceWorker):
     # Signals used to notify Device
@@ -106,3 +116,5 @@ class _Dm6000bWorker(ThreadedDeviceWorker):
     def sendLineSlot(self, line):
         self.serialPort.write(line + '\r')
 
+    def sendPacketSlot(self, packet):
+        self.serialPort.write(str(packet))

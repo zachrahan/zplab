@@ -44,6 +44,9 @@ class DeviceException(AcquisitionException):
     def __str__(self):
         return repr('{}: {}'.format(self.device.deviceName, self.description))
 
+class DeviceTimeoutException(DeviceException):
+    pass
+
 class ThreadedDevice(Device):
     def __init__(self, worker, parent=None, deviceName='UNNAMED THREADED DEVICE'):
         super().__init__(parent, deviceName)

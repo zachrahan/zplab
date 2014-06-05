@@ -19,10 +19,14 @@ class Packet:
                 raise InvalidPacketReceivedException(dm6000b, 'Response from device is invalid; function unit field contains non-digit characters.')
             self.funitCode = int(funitCode)
 
-            cmdCode = line[2:5]
-            if not cmdCode.isdigit():
+            if not line[2:5].isdigit():
                 raise InvalidPacketReceivedException(dm6000b, 'Response from device is invalid; command field contains non-digit characters.')
-            self.cmdCode = int(cmdCode)
+
+            # NB: only responses make use of a status code.  The status code for a request is always zero; in a response,
+            # the status code indicates whether the scope successfully acted on the associated request.
+            self.statusCode = int(line[2:3])
+
+            self.cmdCode = int(line[3:5])
 
             self.parameter = line[5:]
             # Parameter is separated from funitCode and cmdCode by a space; throw that space away
@@ -38,8 +42,8 @@ class Packet:
         '''Serialize packet to be transmitted.'''
         if self.funitCode < 0 or self.funitCode > 99:
             raise ValueError('funitCode must be in the range [0, 99].')
-        if self.cmdCode < 0 or self.cmdCode > 999:
-            raise ValueError('cmdCode must be in the range [0, 999].')
+        if self.cmdCode < 0 or self.cmdCode > 99:
+            raise ValueError('cmdCode must be in the range [0, 99].')
         ret = '{:02}{:03}'.format(self.funitCode, self.cmdCode)
         if self.parameter is not None:
             ret += ' '
@@ -47,6 +51,7 @@ class Packet:
                 ret += self.parameter
             else:
                 ret += str(self.parameter)
+        ret += '\r'
         return ret
         
 class InvalidPacketReceivedException(DeviceException):
