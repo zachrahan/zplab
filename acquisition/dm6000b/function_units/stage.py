@@ -16,6 +16,7 @@ class Stage(FunctionUnit):
     def __init__(self, dm6000b, deviceName, funitCode):
         super().__init__(dm6000b, deviceName, funitCode)
         self._pos = None
+        self.refreshPos()
 
     def _processReceivedPacket(self, txPacket, rxPacket):
         print('got response for "{}":  funitCode: {}, statusCode: {}, cmdCode: {}, parameter: {}'.format(self.deviceName, rxPacket.funitCode, rxPacket.statusCode, rxPacket.cmdCode, rxPacket.parameter))
@@ -23,7 +24,14 @@ class Stage(FunctionUnit):
             if rxPacket.cmdCode in (22, 23):
                 self._pos = int(rxPacket.parameter)
                 self.posChanged.emit(self._pos)
-                print('requested pos: {} new pos: {}'.format(int(txPacket.parameter) if txPacket.cmdCode == 22 else '(none)', self._pos))
+                print('requested pos: {} new pos: {}'.format(int(txPacket.parameter) if txPacket is not None and txPacket.cmdCode == 22 else '(none)', self._pos))
+        if rxPacket.statusCode == 3:
+            if rxPacket.cmdCode == 22:
+                # The user requested that the stage move somewhere, but the stage failed to reach the requested position.
+                # The scope's reply for the failed move contains as a parameter the requested position, not the position
+                # reached.  So, we must retrieve that value as the pos attribute is expected to contain the new value
+                # once the device stops being busy after issuance of a move command (whether successful or not).
+                self.refreshPos()
 
     @QtCore.pyqtProperty(int, notify=posChanged)
     def pos(self):
@@ -32,3 +40,6 @@ class Stage(FunctionUnit):
     @pos.setter
     def pos(self, pos):
         self._transmit(Packet(self, line=None, funitCode=self._funitCode, cmdCode=22, parameter=str(pos)))
+
+    def refreshPos(self):
+        self._transmit(Packet(self, line=None, funitCode=self._funitCode, cmdCode=23))

@@ -41,14 +41,14 @@ class Dm6000b(ThreadedDevice):
         self._workerSendPacketSignal.connect(self._worker.sendPacketSlot, QtCore.Qt.QueuedConnection)
         self._worker.receivedUnhandledLineSignal.connect(self._workerReceivedUnhandledLineSlot, QtCore.Qt.BlockingQueuedConnection)
 
+        self._worker.initPort(serialPort)
+
         # Maps "function unit" code -> subdevice to which responses from the scope with that function unit code should be routed
         self._funitSubdevices = {}
 
         self.stageX = Stage(self, 'Stage X Axis', 72)
         self.stageY = Stage(self, 'Stage Y Axis', 73)
         self.stageZ = Stage(self, 'Stage Z Axis', 71)
-
-        self._worker.initPort(serialPort)
 
     def __del__(self):
         self._thread.quit()
