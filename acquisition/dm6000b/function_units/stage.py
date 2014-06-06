@@ -19,7 +19,6 @@ class Stage(FunctionUnit):
         self.refreshPos()
 
     def _processReceivedPacket(self, txPacket, rxPacket):
-        print('got response for "{}":  funitCode: {}, statusCode: {}, cmdCode: {}, parameter: {}'.format(self.deviceName, rxPacket.funitCode, rxPacket.statusCode, rxPacket.cmdCode, rxPacket.parameter))
         if rxPacket.statusCode == 0:
             if rxPacket.cmdCode in (22, 23):
                 self._pos = int(rxPacket.parameter)
@@ -39,7 +38,7 @@ class Stage(FunctionUnit):
 
     @pos.setter
     def pos(self, pos):
-        self._transmit(Packet(self, line=None, funitCode=self._funitCode, cmdCode=22, parameter=str(pos)))
+        self._transmit(Packet(self, line=None, cmdCode=22, parameter=str(pos)))
 
     def refreshPos(self):
-        self._transmit(Packet(self, line=None, funitCode=self._funitCode, cmdCode=23))
+        self._transmit(Packet(self, line=None, cmdCode=23))

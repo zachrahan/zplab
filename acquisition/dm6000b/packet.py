@@ -4,7 +4,7 @@
 from acquisition.device import DeviceException
 
 class Packet:
-    def __init__(self, dm6000b, line=None, funitCode=None, cmdCode=None, parameter=None):
+    def __init__(self, funit, line=None, funitCode=None, cmdCode=None, parameter=None):
         if line is not None:
             # Parse a received packet
             if funitCode is not None or cmdCode is not None or parameter is not None:
@@ -12,15 +12,15 @@ class Packet:
             if len(line) < 5:
                 e = 'Reponse from device is only {} characters long.  The minimum conceivably valid response '
                 e+= 'length is 5 (2 for function unit code, 3 for command code).'
-                raise TruncatedResponseException(dm6000b, e.format(len(line)))
+                raise TruncatedResponseException(funit, e.format(len(line)))
 
             funitCode = line[:2]
             if not funitCode.isdigit():
-                raise InvalidPacketReceivedException(dm6000b, 'Response from device is invalid; function unit field contains non-digit characters.')
+                raise InvalidPacketReceivedException(funit, 'Response from device is invalid; function unit field contains non-digit characters.')
             self.funitCode = int(funitCode)
 
             if not line[2:5].isdigit():
-                raise InvalidPacketReceivedException(dm6000b, 'Response from device is invalid; command field contains non-digit characters.')
+                raise InvalidPacketReceivedException(funit, 'Response from device is invalid; command field contains non-digit characters.')
 
             # NB: only responses make use of a status code.  The status code for a request is always zero; in a response,
             # the status code indicates whether the scope successfully acted on the associated request.
@@ -34,7 +34,10 @@ class Packet:
                 self.parameter = self.parameter[1:]
         else:
             # Construct a packet to be transmitted
-            self.funitCode = funitCode
+            if funitCode is None:
+                self.funitCode = funit._funitCode
+            else:
+                self.funitCode = funitCode
             self.cmdCode = cmdCode
             self.parameter = parameter
 

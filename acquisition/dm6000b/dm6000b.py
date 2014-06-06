@@ -5,7 +5,9 @@ from PyQt5 import QtCore, QtSerialPort
 import re
 import sys
 from acquisition.device import Device, DeviceException, ThreadedDevice, ThreadedDeviceWorker
+from acquisition.dm6000b.function_unit import FunctionUnit
 from acquisition.dm6000b.function_units.stage import Stage
+from acquisition.dm6000b.method import Method
 from acquisition.dm6000b.packet import Packet, InvalidPacketReceivedException, TruncatedPacketReceivedException
 
 class Dm6000b(ThreadedDevice):
@@ -46,6 +48,8 @@ class Dm6000b(ThreadedDevice):
         # Maps "function unit" code -> subdevice to which responses from the scope with that function unit code should be routed
         self._funitSubdevices = {}
 
+        self._main = _MainFunctionUnit(self)
+
         self.stageX = Stage(self, 'Stage X Axis', 72)
         self.stageY = Stage(self, 'Stage Y Axis', 73)
         self.stageZ = Stage(self, 'Stage Z Axis', 71)
@@ -64,6 +68,17 @@ class Dm6000b(ThreadedDevice):
         Somehow calling waitForReady(..) from the worker thread is also unsafe.'''
         for subdevice in self._funitSubdevices.values():
             subdevice.waitForReady(timeout)
+
+    @QtCore.pyqtProperty(list)
+    def methods(self):
+        '''Index by Method enum value.  For example, to see if "IL DIC" is supported, do dm6000b.methods[Method.IL_DIC]
+        (a bool is returned, True if the specified method is supported).'''
+        return self._methods.copy()
+
+    @QtCore.pyqtProperty(dict)
+    def methodsAsDict(self):
+        '''The same as the methods property, except a dict of "Method enum value -> is supported bool" is returned.'''
+        return {method : self._methods[method] for method in Method}
 
 class _Dm6000bWorker(ThreadedDeviceWorker):
     # Signals used to notify Device
@@ -118,3 +133,32 @@ class _Dm6000bWorker(ThreadedDeviceWorker):
 
     def sendPacketSlot(self, packet):
         self.serialPort.write(str(packet))
+
+class _MainFunctionUnit(FunctionUnit):
+    '''Dm6000b can't inherit from both ThreadedDevice and FunctionUnit.  However, a user will expect to find properties for
+    the scope "main function unit" as attributes of Dm6000b directly, not as attributes of Dm6000b.mainUnit or somesuch.
+    _Dm6000bWorker could route main function unit packets back to its Dm6000b instance, but then
+    FunctionUnit._processReceivedPacket and every other aspect of FunctionUnit would need to be reimplemented as a methods
+    of Dm6000b, which would be redundant and very confusing.
+
+    Instead, a FunctionUnit _MainFunctionUnit is made that stores all its user accessible properties in its associated
+    Dm6000b instance, where they are easily found by the user.'''
+
+    def __init__(self, dm6000b, deviceName='hidden Main Function Unit - properties proxied to Dm6000b'):
+        super().__init__(dm6000b, deviceName, 70)
+        self.dm6000b._methods = None
+        self._transmit(Packet(self, line=None, cmdCode=26))
+
+    def _processReceivedPacket(self, txPacket, rxPacket):
+        if rxPacket.statusCode == 0:
+            if rxPacket.cmdCode == 26:
+                methods = []
+                for method in Method:
+                    s = rxPacket.parameter[-method.value]
+                    if s == '0':
+                        methods.append(False)
+                    elif s == '1':
+                        methods.append(True)
+                    else:
+                        raise InvalidPacketReceivedException(self, 'Method supported element must be either "0" or "1", not "{}".'.format(s))
+                self.dm6000b._methods = methods

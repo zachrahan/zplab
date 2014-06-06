@@ -50,6 +50,7 @@ class FunctionUnit(Device):
                     del txPackets[0]
             if len(txPackets) == 0:
                 del self._outstanding[packet.cmdCode]
+        print('got response for "{}":  funitCode: {}, statusCode: {}, cmdCode: {}, parameter: {}'.format(self.deviceName, packet.funitCode, packet.statusCode, packet.cmdCode, packet.parameter))
         self._processReceivedPacket(txPacket, packet)
         self._updateState()
 
