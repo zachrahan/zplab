@@ -6,12 +6,10 @@ from acquisition.acquisition_exception import AcquisitionException
 
 class Device(QtCore.QObject):
     deviceNameChanged = QtCore.pyqtSignal(str)
-    blockChanged = QtCore.pyqtSignal()
 
     def __init__(self, parent=None, deviceName='UNNAMED DEVICE'):
         QtCore.QObject.__init__(self, parent)
         self.setObjectName(deviceName)
-        self._block = True
         self.objectNameChanged.connect(self.deviceNameChanged)
 
     @property
@@ -25,16 +23,6 @@ class Device(QtCore.QObject):
     @deviceName.setter
     def deviceName(self, deviceName):
         self.setObjectName(deviceName)
-
-    @QtCore.pyqtProperty(bool, notify=blockChanged)
-    def block(self):
-        '''If true, forces operations that may be performed either asynchronously or synchronously to execute synchronously, in blocking fashion,
-        in the calling thread.'''
-        return self._block
-
-    @block.setter
-    def block(self, block):
-        self._block = block
 
 class DeviceException(AcquisitionException):
     def __init__(self, device, description):

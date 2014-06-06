@@ -15,6 +15,10 @@ class Dm6000b(ThreadedDevice):
     _workerSendLineSignal = QtCore.pyqtSignal(str)
     _workerSendPacketSignal = QtCore.pyqtSignal(Packet)
 
+    # Signals available to user to indicate property value changes
+    tlShutterOpenedChanged = QtCore.pyqtSignal(bool)
+    ilShutterOpenedChanged = QtCore.pyqtSignal(bool)
+
     def __init__(self, parent=None, deviceName='Leica DM6000B', serialPortDescriptor='/dev/ttyScope', timeout=1.0):
         '''timeout unit is seconds.'''
         super().__init__(_Dm6000bWorker(self), parent, deviceName)
@@ -49,7 +53,7 @@ class Dm6000b(ThreadedDevice):
         self._funitSubdevices = {}
 
         self._main = _MainFunctionUnit(self)
-
+        self._lamp = _Lamp(self)
         self.stageX = Stage(self, 'Stage X Axis', 72)
         self.stageY = Stage(self, 'Stage Y Axis', 73)
         self.stageZ = Stage(self, 'Stage Z Axis', 71)
@@ -79,6 +83,22 @@ class Dm6000b(ThreadedDevice):
     def methodsAsDict(self):
         '''The same as the methods property, except a dict of "Method enum value -> is supported bool" is returned.'''
         return {method : self._methods[method] for method in Method}
+
+    @QtCore.pyqtProperty(bool, notify=tlShutterOpenedChanged)
+    def tlShutterOpened(self):
+        return self._tlShutterOpened
+
+    @tlShutterOpened.setter
+    def tlShutterOpened(self, tlShutterOpened):
+        self._lamp._setShutterOpened(0, tlShutterOpened)
+
+    @QtCore.pyqtProperty(bool, notify=ilShutterOpenedChanged)
+    def ilShutterOpened(self):
+        return self._ilShutterOpened
+
+    @ilShutterOpened.setter
+    def ilShutterOpened(self, ilShutterOpened):
+        self._lamp._setShutterOpened(1, ilShutterOpened)
 
 class _Dm6000bWorker(ThreadedDeviceWorker):
     # Signals used to notify Device
@@ -162,3 +182,46 @@ class _MainFunctionUnit(FunctionUnit):
                     else:
                         raise InvalidPacketReceivedException(self, 'Method supported element must be either "0" or "1", not "{}".'.format(s))
                 self.dm6000b._methods = methods
+
+class _Lamp(FunctionUnit):
+    '''We are not using the DM6000B's lamp; however, TL and IL shutter settings belong to the lamp function unit.  Rather
+    than create confusion by adding a user visible lamp subdevice, the lamp function unit's shutter state properties are
+    available as properties of the associated Dm6000b instance.
+    '''
+    def __init__(self, dm6000b, deviceName='hidden Lamp Function Unit - properties proxied to Dm6000b'):
+        super().__init__(dm6000b, deviceName, 77)
+        self.dm6000b._tlShutterOpened = None
+        self.dm6000b._ilShutterOpened = None
+        # Subscribe to shutter open/close events
+        self._transmit(Packet(self, line=None, cmdCode=3, parameter='0 0 0 0 1 1'))
+        # Get current shutter open/close states
+        self._transmit(Packet(self, line=None, cmdCode=33))
+
+    def _processReceivedPacket(self, txPacket, rxPacket):
+        if rxPacket.statusCode == 0:
+            if rxPacket.cmdCode == 33:
+                tl, il = rxPacket.parameter.split(' ')
+                def toBool(s, n):
+                    if s == '0':
+                        return False
+                    elif s == '1':
+                        return True
+                    elif s == '-1':
+                        print('Your "{}" reports that the {} shutter has encountered a problem.  In fact, '.format(self.dm6000b.deviceName, n) +
+                              'the microscope doesn\'t know whether that shutter is even open.  This is generally not an ' +
+                              'error you want to be having.  So, I\'m going to go ahead and exit, while you dutifully ' +
+                              'attend to your broken microscope, dear user.', sys.stderr)
+                        sys.exit(-1)
+                    else:
+                        raise InvalidPacketReceivedException(self, 'Shutter state value must be either "0", "1", or "-1", but not "{}".'.format(s))
+                v = toBool(tl, 'TL')
+                if self.dm6000b._tlShutterOpened != v:
+                    self.dm6000b._tlShutterOpened = v
+                    self.dm6000b.tlShutterOpenedChanged.emit(v)
+                v = toBool(il, 'IL')
+                if self.dm6000b._ilShutterOpened != v:
+                    self.dm6000b._ilShutterOpened = v
+                    self.dm6000b.ilShutterOpenedChanged.emit(v)
+
+    def _setShutterOpened(self, idx, opened):
+        self._transmit(Packet(self, line=None, cmdCode=32, parameter='{} {}'.format(idx, '1' if opened else '0')))

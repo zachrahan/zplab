@@ -14,21 +14,30 @@ class Packet:
                 e+= 'length is 5 (2 for function unit code, 3 for command code).'
                 raise TruncatedResponseException(funit, e.format(len(line)))
 
-            funitCode = line[:2]
+            # NB: only packets from the scope may be event notifications.  We command the scope; the scope notifies us.  We
+            # do not notify the scope.
+            if line[0] == '$':
+                self.isEventNotification = True
+                p = 1
+            else:
+                self.isEventNotification = False
+                p = 0
+
+            funitCode = line[p : p+2]
             if not funitCode.isdigit():
                 raise InvalidPacketReceivedException(funit, 'Response from device is invalid; function unit field contains non-digit characters.')
             self.funitCode = int(funitCode)
 
-            if not line[2:5].isdigit():
+            if not line[p+2 : p+5].isdigit():
                 raise InvalidPacketReceivedException(funit, 'Response from device is invalid; command field contains non-digit characters.')
 
             # NB: only responses make use of a status code.  The status code for a request is always zero; in a response,
             # the status code indicates whether the scope successfully acted on the associated request.
-            self.statusCode = int(line[2:3])
+            self.statusCode = int(line[p+2 : p+3])
 
-            self.cmdCode = int(line[3:5])
+            self.cmdCode = int(line[p+3 : p+5])
 
-            self.parameter = line[5:]
+            self.parameter = line[p+5 :]
             # Parameter is separated from funitCode and cmdCode by a space; throw that space away
             if len(self.parameter) > 0 and self.parameter[0] == ' ':
                 self.parameter = self.parameter[1:]

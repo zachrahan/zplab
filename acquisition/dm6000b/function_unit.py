@@ -32,7 +32,8 @@ class FunctionUnit(Device):
 
     def _packetReceivedSlot(self, packet):
         txPacket = None
-        if packet.cmdCode in self._outstanding:
+        # NB: an event notification is sent unprompted and therefore has no associated request
+        if not packet.isEventNotification and packet.cmdCode in self._outstanding:
             txPackets = self._outstanding[packet.cmdCode]
             # Presumably the DM6000B reponds to requests for the same function unit and command in FIFO order, so if no
             # request is found matching the response, the oldest request is assumed to have provoked the response
