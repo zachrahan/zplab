@@ -186,8 +186,8 @@ class _MainFunctionUnit(FunctionUnit):
 class _Lamp(FunctionUnit):
     '''We are not using the DM6000B's lamp; however, TL and IL shutter settings belong to the lamp function unit.  Rather
     than create confusion by adding a user visible lamp subdevice, the lamp function unit's shutter state properties are
-    available as properties of the associated Dm6000b instance.
-    '''
+    available as properties of the associated Dm6000b instance.'''
+
     def __init__(self, dm6000b, deviceName='hidden Lamp Function Unit - properties proxied to Dm6000b'):
         super().__init__(dm6000b, deviceName, 77)
         self.dm6000b._tlShutterOpened = None
