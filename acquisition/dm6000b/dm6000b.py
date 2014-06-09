@@ -1,15 +1,17 @@
 # Copyright 2014 WUSTL ZPLAB
 # Erik Hvatum (ice.rikh@gmail.com)
 
+import copy
 from PyQt5 import QtCore, QtSerialPort
 import re
 import sys
 from acquisition.device import Device, DeviceException, ThreadedDevice, ThreadedDeviceWorker
+from acquisition.dm6000b.enums import ImmersionOrDry, Method
 from acquisition.dm6000b.function_unit import FunctionUnit
 from acquisition.dm6000b.function_units.lamp import _Lamp
 from acquisition.dm6000b.function_units.main import _MainFunctionUnit
+from acquisition.dm6000b.function_units.objective_turret import _ObjectiveTurret
 from acquisition.dm6000b.function_units.stage import Stage
-from acquisition.dm6000b.method import Method
 from acquisition.dm6000b.packet import Packet, InvalidPacketReceivedException, TruncatedPacketReceivedException
 
 class Dm6000b(ThreadedDevice):
@@ -21,6 +23,9 @@ class Dm6000b(ThreadedDevice):
     activeMethodChanged = QtCore.pyqtSignal(Method)
     tlShutterOpenedChanged = QtCore.pyqtSignal(bool)
     ilShutterOpenedChanged = QtCore.pyqtSignal(bool)
+    immersionOrDryChanged = QtCore.pyqtSignal(ImmersionOrDry)
+    objectiveTurretMovingChanged = QtCore.pyqtSignal(bool)
+    objectiveChanged = QtCore.pyqtSignal(int)
 
     def __init__(self, parent=None, deviceName='Leica DM6000B', serialPortDescriptor='/dev/ttyScope', timeout=1.0):
         '''timeout unit is seconds.'''
@@ -57,6 +62,7 @@ class Dm6000b(ThreadedDevice):
 
         self._main = _MainFunctionUnit(self)
         self._lamp = _Lamp(self)
+        self._objectiveTurret = _ObjectiveTurret(self)
         self.stageX = Stage(self, 'Stage X Axis', 72)
         self.stageY = Stage(self, 'Stage Y Axis', 73)
         self.stageZ = Stage(self, 'Stage Z Axis', 71)
@@ -87,7 +93,7 @@ class Dm6000b(ThreadedDevice):
         '''The same as the methods property, except a dict of "Method enum value -> is supported bool" is returned.'''
         return {method : self._main._methods[method] for method in Method}
 
-    @QtCore.pyqtProperty(Method)
+    @QtCore.pyqtProperty(Method, notify=activeMethodChanged)
     def activeMethod(self):
         return self._main._activeMethod
 
@@ -110,6 +116,26 @@ class Dm6000b(ThreadedDevice):
     @ilShutterOpened.setter
     def ilShutterOpened(self, ilShutterOpened):
         self._lamp._setShutterOpened(1, ilShutterOpened)
+
+    @QtCore.pyqtProperty(ImmersionOrDry, notify=immersionOrDryChanged)
+    def immersionOrDry(self):
+        return self._objectiveTurret._immersionOrDry
+
+    @QtCore.pyqtProperty(bool, notify=objectiveTurretMovingChanged)
+    def objectiveTurretMoving(self):
+        return self._objectiveTurret._moving
+
+    @QtCore.pyqtProperty(dict)
+    def objectivesDetails(self):
+        return copy.deepcopy(self._objectiveTurret._objectives)
+
+    @QtCore.pyqtProperty(int, notify=objectiveChanged)
+    def objective(self):
+        return self._objectiveTurret._objective
+
+    @objective.setter
+    def objective(self, magnification):
+        self._objectiveTurret._setObjective(magnification)
 
 class _Dm6000bWorker(ThreadedDeviceWorker):
     # Signals used to notify Device

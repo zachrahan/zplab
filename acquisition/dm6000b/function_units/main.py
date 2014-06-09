@@ -3,8 +3,8 @@
 
 from PyQt5 import QtCore
 from acquisition.device import DeviceException
+from acquisition.dm6000b.enums import Method
 from acquisition.dm6000b.function_unit import FunctionUnit
-from acquisition.dm6000b.method import Method
 from acquisition.dm6000b.packet import Packet, InvalidPacketReceivedException, TruncatedPacketReceivedException
 
 class _MainFunctionUnit(FunctionUnit):

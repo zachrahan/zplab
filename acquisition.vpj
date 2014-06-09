@@ -34,16 +34,6 @@
 			<F N="acquisition/brightfield_led/direct_manip.py"/>
 		</Folder>
 		<Folder
-			Name="leica_dm"
-			Filters="">
-			<F N="acquisition/leica_dm/__init__.py"/>
-			<F N="acquisition/leica_dm/camera_mm.py"/>
-			<F N="acquisition/leica_dm/filter_turret_mm.py"/>
-			<F N="acquisition/leica_dm/microscope_mm.py"/>
-			<F N="acquisition/leica_dm/objective_turret_mm.py"/>
-			<F N="acquisition/leica_dm/stage_mm.py"/>
-		</Folder>
-		<Folder
 			Name="lumencor"
 			Filters="">
 			<F N="acquisition/lumencor/__init__.py"/>
@@ -67,8 +57,8 @@
 			</Folder>
 			<F N="acquisition/dm6000b/__init__.py"/>
 			<F N="acquisition/dm6000b/dm6000b.py"/>
+			<F N="acquisition/dm6000b/enums.py"/>
 			<F N="acquisition/dm6000b/function_unit.py"/>
-			<F N="acquisition/dm6000b/method.py"/>
 			<F N="acquisition/dm6000b/packet.py"/>
 		</Folder>
 		<Folder
@@ -145,7 +135,7 @@
 				Value="1"/>
 			<Item
 				Name="show_hidden"
-				Value="0"/>
+				Value="1"/>
 		</List>
 	</Config>
 </Project>
