@@ -12,6 +12,11 @@ class Device(QtCore.QObject):
         self.setObjectName(deviceName)
         self.objectNameChanged.connect(self.deviceNameChanged)
 
+    def __del__(self):
+        '''Provided so that all child classes may call Device.__del__(self) for potential forward compatibility in the case where this class
+        someday does come to do something important in its destructor.'''
+        pass
+
     @property
     def deviceName(self):
         '''All QObjects have an objectName Qt property that is exposed via .objectName() and .setObjectName(..).  "objectName" is a more general
@@ -49,6 +54,7 @@ class ThreadedDevice(Device):
     def __del__(self):
         self._thread.quit()
         self._thread.wait()
+        Device.__del__(self)
 
 class ThreadedDeviceWorker(QtCore.QObject):
     def __init__(self, device):

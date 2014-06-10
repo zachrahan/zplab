@@ -20,6 +20,11 @@ class _Lamp(FunctionUnit):
         # Get current shutter open/close states
         self._transmit(Packet(self, line=None, cmdCode=33))
 
+    def __del__(self):
+        # Unsubscribe from all events
+        self._transmit(Packet(self, line=None, cmdCode=3, parameter='0 0 0 0 0 0'))
+        FunctionUnit.__del__(self)
+
     def _processReceivedPacket(self, txPacket, rxPacket):
         if rxPacket.statusCode == 0:
             if rxPacket.cmdCode == 33:

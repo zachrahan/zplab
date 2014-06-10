@@ -67,10 +67,6 @@ class Dm6000b(ThreadedDevice):
         self.stageY = Stage(self, 'Stage Y Axis', 73)
         self.stageZ = Stage(self, 'Stage Z Axis', 71)
 
-    def __del__(self):
-        self._thread.quit()
-        self._thread.wait()
-
     def _workerReceivedUnhandledLineSlot(self, line):
         print('Received unhandled response from "{}":\n\t"{}".'.format(self.deviceName, line))
 
@@ -120,6 +116,10 @@ class Dm6000b(ThreadedDevice):
     @QtCore.pyqtProperty(ImmersionOrDry, notify=immersionOrDryChanged)
     def immersionOrDry(self):
         return self._objectiveTurret._immersionOrDry
+
+    @immersionOrDry.setter
+    def immersionOrDry(self, immersionOrDry):
+        self._objectiveTurret._setImmersionOrDry(immersionOrDry)
 
     @QtCore.pyqtProperty(bool, notify=objectiveTurretMovingChanged)
     def objectiveTurretMoving(self):

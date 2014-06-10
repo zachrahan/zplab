@@ -35,6 +35,11 @@ class _ObjectiveTurret(FunctionUnit):
         self._objectivesInitPhase = self._ObjectivesInitPhase.GetMin
         self._transmit(Packet(self, cmdCode=38))
 
+    def __del__(self):
+        # Unsubscribe from all events
+        self._transmit(Packet(self, cmdCode=3, parameter='0 0 0 0 0 0 0 0 0 0'))
+        FunctionUnit.__del__(self)
+
     def _postEnumerationInit(self):
         # Get current objective magnification
         self._transmit(Packet(self, cmdCode=33, parameter='a 1'))
@@ -46,6 +51,8 @@ class _ObjectiveTurret(FunctionUnit):
         self._transmit(Packet(self, cmdCode=4))
         # Subscribe to change events for: turret in motion, objective magnification changed, immersion or dry state change
         self._transmit(Packet(self, cmdCode=3, parameter='1 1 0 0 0 0 1 0 0 0'))
+        # As described by Leica manual: "do not automatically lower the Z-drive before rotation of objective turret, do not
+        # take care of type of objective."
 
     def _processReceivedPacket(self, txPacket, rxPacket):
         if self._objectivesInitPhase == self._ObjectivesInitPhase.Done:
@@ -105,6 +112,12 @@ class _ObjectiveTurret(FunctionUnit):
                         self.dm6000b.objectiveChanged.emit(self._objective)
                 else:
                     raise DeviceException(self, 'Received extraneous (non-requested) objective parameter data.')
+
+        elif rxPacket.statusCode == 3:
+            if rxPacket.cmdCode == 22:
+                raise DeviceException(self, 'Failed to switch to {}x objective.  '.format(self._positionMagnifications[int(txPacket.parameter)]) +
+                                            'The cause of this is often that the specified objective is not compatible with the current immersionOrDry setting.  '
+                                            'Before switching to an immersion objective, set immersionOrDry = "I", and for standard objectives, "D".')
 
     def _processReceivedInitPacket(self, txPacket, rxPacket):
         if rxPacket.statusCode == 0:
@@ -178,3 +191,26 @@ class _ObjectiveTurret(FunctionUnit):
             raise IndexError('Specified magnification does not correspond to the magnification offered by any of the available objectives.')
         if magnification != self._objective:
             self._transmit(Packet(self, line=None, cmdCode=22, parameter='{}'.format(self._objectives[magnification].position)))
+
+    def _setImmersionOrDry(self, immersionOrDry):
+        if type(immersionOrDry) is str:
+            if immersionOrDry in ('d', 'D'):
+                v = ImmersionOrDry.Dry
+            elif immersionOrDry in ('i', 'I'):
+                v = ImmersionOrDry.Immersion
+            else:
+                raise ValueError('When provided as a string, the immersionOrDry parameter must be "D" or "I" (without quotes), not "{}".'.format(immersionOrDry))
+        else:
+            v = immersionOrDry
+
+        if v != self._immersionOrDry:
+            if v == ImmersionOrDry.Dry:
+                parameter = 'D'
+            elif v == ImmersionOrDry.Immersion:
+                parameter = 'I'
+            else:
+                e = 'Unsupported value "{0}" specified for immersionOrDry.  This function only knows about "{1}" and "{2}".  If it needs to support '
+                e+= '"{0}", then it has to be updated or otherwise modified to do so....  But... Do you really want to immerse your objective in '
+                e+= '"{0}"?  Really really?  Does that make sense as a thing that would happen to an objective?  Being immersed in "{0}"?'
+                raise DeviceException(self, e.format(v, ImmersionOrDry.Dry, ImmersionOrDry.Immersion))
+            self._transmit(Packet(self, cmdCode=27, parameter=parameter))
