@@ -8,6 +8,7 @@ import sys
 from acquisition.device import Device, DeviceException, ThreadedDevice, ThreadedDeviceWorker
 from acquisition.dm6000b.enums import ImmersionOrDry, Method
 from acquisition.dm6000b.function_unit import FunctionUnit
+from acquisition.dm6000b.function_units.cube_turret import CubeTurret
 from acquisition.dm6000b.function_units.lamp import _Lamp
 from acquisition.dm6000b.function_units.main import _MainFunctionUnit
 from acquisition.dm6000b.function_units.objective_turret import _ObjectiveTurret
@@ -61,6 +62,8 @@ class Dm6000b(ThreadedDevice):
         self._funitSubdevices = {}
 
         self._main = _MainFunctionUnit(self)
+
+        self.cubeTurret = CubeTurret(self)
         self._lamp = _Lamp(self)
         self._objectiveTurret = _ObjectiveTurret(self)
         self.stageX = Stage(self, 'Stage X Axis', 72)
@@ -78,11 +81,11 @@ class Dm6000b(ThreadedDevice):
         for subdevice in self._funitSubdevices.values():
             subdevice.waitForReady(timeout)
 
-    @QtCore.pyqtProperty(list)
+    @QtCore.pyqtProperty(frozenset)
     def methods(self):
-        '''Index by Method enum value.  For example, to see if "IL DIC" is supported, do dm6000b.methods[Method.IL_DIC]
-        (a bool is returned, True if the specified method is supported).'''
-        return self._main._methods.copy()
+        '''Frozenset containing supported methods.  For example, to see if "IL DIC" is supported, do "dm6000b.Methods.IL_DIC
+        in dm6000b.methods.'''
+        return self._main._methods
 
     @QtCore.pyqtProperty(dict)
     def methodsAsDict(self):
@@ -124,6 +127,10 @@ class Dm6000b(ThreadedDevice):
     @QtCore.pyqtProperty(bool, notify=objectiveTurretMovingChanged)
     def objectiveTurretMoving(self):
         return self._objectiveTurret._moving
+
+    @QtCore.pyqtProperty(set)
+    def objectives(self):
+        return set(self._objectiveTurret._objectives.keys())
 
     @QtCore.pyqtProperty(dict)
     def objectivesDetails(self):

@@ -32,6 +32,8 @@ class _ObjectiveTurret(FunctionUnit):
         self._objective = None
         self._objectives = {}
         self._positionMagnifications = {}
+        self._immersionOrDry = None
+        self._moving = None
         self._objectivesInitPhase = self._ObjectivesInitPhase.GetMin
         self._transmit(Packet(self, cmdCode=38))
 
@@ -44,15 +46,11 @@ class _ObjectiveTurret(FunctionUnit):
         # Get current objective magnification
         self._transmit(Packet(self, cmdCode=33, parameter='a 1'))
         # Get current immsersion or dry state
-        self._immersionOrDry = None
         self._transmit(Packet(self, cmdCode=28))
         # Get current objective movement state
-        self._moving = None
         self._transmit(Packet(self, cmdCode=4))
         # Subscribe to change events for: turret in motion, objective magnification changed, immersion or dry state change
         self._transmit(Packet(self, cmdCode=3, parameter='1 1 0 0 0 0 1 0 0 0'))
-        # As described by Leica manual: "do not automatically lower the Z-drive before rotation of objective turret, do not
-        # take care of type of objective."
 
     def _processReceivedPacket(self, txPacket, rxPacket):
         if self._objectivesInitPhase == self._ObjectivesInitPhase.Done:
@@ -64,6 +62,10 @@ class _ObjectiveTurret(FunctionUnit):
         if rxPacket.statusCode == 0:
 
             if rxPacket.cmdCode == 4:
+                # Response to "is objective turret in motion" query.  (As in, whether the scope is switching between objective
+                # turret positions, not whether the turret is moving because the scope itself is moving due to earthquake or
+                # perhaps a viking hoisting the scope into a long boat.  We'd have to mount some accelerometers to the scope
+                # stand if we wanted that information.)
                 vs = rxPacket.parameter.split(' ')
                 if vs[2] == '1' and vs[3] == '0':
                     moving = False
@@ -77,6 +79,7 @@ class _ObjectiveTurret(FunctionUnit):
                     self.dm6000b.objectiveTurretMovingChanged.emit(self._moving)
 
             elif rxPacket.cmdCode == 28:
+                # Response to scope immersion or dry mode query
                 if rxPacket.parameter == 'D':
                     immersionOrDry = ImmersionOrDry.Dry
                 elif rxPacket.parameter == 'I':
@@ -89,6 +92,7 @@ class _ObjectiveTurret(FunctionUnit):
                     self.dm6000b.immersionOrDryChanged.emit(self._immersionOrDry)
 
             elif rxPacket.cmdCode == 33:
+                # Current magnification changed notification event or response to current maginifaction query
                 vs = rxPacket.parameter.split(' ')
                 position = int(vs[0])
                 par = int(vs[1])
@@ -115,6 +119,7 @@ class _ObjectiveTurret(FunctionUnit):
 
         elif rxPacket.statusCode == 3:
             if rxPacket.cmdCode == 22:
+                # Scope rejected turret position change command
                 raise DeviceException(self, 'Failed to switch to {}x objective.  '.format(self._positionMagnifications[int(txPacket.parameter)]) +
                                             'The cause of this is often that the specified objective is not compatible with the current immersionOrDry setting.  '
                                             'Before switching to an immersion objective, set immersionOrDry = "I", and for standard objectives, "D".')
@@ -123,15 +128,17 @@ class _ObjectiveTurret(FunctionUnit):
         if rxPacket.statusCode == 0:
 
             if rxPacket.cmdCode == 38:
+                # Response to minimum objective position index query
                 if self._objectivesInitPhase != self._ObjectivesInitPhase.GetMin:
-                    raise DeviceException(self, 'Received data out of order.')
+                    raise DeviceException(self, 'Received data out of order during init.')
                 self._objectiveMinPosition = int(rxPacket.parameter)
                 self._objectivesInitPhase = self._ObjectivesInitPhase.GetMax
                 self._transmit(Packet(self, cmdCode=39))
 
             elif rxPacket.cmdCode == 39:
+                # Response to maximum objective position index query
                 if self._objectivesInitPhase != self._ObjectivesInitPhase.GetMax:
-                    raise DeviceException(self, 'Received data out of order.')
+                    raise DeviceException(self, 'Received data out of order during init.')
                 self._objectiveMaxPosition = int(rxPacket.parameter)
                 self._objectivesInitPhase = self._ObjectivesInitPhase.Enumerate
                 self._objectivePositionsAwaitingInitResponse = {p:[True, True] for p in range(self._objectiveMinPosition, self._objectiveMaxPosition+1)}
@@ -141,34 +148,44 @@ class _ObjectiveTurret(FunctionUnit):
                     self._transmit(Packet(self, cmdCode=33, parameter='{} 5'.format(p)))
 
             elif rxPacket.cmdCode == 33:
+                # Reponse to objective parameter query...
                 if self._objectivesInitPhase != self._ObjectivesInitPhase.Enumerate:
-                    raise DeviceException(self, 'Received data out of order.')
+                    raise DeviceException(self, 'Received data out of order during init.')
                 vs = rxPacket.parameter.split(' ')
                 position = int(vs[0])
                 par = int(vs[1])
                 awaiting = self._objectivePositionsAwaitingInitResponse[position]
                 objective = self._objectivesByPosition[position]
                 if par == 1:
+                    # ... for objective maginifacation parameter
                     if not awaiting[0]:
                         raise DeviceException(self, 'Received duplicate response for objective magnification.')
                     objective.position = position
                     if vs[2] != '-':
+                        # "-" indicates empty objective position.  magnification values for empty objectives remain None
+                        # as a result of the if statement containing this comment.
                         objective.magnification = int(vs[2])
                     awaiting[0] = False
                 elif par == 5:
+                    # ... for objective type parameter (eg, O for oil, D for dry, and a zoo of other exotic types too great
+                    # in their multitude to bother representing with an enum)
                     if not awaiting[1]:
                         raise DeviceException(self, 'Received duplicate response for objective type.')
                     objective.type_ = vs[2]
                     awaiting[1] = False
                 else:
+                    # ... that was never made
                     raise DeviceException(self, 'Received extraneous (non-requested) objective parameter data.')
 
                 if not any(awaiting):
                     del self._objectivePositionsAwaitingInitResponse[position]
 
+                # In retrospect, this is more complex than necessary and would have been better implemented as
+                # two init steps, one for each value to be enumerated, rather than as a combined step retrieving
+                # both magnification and type.  It does work, however.
                 if len(self._objectivePositionsAwaitingInitResponse) == 0:
                     for position, objective in self._objectivesByPosition.items():
-                        if objective.magnification is not None:
+                        if objective.magnification is not None: # Skip empty positions
                             if objective.magnification in self._objectives:
                                 raise DeviceException(self, 'More than one objective has {}x magnification.  Because this application identifies objectives ' +
                                                             'by magnification, having multiple objectives of the same magnification on the same objective ' +

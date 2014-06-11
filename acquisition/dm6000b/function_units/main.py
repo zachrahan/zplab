@@ -32,17 +32,22 @@ class _MainFunctionUnit(FunctionUnit):
     def _processReceivedPacket(self, txPacket, rxPacket):
         if rxPacket.statusCode == 0:
             if rxPacket.cmdCode == 26:
+                # Response to available methods query
                 methods = []
                 for method in Method:
                     s = rxPacket.parameter[-method.value]
                     if s == '0':
-                        methods.append(False)
+                        # Method not supported
+                        pass
                     elif s == '1':
-                        methods.append(True)
+                        # Method supported
+                        methods.append(method)
                     else:
-                        raise InvalidPacketReceivedException(self, 'Method supported element must be either "0" or "1", not "{}".'.format(s))
-                self._methods = methods
+                        e = 'Method supported element must be either "0" or "1", not "{}".'
+                        raise InvalidPacketReceivedException(self, e.format(s))
+                self._methods = frozenset(methods)
             elif rxPacket.cmdCode == 28:
+                # Current method changed notification event or response to current method query
                 self._activeMethod = Method(int(rxPacket.parameter))
                 self.dm6000b.activeMethodChanged.emit(self._activeMethod)
 
