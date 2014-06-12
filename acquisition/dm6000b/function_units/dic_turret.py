@@ -157,10 +157,10 @@ class DicTurret(FunctionUnit):
         elif rxPacket.cmdCode == 3:
             raise DeviceException(self, 'Failed to register for change notification events.  If you have recently ' +
                                         'upgraded your DM6000B\'s firmware, this probably happened because Leica added ' +
-                                        'more events for this function unit, and the number of 0 or 1 values in ' + 
-                                        'event registration packets (command code 3) must exactly match the number ' + 
-                                        'of events supported.  Fixing this should just be a matter of adding one more ' + 
-                                        '" 0" at a time to the parameter string for this function unit\'s cmdCode 3 ' + 
+                                        'more events for this function unit, and the number of 0 or 1 values in ' +
+                                        'event registration packets (command code 3) must exactly match the number ' +
+                                        'of events supported.  Fixing this should just be a matter of adding one more ' +
+                                        '" 0" at a time to the parameter string for this function unit\'s cmdCode 3 ' +
                                         'packet constructor calls until it starts working again.')
 
     @QtCore.pyqtProperty(str, notify=prismChanged)
@@ -183,7 +183,7 @@ class DicTurret(FunctionUnit):
     @finePos.setter
     def finePos(self, finePos):
         if self._currentPrismName is None:
-            raise DeviceException(self, 'Can not set current DIC prism fine position; the DIC turret is currently ' + 
+            raise DeviceException(self, 'Can not set current DIC prism fine position; the DIC turret is currently ' +
                                         'at an empty position (ie, no prism is in the beam path).')
         if finePos < self._minFinePos or finePos > self._maxFinePos:
             e = 'finePos value must lie in the range [{}, {}].  The specified value, {}, does not.'
