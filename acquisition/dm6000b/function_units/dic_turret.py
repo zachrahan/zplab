@@ -174,10 +174,8 @@ class DicTurret(FunctionUnit):
 
     @QtCore.pyqtProperty(int, notify=finePosChanged)
     def finePos(self):
-        '''Note that modifying the current prism fine position permanantly alters the fine position value associated
-        with the current method of the current objective.  Although similar, this is at least convenient, expected,
-        and relatively harmless compared to what happens when prism selection is directly modified.  Also, it is no
-        different than the impact of adjusting the DIC spinner wheel on the scope itself.'''
+        '''Note that modifying the current prism fine position does not permanantly alter the fine position value
+        associated with the current method of the current objective.'''
         return self._currentPrismFinePos
 
     @finePos.setter
