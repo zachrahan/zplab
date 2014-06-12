@@ -11,7 +11,7 @@ class ImmersionOrDry(enum.Enum):
 @enum.unique
 class Method(enum.IntEnum):
     '''Leica DM6000B "method" as described in reference for 70 026 in "The serial interface documentation
-    for the stands DM4000, DM5000, DM6000; Version 1.5; August 2010 (DM456K_SER_REF.pdf).'''
+    for the stands DM4000, DM5000, DM6000; Version 1.5; August 2010" (DM456K_SER_REF.pdf).'''
     TL_BF = 0
     TL_PH = 1
     TL_DF = 2

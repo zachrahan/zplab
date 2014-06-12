@@ -3,7 +3,6 @@
 
 from enum import Enum
 from PyQt5 import QtCore
-import sys
 import threading
 from acquisition.dm6000b.packet import Packet
 from acquisition.device import Device, DeviceException, DeviceTimeoutException

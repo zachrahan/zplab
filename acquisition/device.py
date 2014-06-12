@@ -2,6 +2,7 @@
 # Erik Hvatum (ice.rikh@gmail.com)
 
 from PyQt5 import QtCore
+import sys
 from acquisition.acquisition_exception import AcquisitionException
 
 class Device(QtCore.QObject):
@@ -16,6 +17,9 @@ class Device(QtCore.QObject):
         '''Provided so that all child classes may call Device.__del__(self) for potential forward compatibility in the case where this class
         someday does come to do something important in its destructor.'''
         pass
+
+    def _warn(self, warning):
+        print('{}: Warning: {}'.format(self.deviceName, warning), sys.stderr)
 
     @property
     def deviceName(self):

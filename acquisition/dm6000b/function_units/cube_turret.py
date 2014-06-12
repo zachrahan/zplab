@@ -4,7 +4,6 @@
 import copy
 import enum
 from PyQt5 import QtCore
-import re
 from acquisition.device import DeviceException
 from acquisition.dm6000b.enums import Method
 from acquisition.dm6000b.function_unit import FunctionUnit
@@ -23,15 +22,15 @@ class CubeTurret(FunctionUnit):
 
     cubeChanged = QtCore.pyqtSignal(str)
 
-    def __init__(self, dm6000b, deviceName='IL Turret'):
+    def __init__(self, dm6000b, deviceName='Cube Turret'):
         super().__init__(dm6000b, deviceName, 78)
         # So that we don't get confused while initing, unsubscribe from cube change notification events
         self._transmit(Packet(self, cmdCode=3, parameter='0'))
         # Begin scanning cubes by requesting min cube pos/index (scanning will continue once this value is retrieved)
         self._cube = None
-        # cube name -> Cube instance
+        # cube names -> Cube instances
         self._cubes = {}
-        # cube position -> cube name
+        # cube positions -> cube names
         self._positionCubeNames = {}
         self._initPhase = self._InitPhase.MinPos
         self._transmit(Packet(self, cmdCode=31))
@@ -79,7 +78,7 @@ class CubeTurret(FunctionUnit):
         if rxPacket.statusCode == 0:
 
             if rxPacket.cmdCode == 31:
-                # Response to turret minimum position index query
+                # Response to turret minimum position query
                 if self._initPhase != self._InitPhase.MinPos:
                     raise DeviceException(self, 'Received data out of order during init.')
                 self._minPos = int(rxPacket.parameter)
@@ -87,7 +86,7 @@ class CubeTurret(FunctionUnit):
                 self._transmit(Packet(self, cmdCode=32))
 
             elif rxPacket.cmdCode == 32:
-                # Response to turret maximum position index query
+                # Response to turret maximum position query
                 if self._initPhase != self._InitPhase.MaxPos:
                     raise DeviceException(self, 'Received data out of order during init.')
                 self._maxPos = int(rxPacket.parameter)
@@ -183,7 +182,8 @@ class CubeTurret(FunctionUnit):
     def cube(self, cube):
         if cube not in self._cubes:
             raise ValueError('There is no cube named "{}" in the cube turret.'.format(cube))
-        self._transmit(Packet(self, cmdCode=22, parameter=str(self._cubes[cube].position)))
+        if cube != self._cube:
+            self._transmit(Packet(self, cmdCode=22, parameter=str(self._cubes[cube].position)))
 
     @QtCore.pyqtProperty(set)
     def cubes(self):

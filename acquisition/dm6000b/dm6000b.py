@@ -4,11 +4,11 @@
 import copy
 from PyQt5 import QtCore, QtSerialPort
 import re
-import sys
 from acquisition.device import Device, DeviceException, ThreadedDevice, ThreadedDeviceWorker
 from acquisition.dm6000b.enums import ImmersionOrDry, Method
 from acquisition.dm6000b.function_unit import FunctionUnit
 from acquisition.dm6000b.function_units.cube_turret import CubeTurret
+from acquisition.dm6000b.function_units.dic_turret import DicTurret
 from acquisition.dm6000b.function_units.lamp import _Lamp
 from acquisition.dm6000b.function_units.main import _MainFunctionUnit
 from acquisition.dm6000b.function_units.objective_turret import _ObjectiveTurret
@@ -66,6 +66,7 @@ class Dm6000b(ThreadedDevice):
         self.cubeTurret = CubeTurret(self)
         self._lamp = _Lamp(self)
         self._objectiveTurret = _ObjectiveTurret(self)
+        self.dicTurret = DicTurret(self)
         self.stageX = Stage(self, 'Stage X Axis', 72)
         self.stageY = Stage(self, 'Stage Y Axis', 73)
         self.stageZ = Stage(self, 'Stage Z Axis', 71)
@@ -165,7 +166,7 @@ class _Dm6000bWorker(ThreadedDeviceWorker):
         self.buffer = ''
 
     def serialPortErrorSlot(self, serialPortError):
-        print('Serial port error #{} ({}).'.format(serialPortError, self.serialPort.errorString()), file=sys.stderr)
+        self.device._warn('Serial port error #{} ({}).'.format(serialPortError, self.serialPort.errorString()))
 
     def serialPortBytesReadySlot(self):
         inba = self.serialPort.readAll()

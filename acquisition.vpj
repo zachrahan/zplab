@@ -50,6 +50,7 @@
 				Filters="">
 				<F N="acquisition/dm6000b/function_units/__init__.py"/>
 				<F N="acquisition/dm6000b/function_units/cube_turret.py"/>
+				<F N="acquisition/dm6000b/function_units/dic_turret.py"/>
 				<F N="acquisition/dm6000b/function_units/lamp.py"/>
 				<F N="acquisition/dm6000b/function_units/main.py"/>
 				<F N="acquisition/dm6000b/function_units/objective_turret.py"/>
