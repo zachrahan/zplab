@@ -17,14 +17,18 @@ class Objective:
     def __repr__(self):
         return 'Objective(position={}, magnification={}, type_={})'.format(self.position, self.magnification, self.type_)
 
-class _ObjectiveTurret(FunctionUnit):
+class ObjectiveTurret(FunctionUnit):
     '''AKA "nose piece" AKA "revolver" - that rotating bit of hardware to which objectives of various maginifications
     are attached.  This Device is meant to act as a subdevice of Dm6000b and, as such, depends on its parent to send
     requests to the DM6000B and to deliver responses from it.'''
 
     _ObjectivesInitPhase = enum.Enum('_ObjectivesInitPhase', 'GetMin GetMax Enumerate Done')
 
-    def __init__(self, dm6000b, deviceName='hidden Objective Turret Function Unit - properties proxied to Dm6000b'):
+    immersionOrDryChanged = QtCore.pyqtSignal(ImmersionOrDry)
+    objectiveTurretMovingChanged = QtCore.pyqtSignal(bool)
+    objectiveChanged = QtCore.pyqtSignal(int)
+
+    def __init__(self, dm6000b, deviceName='Objective Turret Function Unit'):
         super().__init__(dm6000b, deviceName, 76)
         # So that we don't get confused while initing, unsubscribe from all of the objective turret function unit change events
         self._transmit(Packet(self, cmdCode=3, parameter='0 0 0 0 0 0 0 0 0 0'))
@@ -76,7 +80,7 @@ class _ObjectiveTurret(FunctionUnit):
 
                 if moving != self._moving:
                     self._moving = moving
-                    self.dm6000b.objectiveTurretMovingChanged.emit(self._moving)
+                    self.objectiveTurretMovingChanged.emit(self._moving)
 
             elif rxPacket.cmdCode == 28:
                 # Response to scope immersion or dry mode query
@@ -89,7 +93,7 @@ class _ObjectiveTurret(FunctionUnit):
 
                 if immersionOrDry != self._immersionOrDry:
                     self._immersionOrDry = immersionOrDry
-                    self.dm6000b.immersionOrDryChanged.emit(self._immersionOrDry)
+                    self.immersionOrDryChanged.emit(self._immersionOrDry)
 
             elif rxPacket.cmdCode == 33:
                 # Current magnification changed notification event or response to current maginifaction query
@@ -113,7 +117,7 @@ class _ObjectiveTurret(FunctionUnit):
 
                     if objective is not self._objective:
                         self._objective = objective
-                        self.dm6000b.objectiveChanged.emit(self._objective)
+                        self.objectiveChanged.emit(self._objective)
                 else:
                     raise DeviceException(self, 'Received extraneous (non-requested) objective parameter data.')
 
@@ -231,3 +235,31 @@ class _ObjectiveTurret(FunctionUnit):
                 e+= '"{0}"?  Really really?  Does that make sense as a thing that would happen to an objective?  Being immersed in "{0}"?'
                 raise DeviceException(self, e.format(v, ImmersionOrDry.Dry, ImmersionOrDry.Immersion))
             self._transmit(Packet(self, cmdCode=27, parameter=parameter))
+
+    @QtCore.pyqtProperty(ImmersionOrDry, notify=immersionOrDryChanged)
+    def immersionOrDry(self):
+        return self._immersionOrDry
+
+    @immersionOrDry.setter
+    def immersionOrDry(self, immersionOrDry):
+        self._setImmersionOrDry(immersionOrDry)
+
+    @QtCore.pyqtProperty(bool, notify=objectiveTurretMovingChanged)
+    def objectiveTurretMoving(self):
+        return self._moving
+
+    @QtCore.pyqtProperty(set)
+    def objectives(self):
+        return set(self._objectives.keys())
+
+    @QtCore.pyqtProperty(dict)
+    def objectivesDetails(self):
+        return copy.deepcopy(self._objectives)
+
+    @QtCore.pyqtProperty(int, notify=objectiveChanged)
+    def objective(self):
+        return self._objective
+
+    @objective.setter
+    def objective(self, magnification):
+        self._setObjective(magnification)

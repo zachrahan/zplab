@@ -7,10 +7,11 @@ import re
 from acquisition.device import Device, DeviceException, ThreadedDevice, ThreadedDeviceWorker
 from acquisition.dm6000b.enums import ImmersionOrDry, Method
 from acquisition.dm6000b.function_unit import FunctionUnit
+from acquisition.dm6000b.function_units.condenser_aperature_iris import CondenserApertureIris
 from acquisition.dm6000b.function_units.cube_turret import CubeTurret
 from acquisition.dm6000b.function_units.dic_turret import DicTurret
-from acquisition.dm6000b.function_units.lamp import _Lamp
-from acquisition.dm6000b.function_units.main import _MainFunctionUnit
+from acquisition.dm6000b.function_units.lamp import Lamp
+from acquisition.dm6000b.function_units.main import MainFunctionUnit
 from acquisition.dm6000b.function_units.objective_turret import _ObjectiveTurret
 from acquisition.dm6000b.function_units.stage import Stage
 from acquisition.dm6000b.packet import Packet, InvalidPacketReceivedException, TruncatedPacketReceivedException
@@ -19,14 +20,6 @@ class Dm6000b(ThreadedDevice):
     # Signals used to command _DeviceWorker
     _workerSendLineSignal = QtCore.pyqtSignal(str)
     _workerSendPacketSignal = QtCore.pyqtSignal(Packet)
-
-    # Signals available to user to indicate property value changes
-    activeMethodChanged = QtCore.pyqtSignal(Method)
-    tlShutterOpenedChanged = QtCore.pyqtSignal(bool)
-    ilShutterOpenedChanged = QtCore.pyqtSignal(bool)
-    immersionOrDryChanged = QtCore.pyqtSignal(ImmersionOrDry)
-    objectiveTurretMovingChanged = QtCore.pyqtSignal(bool)
-    objectiveChanged = QtCore.pyqtSignal(int)
 
     def __init__(self, parent=None, deviceName='Leica DM6000B', serialPortDescriptor='/dev/ttyScope', timeout=1.0):
         '''timeout unit is seconds.'''
@@ -61,15 +54,24 @@ class Dm6000b(ThreadedDevice):
         # Maps "function unit" code -> subdevice to which responses from the scope with that function unit code should be routed
         self._funitSubdevices = {}
 
-        self._main = _MainFunctionUnit(self)
+        self.main = MainFunctionUnit(self)
 
         self.cubeTurret = CubeTurret(self)
-        self._lamp = _Lamp(self)
-        self._objectiveTurret = _ObjectiveTurret(self)
+        self.lamp = Lamp(self)
+        self.objectiveTurret = ObjectiveTurret(self)
+        self.condenserApertureIris = CondenserApertureIris(self)
+        # Condenser aperture iris max openness varies with objective, but there is no provision for change event notification
+        # upon iris min/max openness modification.  Therefore, we must refresh min/max upon objective change.
+        self.objectiveChanged.connect(self._objectiveChangedSlot)
         self.dicTurret = DicTurret(self)
         self.stageX = Stage(self, 'Stage X Axis', 72)
         self.stageY = Stage(self, 'Stage Y Axis', 73)
         self.stageZ = Stage(self, 'Stage Z Axis', 71)
+
+    def _objectiveChangedSlot(self, objective):
+        # Only refresh iris min/max openness if the turret has reached an occupied position
+        if objective is not None:
+            self.condenserApertureIris.refreshMinMaxOpenness()
 
     def _workerReceivedUnhandledLineSlot(self, line):
         print('Received unhandled response from "{}":\n\t"{}".'.format(self.deviceName, line))
@@ -81,69 +83,6 @@ class Dm6000b(ThreadedDevice):
         Somehow calling waitForReady(..) from the worker thread is also unsafe.'''
         for subdevice in self._funitSubdevices.values():
             subdevice.waitForReady(timeout)
-
-    @QtCore.pyqtProperty(frozenset)
-    def methods(self):
-        '''Frozenset containing supported methods.  For example, to see if "IL DIC" is supported, do "dm6000b.Methods.IL_DIC
-        in dm6000b.methods.'''
-        return self._main._methods
-
-    @QtCore.pyqtProperty(dict)
-    def methodsAsDict(self):
-        '''The same as the methods property, except a dict of "Method enum value -> is supported bool" is returned.'''
-        return {method : self._main._methods[method] for method in Method}
-
-    @QtCore.pyqtProperty(Method, notify=activeMethodChanged)
-    def activeMethod(self):
-        return self._main._activeMethod
-
-    @activeMethod.setter
-    def activeMethod(self, activeMethod):
-        self._main._setActiveMethod(activeMethod)
-
-    @QtCore.pyqtProperty(bool, notify=tlShutterOpenedChanged)
-    def tlShutterOpened(self):
-        return self._tlShutterOpened
-
-    @tlShutterOpened.setter
-    def tlShutterOpened(self, tlShutterOpened):
-        self._lamp._setShutterOpened(0, tlShutterOpened)
-
-    @QtCore.pyqtProperty(bool, notify=ilShutterOpenedChanged)
-    def ilShutterOpened(self):
-        return self._ilShutterOpened
-
-    @ilShutterOpened.setter
-    def ilShutterOpened(self, ilShutterOpened):
-        self._lamp._setShutterOpened(1, ilShutterOpened)
-
-    @QtCore.pyqtProperty(ImmersionOrDry, notify=immersionOrDryChanged)
-    def immersionOrDry(self):
-        return self._objectiveTurret._immersionOrDry
-
-    @immersionOrDry.setter
-    def immersionOrDry(self, immersionOrDry):
-        self._objectiveTurret._setImmersionOrDry(immersionOrDry)
-
-    @QtCore.pyqtProperty(bool, notify=objectiveTurretMovingChanged)
-    def objectiveTurretMoving(self):
-        return self._objectiveTurret._moving
-
-    @QtCore.pyqtProperty(set)
-    def objectives(self):
-        return set(self._objectiveTurret._objectives.keys())
-
-    @QtCore.pyqtProperty(dict)
-    def objectivesDetails(self):
-        return copy.deepcopy(self._objectiveTurret._objectives)
-
-    @QtCore.pyqtProperty(int, notify=objectiveChanged)
-    def objective(self):
-        return self._objectiveTurret._objective
-
-    @objective.setter
-    def objective(self, magnification):
-        self._objectiveTurret._setObjective(magnification)
 
 class _Dm6000bWorker(ThreadedDeviceWorker):
     # Signals used to notify Device

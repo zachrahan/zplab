@@ -1,6 +1,7 @@
 # Copyright 2014 WUSTL ZPLAB
 # Erik Hvatum (ice.rikh@gmail.com)
 
+import enum
 from PyQt5 import QtCore
 from acquisition.device import DeviceException
 from acquisition.dm6000b.function_unit import FunctionUnit
@@ -11,11 +12,19 @@ class _Lamp(FunctionUnit):
     than create confusion by adding a user visible lamp subdevice, the lamp function unit's shutter state properties are
     available as properties of the associated Dm6000b instance.'''
 
+    _InitPhase = enum.Enum('_InitPhase', 'GetMinIntensity GetMaxIntensity Done')
+
+    tlShutterOpenedChanged = QtCore.pyqtSignal(bool)
+    ilShutterOpenedChanged = QtCore.pyqtSignal(bool)
+    lampIntensityChanged = QtCore.pyqtSignal(int)
+
     def __init__(self, dm6000b, deviceName='hidden Lamp Function Unit - properties proxied to Dm6000b'):
         super().__init__(dm6000b, deviceName, 77)
-        self.dm6000b._tlShutterOpened = None
-        self.dm6000b._ilShutterOpened = None
-        # Subscribe to shutter open/close events
+        self._tlShutterOpened = None
+        self._ilShutterOpened = None
+        # So that we don't get confused while initing, unsubscribe from all notification events
+#       self._transmit
+        # Subscribe to intensity change and shutter open/close events
         self._transmit(Packet(self, line=None, cmdCode=3, parameter='0 0 0 0 1 1'))
         # Get current shutter open/close states
         self._transmit(Packet(self, line=None, cmdCode=33))
@@ -53,3 +62,19 @@ class _Lamp(FunctionUnit):
 
     def _setShutterOpened(self, idx, opened):
         self._transmit(Packet(self, line=None, cmdCode=32, parameter='{} {}'.format(idx, '1' if opened else '0')))
+
+    @QtCore.pyqtProperty(bool, notify=tlShutterOpenedChanged)
+    def tlShutterOpened(self):
+        return self._tlShutterOpened
+
+    @tlShutterOpened.setter
+    def tlShutterOpened(self, tlShutterOpened):
+        self._setShutterOpened(0, tlShutterOpened)
+
+    @QtCore.pyqtProperty(bool, notify=ilShutterOpenedChanged)
+    def ilShutterOpened(self):
+        return self._ilShutterOpened
+
+    @ilShutterOpened.setter
+    def ilShutterOpened(self, ilShutterOpened):
+        self._setShutterOpened(1, ilShutterOpened)

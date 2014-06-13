@@ -7,7 +7,7 @@ from acquisition.dm6000b.enums import Method
 from acquisition.dm6000b.function_unit import FunctionUnit
 from acquisition.dm6000b.packet import Packet, InvalidPacketReceivedException, TruncatedPacketReceivedException
 
-class _MainFunctionUnit(FunctionUnit):
+class MainFunctionUnit(FunctionUnit):
     '''Dm6000b can't inherit from both ThreadedDevice and FunctionUnit.  However, a user will expect to find properties for
     the scope "main function unit" as attributes of Dm6000b directly, not as attributes of Dm6000b.mainUnit or somesuch.
     _Dm6000bWorker could route main function unit packets back to its Dm6000b instance, but then
@@ -17,7 +17,9 @@ class _MainFunctionUnit(FunctionUnit):
     Instead, a FunctionUnit _MainFunctionUnit is made that stores all its user accessible properties in its associated
     Dm6000b instance, where they are easily found by the user.'''
 
-    def __init__(self, dm6000b, deviceName='hidden Main Function Unit - properties proxied to Dm6000b'):
+    activeMethodChanged = QtCore.pyqtSignal(Method)
+
+    def __init__(self, dm6000b, deviceName='Main Function Unit'):
         super().__init__(dm6000b, deviceName, 70)
         self.dm6000b._methods = None
         # Get available methods
@@ -53,3 +55,22 @@ class _MainFunctionUnit(FunctionUnit):
 
     def _setActiveMethod(self, method):
         self._transmit(Packet(self, line=None, cmdCode=29, parameter='{} x'.format(method.value)))
+
+    @QtCore.pyqtProperty(frozenset)
+    def methods(self):
+        '''Frozenset containing supported methods.  For example, to see if "IL DIC" is supported, do "dm6000b.Methods.IL_DIC
+        in dm6000b.methods.'''
+        return self._methods
+
+    @QtCore.pyqtProperty(dict)
+    def methodsAsDict(self):
+        '''The same as the methods property, except a dict of "Method enum value -> is supported bool" is returned.'''
+        return {method : self._methods[method] for method in Method}
+
+    @QtCore.pyqtProperty(Method, notify=activeMethodChanged)
+    def activeMethod(self):
+        return self._activeMethod
+
+    @activeMethod.setter
+    def activeMethod(self, activeMethod):
+        self._setActiveMethod(activeMethod)
