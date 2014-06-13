@@ -15,7 +15,7 @@ class DicTurret(FunctionUnit):
     prismChanged = QtCore.pyqtSignal(str)
     finePosChanged = QtCore.pyqtSignal(int)
 
-    def __init__(self, dm6000b, deviceName='DIC Turret'):
+    def __init__(self, dm6000b, deviceName='DIC Turret Function Unit'):
         super().__init__(dm6000b, deviceName, 85)
         # So that we don't get confused while initing, unsubscribe from prism change and fine pos change
         # notification events.  Note that this registration takes TWO boolean arguments, whereas the manual

@@ -22,7 +22,7 @@ class CubeTurret(FunctionUnit):
 
     cubeChanged = QtCore.pyqtSignal(str)
 
-    def __init__(self, dm6000b, deviceName='Cube Turret'):
+    def __init__(self, dm6000b, deviceName='Cube Turret Function Unit'):
         super().__init__(dm6000b, deviceName, 78)
         # So that we don't get confused while initing, unsubscribe from cube change notification events
         self._transmit(Packet(self, cmdCode=3, parameter='0'))

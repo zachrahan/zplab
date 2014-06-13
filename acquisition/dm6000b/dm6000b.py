@@ -12,7 +12,7 @@ from acquisition.dm6000b.function_units.cube_turret import CubeTurret
 from acquisition.dm6000b.function_units.dic_turret import DicTurret
 from acquisition.dm6000b.function_units.lamp import Lamp
 from acquisition.dm6000b.function_units.main import MainFunctionUnit
-from acquisition.dm6000b.function_units.objective_turret import _ObjectiveTurret
+from acquisition.dm6000b.function_units.objective_turret import ObjectiveTurret
 from acquisition.dm6000b.function_units.stage import Stage
 from acquisition.dm6000b.packet import Packet, InvalidPacketReceivedException, TruncatedPacketReceivedException
 
@@ -62,11 +62,11 @@ class Dm6000b(ThreadedDevice):
         self.condenserApertureIris = CondenserApertureIris(self)
         # Condenser aperture iris max openness varies with objective, but there is no provision for change event notification
         # upon iris min/max openness modification.  Therefore, we must refresh min/max upon objective change.
-        self.objectiveChanged.connect(self._objectiveChangedSlot)
+        self.objectiveTurret.objectiveChanged.connect(self._objectiveChangedSlot)
         self.dicTurret = DicTurret(self)
-        self.stageX = Stage(self, 'Stage X Axis', 72)
-        self.stageY = Stage(self, 'Stage Y Axis', 73)
-        self.stageZ = Stage(self, 'Stage Z Axis', 71)
+        self.stageX = Stage(self, 'Stage X Axis Function Unit', 72)
+        self.stageY = Stage(self, 'Stage Y Axis Function Unit', 73)
+        self.stageZ = Stage(self, 'Stage Z Axis Function Unit', 71)
 
     def _objectiveChangedSlot(self, objective):
         # Only refresh iris min/max openness if the turret has reached an occupied position
@@ -137,5 +137,3 @@ class _Dm6000bWorker(ThreadedDeviceWorker):
 
     def sendPacketSlot(self, packet):
         self.serialPort.write(str(packet))
-
-

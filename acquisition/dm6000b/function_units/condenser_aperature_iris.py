@@ -9,12 +9,12 @@ from acquisition.dm6000b.enums import Method
 from acquisition.dm6000b.function_unit import FunctionUnit
 from acquisition.dm6000b.packet import Packet, InvalidPacketReceivedException, TruncatedPacketReceivedException
 
-class CondeserApertureIris(FunctionUnit):
+class CondenserApertureIris(FunctionUnit):
     minOpennessChanged = QtCore.pyqtSignal(int)
     maxOpennessChanged = QtCore.pyqtSignal(int)
     opennessChanged = QtCore.pyqtSignal(int)
 
-    def __init__(self, dm6000b, deviceName='Condensor Aperture Iris'):
+    def __init__(self, dm6000b, deviceName='Condensor Aperture Iris Function Unit'):
         super().__init__(dm6000b, deviceName, 84)
         # Subscribe to openness changed notification events
         self._transmit(Packet(self, cmdCode=3, parameter='0 1'))
@@ -24,7 +24,7 @@ class CondeserApertureIris(FunctionUnit):
         self.refreshMinMaxOpenness()
         # Get current openness
         self._openness = None
-        self._transmit(Packet(self, cmdCode=23)
+        self._transmit(Packet(self, cmdCode=23))
 
     def __del__(self):
         # Unsubscribe from openness change notification events

@@ -51,7 +51,7 @@ class MainFunctionUnit(FunctionUnit):
             elif rxPacket.cmdCode == 28:
                 # Current method changed notification event or response to current method query
                 self._activeMethod = Method(int(rxPacket.parameter))
-                self.dm6000b.activeMethodChanged.emit(self._activeMethod)
+                self.activeMethodChanged.emit(self._activeMethod)
 
     def _setActiveMethod(self, method):
         self._transmit(Packet(self, line=None, cmdCode=29, parameter='{} x'.format(method.value)))
