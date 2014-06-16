@@ -115,22 +115,24 @@ class _Dm6000bWorker(ThreadedDeviceWorker):
         # remains in a bad state, whatever is in the serial port buffer is assumed to be junk and is ignored (the condition of the if
         # statement below evaluates to false and inba goes out of scope without being parsed).
         if self.serialPort.error() == self.serialPort.NoError:
-            prevBufLen = len(self.buffer)
             self.buffer += inba.data().decode('utf-8')
-            # Note: we search one back from start of new data as crlf my straddle the end of the previous read and the start of the
-            # current one
-            crLoc = self.buffer.find('\r', max(prevBufLen - 1, 0))
-            if crLoc < 0:
-                # No end of line yet
-                pass
-            else:
-                line = self.buffer[:crLoc]
-                self.buffer = self.buffer[crLoc + 1:]
-                response = Packet(self.device, line)
-                if response.funitCode in self.device._funitSubdevices:
-                    self.device._funitSubdevices[response.funitCode]._packetReceivedSignal.emit(response)
+            # Parse and act upon packets read into self.buffer from the from-scope serial stream until no complete packets remain
+            # in the buffer.  Each iteration of the while True loop processes one packet, except for the last iteration which
+            # detects that no complete packets remain.
+            while True:
+                crLoc = self.buffer.find('\r')
+                if crLoc < 0:
+                    # Reached end of buffer without encountering a carriage return; the content of the buffer represents
+                    # the beginning of an incomplete packet
+                    break
                 else:
-                    self.receivedUnhandledLineSignal.emit(line)
+                    line = self.buffer[:crLoc]
+                    self.buffer = self.buffer[crLoc + 1:]
+                    response = Packet(self.device, line)
+                    if response.funitCode in self.device._funitSubdevices:
+                        self.device._funitSubdevices[response.funitCode]._packetReceivedSignal.emit(response)
+                    else:
+                        self.receivedUnhandledLineSignal.emit(line)
 
     def sendLineSlot(self, line):
         self.serialPort.write(line + '\r')

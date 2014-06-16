@@ -3,7 +3,7 @@
 
 from acquisition.andor.andor import Camera
 from acquisition.brightfield_led.brightfield_led import BrightfieldLed
-from acquisition.device import Device, Exception
+from acquisition.device import Device, DeviceException
 from acquisition.dm6000b.dm6000b import Dm6000b
 from acquisition.lumencor.lumencor import Lumencor
 from acquisition.peltier.peltier import Peltier
@@ -16,18 +16,18 @@ class Root(Device):
     def __init__(self):
         super().__init__(deviceName='zplab-scope Linux system')
 
-        self._peltier = Peltier(self)
+#       self._peltier = Peltier(self)
         self._brightfieldLed = BrightfieldLed(self)
         self._dm6000b = Dm6000b(self)
         self._lumencor = Lumencor(self)
-        self._camera = Camera(self, 0)
+        self._camera = Camera(self, andorDeviceIndex=0)
 
     # Properties for accessing devices are in approximate ascending order of vertical position.  The Peltier controller box happened to be below
     # everything else when this was written.
 
-    @property
-    def peltier(self):
-        return self._peltier
+#   @property
+#   def peltier(self):
+#       return self._peltier
 
     @property
     def brightfieldLed(self):

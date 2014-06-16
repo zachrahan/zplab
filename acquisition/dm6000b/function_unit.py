@@ -50,7 +50,8 @@ class FunctionUnit(Device):
                     del txPackets[0]
             if len(txPackets) == 0:
                 del self._outstanding[packet.cmdCode]
-#       print('got response for "{}":  funitCode: {}, statusCode: {}, cmdCode: {}, parameter: {}'.format(self.deviceName, packet.funitCode, packet.statusCode, packet.cmdCode, packet.parameter))
+#       if self._funitCode == 85:
+#           print('got response for "{}":  funitCode: {}, statusCode: {}, cmdCode: {}, parameter: {}, outstanding: {}'.format(self.deviceName, packet.funitCode, packet.statusCode, packet.cmdCode, packet.parameter, len(self._outstanding)))
         self._processReceivedPacket(txPacket, packet)
         self._updateState()
 
@@ -72,6 +73,8 @@ class FunctionUnit(Device):
             self._outstanding[packet.cmdCode] = [packet]
         else:
             self._outstanding[packet.cmdCode].append(packet)
+#       if self._funitCode == 85:
+#           print('sent to "{}":  funitCode: {}, cmdCode: {}, parameter: {}, outstanding: {}'.format(self.deviceName, packet.funitCode, packet.cmdCode, packet.parameter, len(self._outstanding)))
         self.dm6000b._workerSendPacketSignal.emit(packet)
         self._updateState()
 
