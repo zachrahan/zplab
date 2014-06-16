@@ -59,6 +59,8 @@ const wchar_t* _Camera::lookupFeatureName(const Feature& feature)
     return sm_featureNames[static_cast<std::ptrdiff_t>(feature)];
 }
 
+const unsigned int _Camera::Infinite = 0xFFFFFFFF;
+
 _Camera::_Camera(const AT_64& deviceIndex)
 {
     int r = ::AT_Open(deviceIndex, &m_dh);

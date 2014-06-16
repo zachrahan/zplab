@@ -233,6 +233,7 @@ public:
     static void staticInit();
     static std::shared_ptr<std::vector<std::string>> getDeviceNames();
     static const wchar_t* lookupFeatureName(const Feature& feature);
+    static const unsigned int Infinite;
 
     explicit _Camera(const AT_64& deviceIndex);
     virtual ~_Camera();

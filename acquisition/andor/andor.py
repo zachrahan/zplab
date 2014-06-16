@@ -30,6 +30,10 @@ class Camera(ThreadedDevice):
         '''This function makes Andor API calls that tend to run slowly and so can take a second or two to complete.'''
         return list(_Camera.getDeviceNames())
 
+    # Much of the following code could be auto-generated at run time and, in fact, initially was.  However, it was tricky understand
+    # and trickier still to debug.
+
+    # Enums referenced for convenience
     AuxiliaryOutSource = _Camera.AuxiliaryOutSource
     Binning = _Camera.Binning
     CycleMode = _Camera.CycleMode
@@ -43,9 +47,11 @@ class Camera(ThreadedDevice):
     TemperatureStatus = _Camera.TemperatureStatus
     TriggerMode = _Camera.TriggerMode
 
-    # Much of the following code could be auto-generated at run time and, in fact, initially was.  However, it was tricky understand
-    # and trickier still to debug.
+    # Signals for indicating that an image acquisition event has occurred
+    acquisitionSequenceExecutingChanged = QtCore.pyqtSignal(bool)
+    imageAcquired = QtCore.pyqtSignal(numpy.ndarray)
 
+    # Signals for indicating to user that a Camera property has changed
     accumulateCountChanged = QtCore.pyqtSignal(int)
     aoiHeightChanged = QtCore.pyqtSignal(int)
     aoiLeftChanged = QtCore.pyqtSignal(int)
@@ -77,6 +83,10 @@ class Camera(ThreadedDevice):
     timestampClockFrequencyChanged = QtCore.pyqtSignal(int)
     triggerModeChanged = QtCore.pyqtSignal(_Camera.TriggerMode)
 
+    # Private signals used to command DeviceWorker
+    _startAcquisitionSequence = QtCore.pyqtSignal()
+    _stopAcquisitionSequence = QtCore.pyqtSignal()
+
     def __init__(self, parent=None, deviceName='Andor Zyla 5.5', andorDeviceIndex=0):
         '''Note: The deviceName argument sets the .deviceName property; it does not act as a criterion for choosing which Andor camera 
         to open.  That is controlled by the andorDeviceIndex argument exclusively.'''
@@ -86,6 +96,7 @@ class Camera(ThreadedDevice):
         self._cmdLock = threading.RLock()
         self._callbackTokens = []
         with self._propLock, self._cmdLock:
+            self._acquisitionSequenceExecuting 
             # Cached properties that do not change and therefore only need to be read once
             self._cameraModel = self._camera.AT_GetString(_Camera.Feature.CameraModel)
             self._interfaceType = self._camera.AT_GetString(_Camera.Feature.InterfaceType)
@@ -727,7 +738,17 @@ class Camera(ThreadedDevice):
         return True
 
 
+    def softwareTrigger(self):
+        '''Send software trigger.  If the camera is in software triggered mode, an acquisition sequence has been started,
+        and at least one suitable buffer has been queued, this will cause the camera to acquire a frame such that the current
+        or next AT_WaitBuffer() completes once the frame has been transferred to the PC.'''
+        if self.triggerMode != self.TriggerMode.Software:
+            self._warn('Sending software trigger when not in software triggered exposure mode.')
+        self._camera.AT_Command(self._camera.Feature.SoftwareTrigger)
+
     def getEnumStrings(self, feature):
+        '''Returns a list of valid enum value names for the specified feature.  This will throw an exception if the specified
+        feature does not represent an enumerated property (for example, because it is an int or float).'''
         return [self._camera.AT_GetEnumStringByIndex(feature, i) for i in range(self._camera.AT_GetEnumCount(feature))]
 
     def makeAcquisitionBuffer(self):
@@ -774,6 +795,9 @@ class Camera(ThreadedDevice):
     QtCore.Q_ENUMS(TriggerMode)
 
 class _CameraWorker(ThreadedDeviceWorker):
+    # Private signals used to notify Device
+
+
     def __init__(self, device):
         super().__init__(device)
 
