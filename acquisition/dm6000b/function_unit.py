@@ -94,7 +94,8 @@ class FunctionUnit(Device):
                 timer = QtCore.QTimer()
                 timer.setSingleShot(True)
                 def ontimeout():
-                    timedOut = true
+                    nonlocal timedOut
+                    timedOut = True
                     eventLoop.quit()
                 timer.timeout.connect(ontimeout)
                 timer.start(timeout * 1000)
