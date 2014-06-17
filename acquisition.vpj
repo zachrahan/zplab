@@ -67,6 +67,7 @@
 			Name="root"
 			Filters="">
 			<F N="acquisition/root/__init__.py"/>
+			<F N="acquisition/root/direct_manip.py"/>
 			<F N="acquisition/root/root.py"/>
 		</Folder>
 		<Folder

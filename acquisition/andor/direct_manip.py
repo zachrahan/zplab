@@ -69,6 +69,11 @@ class CameraManipDialog(Qt.QDialog):
             evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, checkBox=self.ui.{0}CheckBox, Qt=Qt: checkBox.setCheckState(Qt.Qt.Checked if value else Qt.Qt.Unchecked))'
             exec(evalStr.format(propName), {'self':self, 'propName':propName, 'Qt':Qt})
 
+        def addRoCheckBoxProp(propName):
+            evalStr = 'self.ui.{0}CheckBox.setCheckState(Qt.Qt.Checked if self.cameraInstance.{0} else Qt.Qt.Unchecked)\n'
+            evalStr+= 'self.cameraInstance.{0}Changed.connect(lambda value, checkBox=self.ui.{0}CheckBox, Qt=Qt: checkBox.setCheckState(Qt.Qt.Checked if value else Qt.Qt.Unchecked))'
+            exec(evalStr.format(propName), {'self':self, 'propName':propName, 'Qt':Qt})
+
         addSpinBoxProp('accumulateCount')
         addSpinBoxProp('aoiLeft')
         addSpinBoxProp('aoiTop')
@@ -94,6 +99,7 @@ class CameraManipDialog(Qt.QDialog):
         addComboProp('pixelReadoutRate')
         addRoEditProp('readoutTime')
         addCheckBoxProp('sensorCooling')
+        addRoCheckBoxProp('acquisitionSequenceInProgress')
         addComboProp('shutter')
         addComboProp('simplePreAmp')
         addCheckBoxProp('spuriousNoiseFilter')
@@ -102,13 +108,15 @@ class CameraManipDialog(Qt.QDialog):
 
         self.ui.resetTimestampClockButton.clicked.connect(self.cameraInstance.commandTimestampClockReset)
         self.ui.softwareTriggerButton.clicked.connect(self.cameraInstance.commandSoftwareTrigger)
+        self.ui.startAcquisitionSequenceButton.clicked.connect(self.cameraInstance.startAcquisitionSequence)
+        self.ui.stopAcquisitionSequenceButton.clicked.connect(self.cameraInstance.stopAcquisitionSequence)
 
     def closeEvent(self, event):
         super().closeEvent(event)
         self.deleteLater()
 
-    def __del__(self):
-        print('DEL!!!!!!!!!!!!!')
+#   def __del__(self):
+#       print('DEL!!!!!!!!!!!!!')
 
 def show(cameraInstance=None, launcherDescription=None, moduleArgs=None):
     import argparse

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>688</width>
-    <height>1169</height>
+    <width>641</width>
+    <height>1236</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -673,7 +673,7 @@
         </property>
        </widget>
       </item>
-      <item row="23" column="0">
+      <item row="24" column="0">
        <widget class="QLabel" name="shutterLabel">
         <property name="text">
          <string>Shutter:</string>
@@ -683,10 +683,10 @@
         </property>
        </widget>
       </item>
-      <item row="23" column="1">
+      <item row="24" column="1">
        <widget class="QComboBox" name="shutterCombo"/>
       </item>
-      <item row="24" column="0">
+      <item row="25" column="0">
        <widget class="QLabel" name="simplePreAmpLabel">
         <property name="text">
          <string>Simple pre amp:</string>
@@ -696,10 +696,10 @@
         </property>
        </widget>
       </item>
-      <item row="24" column="1">
+      <item row="25" column="1">
        <widget class="QComboBox" name="simplePreAmpCombo"/>
       </item>
-      <item row="25" column="0">
+      <item row="26" column="0">
        <widget class="QLabel" name="spuriousNoiseFilterLabel">
         <property name="text">
          <string>Spurious noise filter:</string>
@@ -709,7 +709,7 @@
         </property>
        </widget>
       </item>
-      <item row="25" column="1">
+      <item row="26" column="1">
        <widget class="QCheckBox" name="spuriousNoiseFilterCheckBox">
         <property name="minimumSize">
          <size>
@@ -722,7 +722,7 @@
         </property>
        </widget>
       </item>
-      <item row="26" column="0">
+      <item row="27" column="0">
        <widget class="QLabel" name="timestampClockFrequencyLabel">
         <property name="text">
          <string>Timestamp clock freq:</string>
@@ -732,7 +732,7 @@
         </property>
        </widget>
       </item>
-      <item row="26" column="1">
+      <item row="27" column="1">
        <widget class="QSpinBox" name="timestampClockFrequencySpinBox">
         <property name="suffix">
          <string>Hz</string>
@@ -742,7 +742,7 @@
         </property>
        </widget>
       </item>
-      <item row="27" column="0">
+      <item row="28" column="0">
        <widget class="QLabel" name="triggerModeLabel">
         <property name="text">
          <string>Trigger mode:</string>
@@ -752,7 +752,7 @@
         </property>
        </widget>
       </item>
-      <item row="27" column="1">
+      <item row="28" column="1">
        <widget class="QComboBox" name="triggerModeCombo"/>
       </item>
       <item row="20" column="0">
@@ -767,6 +767,29 @@
       </item>
       <item row="20" column="1">
        <widget class="QComboBox" name="pixelReadoutRateCombo"/>
+      </item>
+      <item row="23" column="0">
+       <widget class="QLabel" name="acquisitionSequenceInProgressLabel">
+        <property name="text">
+         <string>Sequence running:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="23" column="1">
+       <widget class="QCheckBox" name="acquisitionSequenceInProgressCheckBox">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>22</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="checkable">
+         <bool>false</bool>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
@@ -791,6 +814,26 @@
        <widget class="QPushButton" name="resetTimestampClockButton">
         <property name="text">
          <string>Reset Timestamp Clock</string>
+        </property>
+        <property name="autoDefault">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QPushButton" name="startAcquisitionSequenceButton">
+        <property name="text">
+         <string>Start Acquisition Sequence</string>
+        </property>
+        <property name="autoDefault">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QPushButton" name="stopAcquisitionSequenceButton">
+        <property name="text">
+         <string>Stop Acquisition Sequence</string>
         </property>
         <property name="autoDefault">
          <bool>false</bool>

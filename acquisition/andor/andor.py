@@ -1,6 +1,7 @@
 # Copyright 2014 WUSTL ZPLAB
 
 import ctypes
+import enum
 import numpy
 import threading
 from PyQt5 import QtCore
@@ -47,12 +48,11 @@ class Camera(ThreadedDevice):
     TemperatureStatus = _Camera.TemperatureStatus
     TriggerMode = _Camera.TriggerMode
 
-    # Signals for indicating that an image acquisition event has occurred
-    acquisitionSequenceExecutingChanged = QtCore.pyqtSignal(bool)
     imageAcquired = QtCore.pyqtSignal(numpy.ndarray)
 
     # Signals for indicating to user that a Camera property has changed
     accumulateCountChanged = QtCore.pyqtSignal(int)
+    acquisitionSequenceInProgressChanged = QtCore.pyqtSignal(bool)
     aoiHeightChanged = QtCore.pyqtSignal(int)
     aoiLeftChanged = QtCore.pyqtSignal(int)
     aoiStrideChanged = QtCore.pyqtSignal(int)
@@ -96,7 +96,6 @@ class Camera(ThreadedDevice):
         self._cmdLock = threading.RLock()
         self._callbackTokens = []
         with self._propLock, self._cmdLock:
-            self._acquisitionSequenceExecuting 
             # Cached properties that do not change and therefore only need to be read once
             self._cameraModel = self._camera.AT_GetString(_Camera.Feature.CameraModel)
             self._interfaceType = self._camera.AT_GetString(_Camera.Feature.InterfaceType)
@@ -108,6 +107,8 @@ class Camera(ThreadedDevice):
             # Cached properties that, when changed, cause callback execution updating the cache and emitting an xxxxChanged signal
             self._accumulateCount = self._camera.AT_GetInt(_Camera.Feature.AccumulateCount)
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.AccumulateCount, self._accumulateCountCb))
+            self._acquisitionSequenceInProgress = self._camera.AT_GetBool(_Camera.Feature.CameraAcquiring)
+            self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.CameraAcquiring, self._acquisitionSequenceInProgressCb))
             self._aoiHeight = self._camera.AT_GetInt(_Camera.Feature.AOIHeight)
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.AOIHeight, self._aoiHeightCb))
             self._aoiLeft = self._camera.AT_GetInt(_Camera.Feature.AOILeft)
@@ -166,6 +167,10 @@ class Camera(ThreadedDevice):
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.TimestampClockFrequency, self._timestampClockFrequencyCb))
             self._triggerMode = self._camera.triggerMode
             self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.TriggerMode, self._triggerModeCb))
+
+        self._worker.imageAcquired.connect(self.imageAcquired, QtCore.Qt.QueuedConnection)
+        self._startAcquisitionSequence.connect(self._worker.startAcquisitionSequenceSlot, QtCore.Qt.QueuedConnection)
+        self._stopAcquisitionSequence.connect(self._worker.stopAcquisitionSequenceSlot, QtCore.Qt.QueuedConnection)
 
     def __del__(self):
         with self._cmdLock:
@@ -255,6 +260,16 @@ class Camera(ThreadedDevice):
             self._accumulateCount = self._camera.AT_GetInt(_Camera.Feature.AccumulateCount)
             self.accumulateCountChanged.emit(self._accumulateCount)
         return True
+
+
+    @QtCore.pyqtProperty(bool, notify=acquisitionSequenceInProgressChanged)
+    def acquisitionSequenceInProgress(self):
+        with self._propLock:
+            return self._acquisitionSequenceInProgress
+
+    def _acquisitionSequenceInProgressCb(self, feature):
+        with self._propLock, self._cmdLock:
+            self._acquisitionSequenceInProgress = self._camera.AT_GetBool(_Camera.Feature.CameraAcquiring)
 
 
     @QtCore.pyqtProperty(int, notify=aoiHeightChanged)
@@ -752,22 +767,39 @@ class Camera(ThreadedDevice):
         return [self._camera.AT_GetEnumStringByIndex(feature, i) for i in range(self._camera.AT_GetEnumCount(feature))]
 
     def makeAcquisitionBuffer(self):
-        aoiStride = self._camera.AT_GetInt(self.Feature.AOIStride)
-        imageBufferSize = self._camera.AT_GetInt(self.Feature.ImageSizeBytes)
+        '''Allocate and return a numpy ndarray to be used to AT_QueueBuffer(..).'''
+        with self._propLock:
+            aoiStride = self._aoiStride
+            imageBufferSize = self._imageSizeBytes
         if imageBufferSize <= 0:
-            raise AndorException('ImageSizeBytes value retrieved from Andor API is <= 0.')
+            raise AndorException('ImageSizeBytes value last retrieved from Andor API is <= 0.')
         if imageBufferSize % aoiStride != 0:
-            raise AndorException('Value of ImageSizeBytes retrieved from Andor API is not divisible by AOIStride value.')
+            raise AndorException('Value of ImageSizeBytes last retrieved from Andor API is not divisible by AOIStride value.')
         return numpy.ndarray(shape=(imageBufferSize / aoiStride, aoiStride / 2), dtype=numpy.uint16, order='C')
 
     def acquireImage(self):
+        '''This function grabs a single image by:
+        * Flushing buffer queue
+        * Setting camera to single frame, interally triggered
+        * Queueing a single frame
+        * Commanding acquisition sequence start
+        * Waiting for the frame to be written to the buffer and handed back to us
+        * Commanding acquisition sequence stop
+        * Returning the acquired frame.'''
         imageBuffer = self.makeAcquisitionBuffer()
+
+        self._camera.AT_Flush()
+        if self.triggerMode != _Camera.TriggerMode.Internal:
+            self.triggerMode = _Camera.TriggerMode.Internal
+        if self.cycleMode != _Camera.CycleMode.Fixed:
+            self.cycleMode = _Camera.CycleMode.Fixed
+        if self.frameCount != 1:
+            self.frameCount = 1
 
         # Queue acquisition buffer
         acquisitionTimeout = int(self._camera.AT_GetFloat(self.Feature.ExposureTime) * 3 * 1000)
         if acquisitionTimeout < 500:
             acquisitionTimeout = 500
-        self._camera.AT_Flush()
         self._camera.AT_QueueBuffer(imageBuffer)
 
         # Initiate acquisition
@@ -780,6 +812,12 @@ class Camera(ThreadedDevice):
             raise AndorException('Acquired image buffer has different address than queued image buffer.')
 
         return imageBuffer[:self._camera.AT_GetInt(self.Feature.AOIHeight), :self._camera.AT_GetInt(self.Feature.AOIWidth)]
+
+    def startAcquisitionSequence(self):
+        self._startAcquisitionSequence.emit()
+
+    def stopAcquisitionSequence(self):
+        self._stopAcquisitionSequence.emit()
 
     QtCore.Q_ENUMS(AuxiliaryOutSource)
     QtCore.Q_ENUMS(Binning)
@@ -796,8 +834,47 @@ class Camera(ThreadedDevice):
 
 class _CameraWorker(ThreadedDeviceWorker):
     # Private signals used to notify Device
+    imageAcquired = QtCore.pyqtSignal(numpy.ndarray)
 
+    # Private signal used internally to queue next waitbuffer operation while allowing an opportunity for a stop signal
+    # previously queued to preempt it
+    waitBuffer = QtCore.pyqtSignal()
 
     def __init__(self, device):
         super().__init__(device)
+        self.acquiring = False
+        self.waitBuffer.connect(self.waitBufferSlot, QtCore.Qt.QueuedConnection)
 
+    def startAcquisitionSequenceSlot(self):
+        if self.acquiring:
+            self.device._warn('_CameraWorker.startAcquisitionSequenceSlot(): Called while acquisition is already in progress.')
+        else:
+            with self.device._cmdLock:
+                self.device._camera.AT_Flush()
+                self.acquiring = True
+                self.queuedBuffers = {buffer.ctypes.data:buffer for buffer in [self.device.makeAcquisitionBuffer() for i in range(3)]}
+                for buffer in self.queuedBuffers.values():
+                    self.device._camera.AT_QueueBuffer(buffer)
+                self.device._camera.AT_Command(_Camera.Feature.AcquisitionStart)
+            self.waitBuffer.emit()
+            print("returned")
+
+    def stopAcquisitionSequenceSlot(self):
+        self.acquiring = False
+        self.device._camera.AT_Command(_Camera.Feature.AcquisitionStop)
+        self.device._camera.AT_Flush()
+        self.queuedBuffers = {}
+
+    def waitBufferSlot(self):
+        if self.acquiring:
+            voidp = self.device._camera.AT_WaitBuffer(self.device._camera.Infinite)
+            if voidp not in self.queuedBuffers:
+                raise DeviceException(self.device, 'Acquired image buffer has different address than queued image buffer.')
+            acquiredBuffer = self.queuedBuffers[voidp]
+            del self.queuedBuffers[voidp]
+            self.imageAcquired.emit(acquiredBuffer[:self.device.aoiWidth, :self.device.aoiHeight])
+            if self.acquiring:
+                newBuffer = self.device.makeAcquisitionBuffer()
+                self.queuedBuffers[newBuffer.ctypes.data] = newBuffer
+                self.device._camera.AT_QueueBuffer(newBuffer)
+                self.waitBuffer.emit()
