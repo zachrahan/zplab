@@ -1,5 +1,5 @@
 ﻿// Copyright 2014 WUSTL ZPLAB
-
+#include <csignal>
 #include "_common.h"
 #include "_AndorException.h"
 #include "_Api.h"
@@ -9,7 +9,7 @@ using namespace boost::python;
 
 static void andorExceptionBaseTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorExceptionBase& _andorExceptionBase)
 {
-    std::cerr << "static void andorExceptionBaseTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorExceptionBase& _andorExceptionBase)\n";
+//  std::cerr << "static void andorExceptionBaseTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorExceptionBase& _andorExceptionBase)\n";
     // The following line is roughly equivalent to the python "andorException = 
     // AndorException(_andorExceptionBase.description())"
     object andorException{ (*andorExceptionType)(_andorExceptionBase.description().c_str()) };
@@ -18,27 +18,27 @@ static void andorExceptionBaseTranslator(const std::shared_ptr<object>& andorExc
 
 static void andorExceptionTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorException& _andorException)
 {
-    std::cerr << "static void andorExceptionTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorException& _andorException)\n";
+//  std::cerr << "static void andorExceptionTranslator(const std::shared_ptr<object>& andorExceptionType, const _AndorException& _andorException)\n";
     // The following line is roughly equivalent to the python "andorException = 
     // AndorException(_andorException.description(), _andorException.errorCode(), _andorException.errorName())"
     object andorException{ (*andorExceptionType)(_andorException.description().c_str(), _andorException.errorCode(), _andorException.errorName().c_str()) };
     PyErr_SetObject(andorExceptionType->ptr(), andorException.ptr() );
 }
 
-static std::string test()
-{
-    return std::string("Héllø ∑ô¡™£¢d!");
-}
+// static std::string test()
+// {
+//  return std::string("Héllø ∑ô¡™£¢d!");
+// }
 
-static unsigned long testndarray(np::ndarray a)
-{
+// static unsigned long testndarray(np::ndarray a)
+// {
 //  std::cout << py::extract<const char*>(py::str(a)) << std::endl;
-    const Py_intptr_t* strides = a.get_strides();
-    *reinterpret_cast<float*>(a.get_data() + 2 * strides[0] + 1 * strides[1]) += 5.1f;
-    unsigned long m(std::numeric_limits<unsigned long>::max());
-    std::cout << m << std::endl;
-    return m;
-}
+//  const Py_intptr_t* strides = a.get_strides();
+//  *reinterpret_cast<float*>(a.get_data() + 2 * strides[0] + 1 * strides[1]) += 5.1f;
+//  unsigned long m(std::numeric_limits<unsigned long>::max());
+//  std::cout << m << std::endl;
+//  return m;
+// }
 
 // Note that this block is executed by the Python interpreter when this module is loaded
 BOOST_PYTHON_MODULE(_andor)
@@ -62,6 +62,7 @@ BOOST_PYTHON_MODULE(_andor)
         // no-op.
         PyEval_InitThreads();
         np::initialize();
+        _Camera::staticInit();
 
         // Import our Python exception module
         object andorExceptionPackage{import("acquisition.andor.andor_exception")};
@@ -78,8 +79,8 @@ BOOST_PYTHON_MODULE(_andor)
         // Initialize Andor SDK3 API library
         _Api::instantiate();
 
-        def("test", test);
-        def("testndarray", testndarray);
+//      def("test", test);
+//      def("testndarray", testndarray);
 
         class_< std::vector<std::string>, std::shared_ptr<std::vector<std::string>> >("StringVector")
             .def( vector_indexing_suite<std::vector<std::string> >());
@@ -88,6 +89,7 @@ BOOST_PYTHON_MODULE(_andor)
         class_<_Camera, boost::noncopyable>("_Camera", init<AT_64>())
             .def("getDeviceNames", &_Camera::getDeviceNames)
             .staticmethod("getDeviceNames")
+            .def_readonly("Infinite", &_Camera::Infinite)
             .def("AT_RegisterFeatureCallback", &_Camera::AT_RegisterFeatureCallbackPyWrapper)
             .def("AT_UnregisterFeatureCallback", &_Camera::AT_UnregisterFeatureCallback)
             .def("AT_IsImplemented", &_Camera::AT_IsImplemented)
@@ -118,17 +120,37 @@ BOOST_PYTHON_MODULE(_andor)
             .def("AT_QueueBuffer", &_Camera::AT_QueueBuffer)
             .def("AT_WaitBuffer", &_Camera::AT_WaitBuffer)
             .def("AT_Flush", &_Camera::AT_Flush)
+            .add_property("temperatureStatus", &_Camera::temperatureStatus)
+            .add_property("pixelEncoding", &_Camera::pixelEncoding)
             // The following properties have getters and setters that share overloaded function names and must therefore
-            // be described with fully qualified function pointers.
+            // be addressed with fully qualified function pointer types.
             .add_property("simplePreAmp",
                           (_Camera::SimplePreAmp (_Camera::*)() const) &_Camera::simplePreAmp,
-                          (void (_Camera::*)(const _Camera::SimplePreAmp&))&_Camera::simplePreAmp)
+                          (void (_Camera::*)(const _Camera::SimplePreAmp&)) &_Camera::simplePreAmp)
             .add_property("shutter",
                           (_Camera::Shutter (_Camera::*)() const) &_Camera::shutter,
-                          (void (_Camera::*)(const _Camera::Shutter&))&_Camera::shutter)
+                          (void (_Camera::*)(const _Camera::Shutter&)) &_Camera::shutter)
             .add_property("triggerMode",
                           (_Camera::TriggerMode (_Camera::*)() const) &_Camera::triggerMode,
-                          (void (_Camera::*)(const _Camera::TriggerMode&))&_Camera::triggerMode);
+                          (void (_Camera::*)(const _Camera::TriggerMode&)) &_Camera::triggerMode)
+            .add_property("binning",
+                          (_Camera::Binning (_Camera::*)() const) &_Camera::binning,
+                          (void (_Camera::*)(const _Camera::Binning&)) &_Camera::binning)
+            .add_property("auxiliaryOutSource",
+                          (_Camera::AuxiliaryOutSource (_Camera::*)() const) &_Camera::auxiliaryOutSource,
+                          (void (_Camera::*)(const _Camera::AuxiliaryOutSource&)) &_Camera::auxiliaryOutSource)
+            .add_property("cycleMode",
+                          (_Camera::CycleMode (_Camera::*)() const) &_Camera::cycleMode,
+                          (void (_Camera::*)(const _Camera::CycleMode&)) &_Camera::cycleMode)
+            .add_property("fanSpeed",
+                          (_Camera::FanSpeed (_Camera::*)() const) &_Camera::fanSpeed,
+                          (void (_Camera::*)(const _Camera::FanSpeed&)) &_Camera::fanSpeed)
+            .add_property("ioSelector",
+                          (_Camera::IOSelector (_Camera::*)() const) &_Camera::ioSelector,
+                          (void (_Camera::*)(const _Camera::IOSelector&)) &_Camera::ioSelector)
+            .add_property("pixelReadoutRate",
+                          (_Camera::PixelReadoutRate (_Camera::*)() const) &_Camera::pixelReadoutRate,
+                          (void (_Camera::*)(const _Camera::PixelReadoutRate&)) &_Camera::pixelReadoutRate);
 
         class_<_Camera::_CallbackRegistrationToken, std::shared_ptr<_Camera::_CallbackRegistrationToken>, boost::noncopyable>("_CallbackRegistrationToken", no_init);
 
@@ -215,11 +237,13 @@ BOOST_PYTHON_MODULE(_andor)
         enum_<_Camera::SimplePreAmp>("SimplePreAmp")
             .value("HighCapacity_12bit", _Camera::SimplePreAmp::HighCapacity_12bit)
             .value("LowNoise_12bit", _Camera::SimplePreAmp::LowNoise_12bit)
-            .value("LowNoiseHighCapacity_16bit", _Camera::SimplePreAmp::LowNoiseHighCapacity_16bit);
+            .value("LowNoiseHighCapacity_16bit", _Camera::SimplePreAmp::LowNoiseHighCapacity_16bit)
+            .export_values();
 
         enum_<_Camera::Shutter>("Shutter")
             .value("Rolling", _Camera::Shutter::Rolling)
-            .value("Global", _Camera::Shutter::Global);
+            .value("Global", _Camera::Shutter::Global)
+            .export_values();
 
         enum_<_Camera::TriggerMode>("TriggerMode")
             .value("Internal", _Camera::TriggerMode::Internal)
@@ -228,7 +252,73 @@ BOOST_PYTHON_MODULE(_andor)
             .value("ExternalExposure", _Camera::TriggerMode::ExternalExposure)
             .value("Software", _Camera::TriggerMode::Software)
             .value("Advanced", _Camera::TriggerMode::Advanced)
-            .value("External", _Camera::TriggerMode::External);
+            .value("External", _Camera::TriggerMode::External)
+            .export_values();
+
+        enum_<_Camera::TemperatureStatus>("TemperatureStatus")
+            .value("CoolerOff", _Camera::TemperatureStatus::CoolerOff)
+            .value("Stabilized", _Camera::TemperatureStatus::Stabilized)
+            .value("Cooling", _Camera::TemperatureStatus::Cooling)
+            .value("Drift", _Camera::TemperatureStatus::Drift)
+            .value("NotStabilized", _Camera::TemperatureStatus::NotStabilized)
+            .value("Fault", _Camera::TemperatureStatus::Fault)
+            .export_values();
+
+        enum_<_Camera::Binning>("Binning")
+            .value("Bin_1x1", _Camera::Binning::Bin_1x1)
+            .value("Bin_2x2", _Camera::Binning::Bin_2x2)
+            .value("Bin_3x3", _Camera::Binning::Bin_3x3)
+            .value("Bin_4x4", _Camera::Binning::Bin_4x4)
+            .value("Bin_8x8", _Camera::Binning::Bin_8x8)
+            .export_values();
+
+        enum_<_Camera::AuxiliaryOutSource>("AuxiliaryOutSource")
+            .value("FireRow1", _Camera::AuxiliaryOutSource::FireRow1)
+            .value("FireRowN", _Camera::AuxiliaryOutSource::FireRowN)
+            .value("FireAll", _Camera::AuxiliaryOutSource::FireAll)
+            .value("FireAny", _Camera::AuxiliaryOutSource::FireAny)
+            .export_values();
+
+        enum_<_Camera::CycleMode>("CycleMode")
+            .value("Fixed", _Camera::CycleMode::Fixed)
+            .value("Continuous", _Camera::CycleMode::Continuous)
+            .export_values();
+
+        enum_<_Camera::FanSpeed>("FanSpeed")
+            .value("Off", _Camera::FanSpeed::Off)
+            .value("On", _Camera::FanSpeed::On)
+            .export_values();
+
+        enum_<_Camera::PixelEncoding>("PixelEncoding")
+            .value("Mono12", _Camera::PixelEncoding::Mono12)
+            .value("Mono12Packed", _Camera::PixelEncoding::Mono12Packed)
+            .value("Mono16", _Camera::PixelEncoding::Mono16)
+            .value("RGB8Packed", _Camera::PixelEncoding::RGB8Packed)
+            .value("Mono12Coded", _Camera::PixelEncoding::Mono12Coded)
+            .value("Mono12CodedPacked", _Camera::PixelEncoding::Mono12CodedPacked)
+            .value("Mono22Parallel", _Camera::PixelEncoding::Mono22Parallel)
+            .value("Mono22PackedParallel", _Camera::PixelEncoding::Mono22PackedParallel)
+            .value("Mono8", _Camera::PixelEncoding::Mono8)
+            .value("Mono32", _Camera::PixelEncoding::Mono32)
+            .export_values();
+
+        enum_<_Camera::IOSelector>("IOSelector")
+            .value("Fire1", _Camera::IOSelector::Fire1)
+            .value("FireN", _Camera::IOSelector::FireN)
+            .value("AuxOut1", _Camera::IOSelector::AuxOut1)
+            .value("Arm", _Camera::IOSelector::Arm)
+            .value("AuxOut2", _Camera::IOSelector::AuxOut2)
+            .value("SpareInput", _Camera::IOSelector::SpareInput)
+            .value("ExternalTrigger", _Camera::IOSelector::ExternalTrigger)
+            .value("FireNand1", _Camera::IOSelector::FireNand1)
+            .export_values();
+
+        enum_<_Camera::PixelReadoutRate>("PixelReadoutRate")
+            .value("Rate_10MHz", _Camera::PixelReadoutRate::Rate_10MHz)
+            .value("Rate_100MHz", _Camera::PixelReadoutRate::Rate_100MHz)
+            .value("Rate_200MHz", _Camera::PixelReadoutRate::Rate_200MHz)
+            .value("Rate_300MHz", _Camera::PixelReadoutRate::Rate_300MHz)
+            .export_values();
     }
     catch(error_already_set const&)
     {

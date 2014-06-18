@@ -1,6 +1,7 @@
 # Copyright 2014 WUSTL ZPLAB
 
 import copy
+from PyQt5 import QtCore
 import serial
 import time
 from acquisition.device import Device
@@ -54,9 +55,11 @@ class Lumencor(Device):
     _lampRgcuPowerCommandBase = bytearray((0x53, 0x18, 0x03, 0x00, 0xF0, 0x00, 0x50))
     _lampBtPowerCommandBase = bytearray((0x53, 0x1A, 0x03, 0x00, 0xF0, 0x00, 0x50))
 
-    def __init__(self, serialPortDescriptor='/dev/ttySptrx', name='Lumencor Spectra-X'):
-        super().__init__(name)
-        self._appendTypeName('Lumencor')
+    # Argument contains a dict of dicts: {"lampname" : {"propertyname" : newvalue}}
+    lampStatesChanged = QtCore.pyqtSignal(dict)
+
+    def __init__(self, parent=None, deviceName='Lumencor Spectra-X', serialPortDescriptor='/dev/ttySptrx'):
+        super().__init__(parent, deviceName)
         self._serialPort = serial.Serial(serialPortDescriptor, 9600, timeout=1)
         if not self._serialPort.isOpen():
             raise LumencorException('Failed to open {}.'.format(serialPortDescriptor))
@@ -221,7 +224,7 @@ class Lumencor(Device):
 
         self.lampStates = lampStates
 
-    @property
+    @QtCore.pyqtProperty(dict, notify=lampStatesChanged)
     def lampStates(self):
         '''Returns a copy of the dict containing lamp names -> current lamp states.'''
         return copy.deepcopy(self._lampStates)
@@ -271,23 +274,9 @@ class Lumencor(Device):
         updatePowers(Lumencor._lampBtPowerCommandBase, power_bt)
         self._updateDisablement()
 
-        for observer in self._observers:
-            try:
-                observer.notifyLumencorLampStatesChanged(self, lampStateChangesForObserver)
-            except AttributeError as e:
-                pass
+        self.lampStatesChanged.emit(lampStateChangesForObserver)
 
-    def forceComprehensiveObserverNotification(self, observer):
-        lampStateChangesForObserver = {}
-        for ln, ls in self._lampStates.items():
-            lampStateChangesForObserver[ln] = {'enabled' : ls.enabled, 'power' : ls.power}
-        try:
-            observer.notifyLumencorLampStatesChanged(self, lampStateChangesForObserver)
-        except AttributeError as e:
-            pass
-        super().forceComprehensiveObserverNotification(observer)
-
-    @property
+    @QtCore.pyqtProperty(bool)
     def redEnabled(self):
         return self._lampStates['red'].enabled
 
@@ -296,7 +285,7 @@ class Lumencor(Device):
         scur = self.lampStates['red']
         self.lampStates = {'red' : Lumencor.LampState(enabled, scur.power, scur.idx)}
 
-    @property
+    @QtCore.pyqtProperty(int)
     def redPower(self):
         return self._lampStates['red'].power
 
@@ -305,7 +294,7 @@ class Lumencor(Device):
         scur = self.lampStates['red']
         self.lampStates = {'red' : Lumencor.LampState(scur.enabled, power, scur.idx)}
 
-    @property
+    @QtCore.pyqtProperty(bool)
     def greenEnabled(self):
         return self._lampStates['green'].enabled
 
@@ -314,7 +303,7 @@ class Lumencor(Device):
         scur = self.lampStates['green']
         self.lampStates = {'green' : Lumencor.LampState(enabled, scur.power, scur.idx)}
 
-    @property
+    @QtCore.pyqtProperty(int)
     def greenPower(self):
         return self._lampStates['green'].power
 
@@ -323,7 +312,7 @@ class Lumencor(Device):
         scur = self.lampStates['green']
         self.lampStates = {'green' : Lumencor.LampState(scur.enabled, power, scur.idx)}
 
-    @property
+    @QtCore.pyqtProperty(bool)
     def cyanEnabled(self):
         return self._lampStates['cyan'].enabled
 
@@ -332,7 +321,7 @@ class Lumencor(Device):
         scur = self.lampStates['cyan']
         self.lampStates = {'cyan' : Lumencor.LampState(enabled, scur.power, scur.idx)}
 
-    @property
+    @QtCore.pyqtProperty(int)
     def cyanPower(self):
         return self._lampStates['cyan'].power
 
@@ -341,7 +330,7 @@ class Lumencor(Device):
         scur = self.lampStates['cyan']
         self.lampStates = {'cyan' : Lumencor.LampState(scur.enabled, power, scur.idx)}
 
-    @property
+    @QtCore.pyqtProperty(bool)
     def UVEnabled(self):
         return self._lampStates['UV'].enabled
 
@@ -350,7 +339,7 @@ class Lumencor(Device):
         scur = self.lampStates['UV']
         self.lampStates = {'UV' : Lumencor.LampState(enabled, scur.power, scur.idx)}
 
-    @property
+    @QtCore.pyqtProperty(int)
     def UVPower(self):
         return self._lampStates['UV'].power
 
@@ -359,7 +348,7 @@ class Lumencor(Device):
         scur = self.lampStates['UV']
         self.lampStates = {'UV' : Lumencor.LampState(scur.enabled, power, scur.idx)}
 
-    @property
+    @QtCore.pyqtProperty(bool)
     def blueEnabled(self):
         return self._lampStates['blue'].enabled
 
@@ -368,7 +357,7 @@ class Lumencor(Device):
         scur = self.lampStates['blue']
         self.lampStates = {'blue' : Lumencor.LampState(enabled, scur.power, scur.idx)}
 
-    @property
+    @QtCore.pyqtProperty(int)
     def bluePower(self):
         return self._lampStates['blue'].power
 
@@ -377,7 +366,7 @@ class Lumencor(Device):
         scur = self.lampStates['blue']
         self.lampStates = {'blue' : Lumencor.LampState(scur.enabled, power, scur.idx)}
 
-    @property
+    @QtCore.pyqtProperty(bool)
     def tealEnabled(self):
         return self._lampStates['teal'].enabled
 
@@ -386,7 +375,7 @@ class Lumencor(Device):
         scur = self.lampStates['teal']
         self.lampStates = {'teal' : Lumencor.LampState(enabled, scur.power, scur.idx)}
 
-    @property
+    @QtCore.pyqtProperty(int)
     def tealPower(self):
         return self._lampStates['teal'].power
 

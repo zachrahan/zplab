@@ -5,6 +5,12 @@
 #include "_Camera.h"
 #include "_GilScopedRelease.h"
 
+void _Camera::staticInit()
+{
+    py::object weakRefPackage{py::import("weakref")};
+    sm_WeakMethod.reset(new py::object(weakRefPackage.attr("WeakMethod")));
+}
+
 std::shared_ptr<std::vector<std::string>> _Camera::getDeviceNames()
 {
     AT_64 deviceCount;
@@ -52,6 +58,8 @@ const wchar_t* _Camera::lookupFeatureName(const Feature& feature)
 {
     return sm_featureNames[static_cast<std::ptrdiff_t>(feature)];
 }
+
+const unsigned int _Camera::Infinite = 0xFFFFFFFF;
 
 _Camera::_Camera(const AT_64& deviceIndex)
 {
@@ -177,11 +185,13 @@ std::shared_ptr<_Camera::_CallbackRegistrationToken> _Camera::AT_RegisterFeature
 
 static bool AT_RegisterFeatureCallbackPyWrapperHelper(py::object& pyCallback, _Camera::Feature feature)
 {
-    return py::extract<bool>(pyCallback(feature));
+    return py::extract<bool>(pyCallback()(feature));
 }
 
 std::shared_ptr<_Camera::_CallbackRegistrationToken> _Camera::AT_RegisterFeatureCallbackPyWrapper(const Feature& feature, py::object pyCallback)
 {
+    // Equivalent to the Python code pyCallback = weakref.WeakMethod(pyCallback)
+    pyCallback = (*sm_WeakMethod)(pyCallback);
     // The following should work, but does not compile on g++ 4.8.2-r1.
 //  AT_RegisterFeatureCallback(feature, [=](Feature feature)mutable{return py::extract<bool>(pyCallback(feature));});
     // So we use a static wrapper function for executing the py::extract portion (the part that causes compilation
@@ -654,6 +664,142 @@ void _Camera::triggerMode(const TriggerMode& triggerMode_)
     AT_SetEnumIndex(Feature::TriggerMode, int(triggerMode_));
 }
 
+_Camera::TemperatureStatus _Camera::temperatureStatus() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::TemperatureStatus);
+    if(v < int(TemperatureStatus::_Begin) || v >= int(TemperatureStatus::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for TemperatureStatus, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(TemperatureStatus::_Begin) << ", " << static_cast<int>(TemperatureStatus::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return TemperatureStatus(v);
+}
+
+_Camera::Binning _Camera::binning() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::AOIBinning);
+    if(v < int(Binning::_Begin) || v >= int(Binning::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for AOIBinning, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(Binning::_Begin) << ", " << static_cast<int>(Binning::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return Binning(v);
+}
+
+void _Camera::binning(const Binning& binning_)
+{
+    AT_SetEnumIndex(Feature::AOIBinning, int(binning_));
+}
+
+_Camera::AuxiliaryOutSource _Camera::auxiliaryOutSource() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::AuxiliaryOutSource);
+    if(v < int(AuxiliaryOutSource::_Begin) || v >= int(AuxiliaryOutSource::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for AuxiliaryOutSource, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(AuxiliaryOutSource::_Begin) << ", " << static_cast<int>(AuxiliaryOutSource::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return AuxiliaryOutSource(v);
+}
+
+void _Camera::auxiliaryOutSource(const AuxiliaryOutSource& auxiliaryOutSource_)
+{
+    AT_SetEnumIndex(Feature::AuxiliaryOutSource, int(auxiliaryOutSource_));
+}
+
+_Camera::CycleMode _Camera::cycleMode() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::CycleMode);
+    if(v < int(CycleMode::_Begin) || v >= int(CycleMode::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for CycleMode, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(CycleMode::_Begin) << ", " << static_cast<int>(CycleMode::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return CycleMode(v);
+}
+
+void _Camera::cycleMode(const CycleMode& cycleMode_)
+{
+    AT_SetEnumIndex(Feature::CycleMode, int(cycleMode_));
+}
+
+_Camera::FanSpeed _Camera::fanSpeed() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::FanSpeed);
+    if(v < int(FanSpeed::_Begin) || v >= int(FanSpeed::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for FanSpeed, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(FanSpeed::_Begin) << ", " << static_cast<int>(FanSpeed::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return FanSpeed(v);
+}
+
+void _Camera::fanSpeed(const FanSpeed& fanSpeed_)
+{
+    AT_SetEnumIndex(Feature::FanSpeed, int(fanSpeed_));
+}
+
+_Camera::PixelEncoding _Camera::pixelEncoding() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::PixelEncoding);
+    if(v < int(PixelEncoding::_Begin) || v >= int(PixelEncoding::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for PixelEncoding, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(PixelEncoding::_Begin) << ", " << static_cast<int>(PixelEncoding::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return PixelEncoding(v);
+}
+
+_Camera::IOSelector _Camera::ioSelector() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::IOSelector);
+    if(v < int(IOSelector::_Begin) || v >= int(IOSelector::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for IOSelector, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(IOSelector::_Begin) << ", " << static_cast<int>(IOSelector::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return IOSelector(v);
+}
+
+void _Camera::ioSelector(const IOSelector& ioSelector_)
+{
+    AT_SetEnumIndex(Feature::IOSelector, int(ioSelector_));
+}
+
+_Camera::PixelReadoutRate _Camera::pixelReadoutRate() const
+{
+    int v = const_cast<_Camera*>(this)->AT_GetEnumIndex(Feature::PixelReadoutRate);
+    if(v < int(PixelReadoutRate::_Begin) || v >= int(PixelReadoutRate::_End))
+    {
+        std::ostringstream o;
+        o << "AT_GetEnumIndex returned " << v << " for PixelReadoutRate, which is not in the interval corresponding ";
+        o << "to known values, [" << static_cast<int>(PixelReadoutRate::_Begin) << ", " << static_cast<int>(PixelReadoutRate::_End) << ").";
+        throw _AndorExceptionBase(o.str());
+    }
+    return PixelReadoutRate(v);
+}
+
+void _Camera::pixelReadoutRate(const PixelReadoutRate& pixelReadoutRate_)
+{
+    AT_SetEnumIndex(Feature::PixelReadoutRate, int(pixelReadoutRate_));
+}
+
+std::unique_ptr<py::object> _Camera::sm_WeakMethod;
+
 const wchar_t *_Camera::sm_featureNames[] =
 {
     L"AccumulateCount",
@@ -760,18 +906,91 @@ const wchar_t *_Camera::sm_triggerModeNames[] =
     L"External"
 };
 
+const wchar_t *_Camera::sm_temperatureStatusNames[] =
+{
+    L"Cooler Off",
+    L"Stabilised",
+    L"Cooling",
+    L"Drift",
+    L"Not Stabilised",
+    L"Fault"
+};
+
+const wchar_t *_Camera::sm_binningNames[] =
+{
+    L"1x1",
+    L"2x2",
+    L"3x3",
+    L"4x4",
+    L"8x8"
+};
+
+const wchar_t *_Camera::sm_auxiliaryOutSourceNames[] =
+{
+    L"FireRow1",
+    L"FireRowN",
+    L"FireAll",
+    L"FireAny"
+};
+
+const wchar_t *_Camera::sm_cycleModeNames[] =
+{
+    L"Fixed",
+    L"Continuous"
+};
+
+const wchar_t *_Camera::sm_fanSpeedNames[] =
+{
+    L"Off",
+    L"On"
+};
+
+const wchar_t *_Camera::sm_pixelEncodingNames[] =
+{
+    L"Mono12",
+    L"Mono12Packed",
+    L"Mono16",
+    L"RGB8Packed",
+    L"Mono12Coded",
+    L"Mono12CodedPacked",
+    L"Mono22Parallel",
+    L"Mono22PackedParallel",
+    L"Mono8",
+    L"Mono32"
+};
+
+const wchar_t *_Camera::sm_IOSelectorNames[] =
+{
+    L"Fire 1",
+    L"Fire N",
+    L"Aux Out 1",
+    L"Arm",
+    L"Aux Out 2",
+    L"Spare Input",
+    L"External Trigger",
+    L"Fire N and 1"
+};
+
+const wchar_t *_Camera::sm_pixelReadoutRateNames[] =
+{
+    L"Rate_10MHz",
+    L"Rate_100MHz",
+    L"Rate_200MHz",
+    L"Rate_300MHz"
+};
+
 _Camera::_CallbackRegistrationToken::_CallbackRegistrationToken(_Camera& camera_, const Feature& feature_, const std::function<bool(Feature)>& callback_)
   : m_camera(camera_),
     m_feature(feature_),
     m_callback(callback_),
     m_precalled(false)
 {
-    std::wcerr << L"_Camera::_CallbackRegistrationToken::_CallbackRegistrationToken()  " << sm_featureNames[static_cast<std::ptrdiff_t>(m_feature)] << std::endl;
+//  std::wcerr << L"_Camera::_CallbackRegistrationToken::_CallbackRegistrationToken()  " << sm_featureNames[static_cast<std::ptrdiff_t>(m_feature)] << std::endl;
 }
 
 _Camera::_CallbackRegistrationToken::~_CallbackRegistrationToken()
 {
-    std::wcerr << L"_Camera::_CallbackRegistrationToken::~_CallbackRegistrationToken() " << sm_featureNames[static_cast<std::ptrdiff_t>(m_feature)] << std::endl;
+//  std::wcerr << L"_Camera::_CallbackRegistrationToken::~_CallbackRegistrationToken() " << sm_featureNames[static_cast<std::ptrdiff_t>(m_feature)] << std::endl;
 }
 
 bool _Camera::_CallbackRegistrationToken::operator == (const _CallbackRegistrationToken& rhs) const

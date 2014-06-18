@@ -114,13 +114,102 @@ public:
     enum class TriggerMode : int
     {
         _Begin = 0,
-        Internal= _Begin,
+        Internal = _Begin,
         ExternalLevelTransition,
         ExternalStart,
         ExternalExposure,
         Software,
         Advanced,
         External,
+        _End
+    };
+
+    enum class TemperatureStatus : int
+    {
+        _Begin = 0,
+        CoolerOff = _Begin,
+        Stabilized,
+        Cooling,
+        Drift,
+        NotStabilized,
+        Fault,
+        _End
+    };
+
+    enum class Binning : int
+    {
+        _Begin = 0,
+        Bin_1x1 = _Begin,
+        Bin_2x2,
+        Bin_3x3,
+        Bin_4x4,
+        Bin_8x8,
+        _End
+    };
+
+    enum class AuxiliaryOutSource : int
+    {
+        _Begin = 0,
+        FireRow1 = _Begin,
+        FireRowN,
+        FireAll,
+        FireAny,
+        _End
+    };
+
+    enum class CycleMode : int
+    {
+        _Begin = 0,
+        Fixed = _Begin,
+        Continuous,
+        _End
+    };
+
+    enum class FanSpeed : int
+    {
+        _Begin = 0,
+        Off = _Begin,
+        On,
+        _End
+    };
+
+    enum class PixelEncoding : int
+    {
+        _Begin = 0,
+        Mono12 = _Begin,
+        Mono12Packed,
+        Mono16,
+        RGB8Packed,
+        Mono12Coded,
+        Mono12CodedPacked,
+        Mono22Parallel,
+        Mono22PackedParallel,
+        Mono8,
+        Mono32,
+        _End
+    };
+
+    enum class IOSelector : int
+    {
+        _Begin = 0,
+        Fire1 = _Begin,
+        FireN,
+        AuxOut1,
+        Arm,
+        AuxOut2,
+        SpareInput,
+        ExternalTrigger,
+        FireNand1,
+        _End
+    };
+
+    enum class PixelReadoutRate : int
+    {
+        _Begin = 0,
+        Rate_10MHz = _Begin,
+        Rate_100MHz,
+        Rate_200MHz,
+        Rate_300MHz,
         _End
     };
 
@@ -141,8 +230,10 @@ public:
         friend _Camera;
     };
 
+    static void staticInit();
     static std::shared_ptr<std::vector<std::string>> getDeviceNames();
     static const wchar_t* lookupFeatureName(const Feature& feature);
+    static const unsigned int Infinite;
 
     explicit _Camera(const AT_64& deviceIndex);
     virtual ~_Camera();
@@ -200,11 +291,42 @@ public:
     TriggerMode triggerMode() const;
     void triggerMode(const TriggerMode& triggerMode_);
 
+    TemperatureStatus temperatureStatus() const;
+
+    Binning binning() const;
+    void binning(const Binning& binning_);
+
+    AuxiliaryOutSource auxiliaryOutSource() const;
+    void auxiliaryOutSource(const AuxiliaryOutSource& auxiliaryOutSource_);
+
+    CycleMode cycleMode() const;
+    void cycleMode(const CycleMode& cycleMode_);
+
+    FanSpeed fanSpeed() const;
+    void fanSpeed(const FanSpeed& fanSpeed_);
+
+    PixelEncoding pixelEncoding() const;
+
+    IOSelector ioSelector() const;
+    void ioSelector(const IOSelector& ioSelector_);
+
+    PixelReadoutRate pixelReadoutRate() const;
+    void pixelReadoutRate(const PixelReadoutRate& pixelReadoutRate_);
+
 protected:
+    static std::unique_ptr<py::object> sm_WeakMethod;
     static const wchar_t *sm_featureNames[];
     static const wchar_t *sm_simplePreAmpNames[];
     static const wchar_t *sm_shutterNames[];
     static const wchar_t *sm_triggerModeNames[];
+    static const wchar_t *sm_temperatureStatusNames[];
+    static const wchar_t *sm_binningNames[];
+    static const wchar_t *sm_auxiliaryOutSourceNames[];
+    static const wchar_t *sm_cycleModeNames[];
+    static const wchar_t *sm_fanSpeedNames[];
+    static const wchar_t *sm_pixelEncodingNames[];
+    static const wchar_t *sm_IOSelectorNames[];
+    static const wchar_t *sm_pixelReadoutRateNames[];
 
     // Device handle
     AT_H m_dh;

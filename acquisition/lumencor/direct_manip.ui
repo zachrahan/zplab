@@ -958,7 +958,7 @@
    <sender>enableAllButton</sender>
    <signal>clicked()</signal>
    <receiver>LumencorDirectManipDialog</receiver>
-   <slot>handleEnableAllLamps()</slot>
+   <slot>enableAllLampsSlot()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>631</x>
@@ -974,7 +974,7 @@
    <sender>disableAllButton</sender>
    <signal>clicked()</signal>
    <receiver>LumencorDirectManipDialog</receiver>
-   <slot>handleDisableAllLamps()</slot>
+   <slot>disableAllLampsSlot()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>717</x>
@@ -990,7 +990,7 @@
    <sender>maxAllButton</sender>
    <signal>clicked()</signal>
    <receiver>LumencorDirectManipDialog</receiver>
-   <slot>handleMaxAllLamps()</slot>
+   <slot>maxAllLampsSlot()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>631</x>
@@ -1006,7 +1006,7 @@
    <sender>zeroAllButton</sender>
    <signal>clicked()</signal>
    <receiver>LumencorDirectManipDialog</receiver>
-   <slot>handleZeroAllLamps()</slot>
+   <slot>zeroAllLampsSlot()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>717</x>
@@ -1020,9 +1020,9 @@
   </connection>
  </connections>
  <slots>
-  <slot>handleEnableAllLamps()</slot>
-  <slot>handleDisableAllLamps()</slot>
-  <slot>handleMaxAllLamps()</slot>
-  <slot>handleZeroAllLamps()</slot>
+  <slot>enableAllLampsSlot()</slot>
+  <slot>disableAllLampsSlot()</slot>
+  <slot>maxAllLampsSlot()</slot>
+  <slot>zeroAllLampsSlot()</slot>
  </slots>
 </ui>

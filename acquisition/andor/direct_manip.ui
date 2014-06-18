@@ -1,455 +1,904 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>AndorManipMainWindow</class>
- <widget class="QMainWindow" name="AndorManipMainWindow">
+ <class>CameraManipDialog</class>
+ <widget class="QDialog" name="CameraManipDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>989</width>
-    <height>683</height>
+    <width>641</width>
+    <height>1236</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>andor Module Direct Manipulator</string>
   </property>
-  <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout">
-    <item>
-     <widget class="QGraphicsView" name="graphicsView"/>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>989</width>
-     <height>22</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QStatusBar" name="statusbar"/>
-  <widget class="QDockWidget" name="dockWidget">
-   <property name="features">
-    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
-   </property>
-   <property name="windowTitle">
-    <string>Image</string>
-   </property>
-   <attribute name="dockWidgetArea">
-    <number>2</number>
-   </attribute>
-   <widget class="QWidget" name="dockWidgetContents">
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <widget class="QGroupBox" name="groupBox">
-       <property name="title">
-        <string>File</string>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QGroupBox" name="staticPropertiesGroupBox">
+     <property name="title">
+      <string>Camera Information</string>
+     </property>
+     <layout class="QFormLayout" name="formLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="cameraModelLabel">
+        <property name="text">
+         <string>Camera model:</string>
+        </property>
+        <property name="buddy">
+         <cstring>cameraModelEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="cameraModelEdit">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="serialNumberLabel">
+        <property name="text">
+         <string>Serial number:</string>
+        </property>
+        <property name="buddy">
+         <cstring>serialNumberEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="serialNumberEdit">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="interfaceTypeLabel">
+        <property name="text">
+         <string>Interface type:</string>
+        </property>
+        <property name="buddy">
+         <cstring>interfaceTypeEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="interfaceTypeEdit">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="sensorDimensionsLabel">
+        <property name="text">
+         <string>Sensor dimensions:</string>
+        </property>
+        <property name="buddy">
+         <cstring>sensorWidthEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <layout class="QHBoxLayout" name="sensorDimensionsLayout">
         <item>
-         <widget class="QPushButton" name="pushButton">
-          <property name="text">
-           <string>Open</string>
+         <widget class="QLineEdit" name="sensorWidthEdit">
+          <property name="readOnly">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_2">
+         <widget class="QLabel" name="sensorDimensionsDelimeterLabel">
           <property name="text">
-           <string>Save</string>
+           <string>x</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="sensorHeightEdit">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="sensorDimensionsUnitLabel">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>pixels</string>
           </property>
          </widget>
         </item>
        </layout>
-      </widget>
-     </item>
-     <item>
-      <widget class="QGroupBox" name="groupBox_2">
-       <property name="title">
-        <string>Camera</string>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="pixelDimensionsLabel">
+        <property name="text">
+         <string>Pixel dimensions:</string>
+        </property>
+        <property name="buddy">
+         <cstring>pixelWidthEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <layout class="QHBoxLayout" name="pixelDimensionsLayout">
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <item>
-           <widget class="QComboBox" name="andorDeviceListCombo">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-              <horstretch>100</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="sizeAdjustPolicy">
-             <enum>QComboBox::AdjustToContents</enum>
-            </property>
-            <property name="duplicatesEnabled">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="refreshAndorDeviceListButton">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-              <horstretch>1</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="toolTip">
-             <string>Refresh</string>
-            </property>
-            <property name="text">
-             <string>Refresh</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <widget class="QPushButton" name="connectDisconnectAndorDeviceButton">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Connect</string>
+         <widget class="QLineEdit" name="pixelWidthEdit">
+          <property name="readOnly">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="testButton">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
+         <widget class="QLabel" name="pixelDimensionsDelimiterLabel">
           <property name="text">
-           <string>test</string>
+           <string>x</string>
           </property>
          </widget>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_3">
-          <item>
-           <widget class="QLabel" name="exposureTimeLabel">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Exposure:</string>
-            </property>
-            <property name="buddy">
-             <cstring>exposureTimeSpinBox</cstring>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QDoubleSpinBox" name="exposureTimeSpinBox">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="suffix">
-             <string>s</string>
-            </property>
-            <property name="decimals">
-             <number>4</number>
-            </property>
-            <property name="maximum">
-             <double>9999999.000000000000000</double>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_4">
-          <item>
-           <widget class="QLabel" name="actualExposureTimeLabel">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Reported Exposure:</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLCDNumber" name="actualExposureTimeLcdDisplay">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="digitCount">
-             <number>9</number>
-            </property>
-            <property name="segmentStyle">
-             <enum>QLCDNumber::Filled</enum>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <spacer name="horizontalSpacer">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>0</width>
-              <height>0</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <widget class="QPushButton" name="acquireButton">
-          <property name="enabled">
-           <bool>false</bool>
+         <widget class="QLineEdit" name="pixelHeightEdit">
+          <property name="readOnly">
+           <bool>true</bool>
           </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="pixelDimensionsUnitLabel">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>35</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>µm</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="mutablePropertiesGroupBox">
+     <property name="title">
+      <string>Camera Settings</string>
+     </property>
+     <layout class="QFormLayout" name="formLayout_2">
+      <item row="0" column="0">
+       <widget class="QLabel" name="accumulateCountLabel">
+        <property name="text">
+         <string>Accumulate:</string>
+        </property>
+        <property name="buddy">
+         <cstring>accumulateCountSpinBox</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QSpinBox" name="accumulateCountSpinBox">
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>999999</number>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="aoiOffsetLabel">
+        <property name="text">
+         <string>AOI offset:</string>
+        </property>
+        <property name="buddy">
+         <cstring>aoiLeftSpinBox</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <layout class="QHBoxLayout" name="aoiOffsetLayout">
+        <item>
+         <widget class="QSpinBox" name="aoiLeftSpinBox">
           <property name="toolTip">
-           <string>Expose for specified time and get resulting image</string>
+           <string>Area Of Interest left offset, counting from 1</string>
           </property>
-          <property name="text">
-           <string>Acquire Single Image</string>
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>999999</number>
           </property>
          </widget>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_5">
-          <item>
-           <widget class="QLabel" name="liveStreamBufferCountLabel">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Live Buffers:</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QSpinBox" name="liveStreamBufferCountSpinBox">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="suffix">
-             <string/>
-            </property>
-            <property name="minimum">
-             <number>1</number>
-            </property>
-            <property name="value">
-             <number>5</number>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <widget class="QPushButton" name="startStopLiveStreamButton">
-          <property name="enabled">
-           <bool>false</bool>
+         <widget class="QLabel" name="aoiOffsetDelimiter">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
           <property name="text">
-           <string>Live Stream</string>
+           <string>,</string>
           </property>
-          <property name="checkable">
-           <bool>false</bool>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
-          <property name="checked">
-           <bool>false</bool>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="aoiTopSpinBox">
+          <property name="toolTip">
+           <string>Area Of Interest top offset, counting from 1</string>
           </property>
-          <property name="autoExclusive">
-           <bool>false</bool>
+          <property name="minimum">
+           <number>1</number>
           </property>
-          <property name="default">
-           <bool>false</bool>
-          </property>
-          <property name="flat">
-           <bool>false</bool>
+          <property name="maximum">
+           <number>999999</number>
           </property>
          </widget>
         </item>
        </layout>
-      </widget>
-     </item>
-     <item>
-      <spacer name="verticalSpacer">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>20</width>
-         <height>40</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-    </layout>
-   </widget>
-  </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="aoiDimensionsLabel">
+        <property name="text">
+         <string>AOI size:</string>
+        </property>
+        <property name="buddy">
+         <cstring>aoiWidthSpinBox</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <layout class="QHBoxLayout" name="aoiSizeLayout">
+        <item>
+         <widget class="QSpinBox" name="aoiWidthSpinBox">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>999999</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="aoiSizeDelimeter">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>x</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="aoiHeightSpinBox">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>999999</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="aoiStrideLabel">
+        <property name="text">
+         <string>aoiStride:</string>
+        </property>
+        <property name="buddy">
+         <cstring>aoiStrideEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="aoiStrideEdit">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="auxiliaryOutSourceLabel">
+        <property name="text">
+         <string>Aux out source:</string>
+        </property>
+        <property name="buddy">
+         <cstring>auxiliaryOutSourceCombo</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QComboBox" name="auxiliaryOutSourceCombo"/>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="binningLabel">
+        <property name="text">
+         <string>Binning:</string>
+        </property>
+        <property name="buddy">
+         <cstring>binningCombo</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QComboBox" name="binningCombo"/>
+      </item>
+      <item row="6" column="0">
+       <widget class="QLabel" name="bytesPerPixelLabel">
+        <property name="text">
+         <string>Bytes per pixel:</string>
+        </property>
+        <property name="buddy">
+         <cstring>bytesPerPixelEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="1">
+       <widget class="QLineEdit" name="bytesPerPixelEdit">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="0">
+       <widget class="QLabel" name="cycleModeLabel">
+        <property name="text">
+         <string>Cycle mode:</string>
+        </property>
+        <property name="buddy">
+         <cstring>cycleModeCombo</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="1">
+       <widget class="QComboBox" name="cycleModeCombo"/>
+      </item>
+      <item row="8" column="0">
+       <widget class="QLabel" name="exposureTimeLabel">
+        <property name="text">
+         <string>Exposure time:</string>
+        </property>
+        <property name="buddy">
+         <cstring>exposureTimeSpinBox</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="1">
+       <widget class="QDoubleSpinBox" name="exposureTimeSpinBox">
+        <property name="suffix">
+         <string>s</string>
+        </property>
+        <property name="decimals">
+         <number>10</number>
+        </property>
+        <property name="minimum">
+         <double>0.000001000000000</double>
+        </property>
+        <property name="maximum">
+         <double>999999999.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.001000000000000</double>
+        </property>
+        <property name="value">
+         <double>999999999.000000000000000</double>
+        </property>
+       </widget>
+      </item>
+      <item row="9" column="0">
+       <widget class="QLabel" name="fanSpeedLabel">
+        <property name="text">
+         <string>Fan speed:</string>
+        </property>
+        <property name="buddy">
+         <cstring>fanSpeedCombo</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="9" column="1">
+       <widget class="QComboBox" name="fanSpeedCombo"/>
+      </item>
+      <item row="10" column="0">
+       <widget class="QLabel" name="frameCountLabel">
+        <property name="text">
+         <string>Frame count:</string>
+        </property>
+        <property name="buddy">
+         <cstring>frameCountSpinBox</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="10" column="1">
+       <widget class="QSpinBox" name="frameCountSpinBox">
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>999999999</number>
+        </property>
+       </widget>
+      </item>
+      <item row="11" column="0">
+       <widget class="QLabel" name="frameRateLabel">
+        <property name="text">
+         <string>Frame rate:</string>
+        </property>
+        <property name="buddy">
+         <cstring>frameRateSpinBox</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="11" column="1">
+       <widget class="QDoubleSpinBox" name="frameRateSpinBox">
+        <property name="suffix">
+         <string>fps</string>
+        </property>
+        <property name="decimals">
+         <number>10</number>
+        </property>
+        <property name="minimum">
+         <double>0.000001000000000</double>
+        </property>
+        <property name="maximum">
+         <double>999999999.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="value">
+         <double>999999999.000000000000000</double>
+        </property>
+       </widget>
+      </item>
+      <item row="12" column="0">
+       <widget class="QLabel" name="imageSizeBytesLabel">
+        <property name="text">
+         <string>Image size in bytes:</string>
+        </property>
+        <property name="buddy">
+         <cstring>imageSizeBytesEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="12" column="1">
+       <widget class="QLineEdit" name="imageSizeBytesEdit">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="13" column="0">
+       <widget class="QLabel" name="ioSelectorLabel">
+        <property name="text">
+         <string>IO inversion selector:</string>
+        </property>
+        <property name="buddy">
+         <cstring>ioSelectorCombo</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="13" column="1">
+       <widget class="QComboBox" name="ioSelectorCombo"/>
+      </item>
+      <item row="14" column="0">
+       <widget class="QLabel" name="ioInvertLabel">
+        <property name="text">
+         <string>Invert selected pin:</string>
+        </property>
+        <property name="buddy">
+         <cstring>ioInvertCheckBox</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="14" column="1">
+       <widget class="QCheckBox" name="ioInvertCheckBox">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>22</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="15" column="0">
+       <widget class="QLabel" name="maxInterfaceTransferRateLabel">
+        <property name="text">
+         <string>Max interface FPS:</string>
+        </property>
+        <property name="buddy">
+         <cstring>maxInterfaceTransferRateEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="15" column="1">
+       <widget class="QLineEdit" name="maxInterfaceTransferRateEdit">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="16" column="0">
+       <widget class="QLabel" name="metadataEnabledLabel">
+        <property name="text">
+         <string>Metadata enabled:</string>
+        </property>
+        <property name="buddy">
+         <cstring>metadataEnabledCheckBox</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="16" column="1">
+       <widget class="QCheckBox" name="metadataEnabledCheckBox">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>22</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="17" column="0">
+       <widget class="QLabel" name="metadataTimestampEnabledLabel">
+        <property name="text">
+         <string>Timestamp metadata:</string>
+        </property>
+        <property name="buddy">
+         <cstring>metadataTimestampEnabledCheckBox</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="17" column="1">
+       <widget class="QCheckBox" name="metadataTimestampEnabledCheckBox">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>22</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="18" column="0">
+       <widget class="QLabel" name="overlapLabel">
+        <property name="text">
+         <string>Overlap:</string>
+        </property>
+        <property name="buddy">
+         <cstring>overlapCheckBox</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="18" column="1">
+       <widget class="QCheckBox" name="overlapCheckBox">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>22</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="19" column="0">
+       <widget class="QLabel" name="pixelEncodingLabel">
+        <property name="text">
+         <string>Pixel encoding:</string>
+        </property>
+        <property name="buddy">
+         <cstring>pixelEncodingEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="19" column="1">
+       <widget class="QLineEdit" name="pixelEncodingEdit">
+        <property name="toolTip">
+         <string>A function of simple pre amp (change simple pre amp to modify this value)</string>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="21" column="0">
+       <widget class="QLabel" name="readoutTimeLabel">
+        <property name="text">
+         <string>Readout time:</string>
+        </property>
+        <property name="buddy">
+         <cstring>readoutTimeEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="21" column="1">
+       <widget class="QLineEdit" name="readoutTimeEdit"/>
+      </item>
+      <item row="22" column="0">
+       <widget class="QLabel" name="sensorCoolingLabel">
+        <property name="text">
+         <string>Sensor cooling:</string>
+        </property>
+        <property name="buddy">
+         <cstring>sensorCoolingCheckBox</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="22" column="1">
+       <widget class="QCheckBox" name="sensorCoolingCheckBox">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>22</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="24" column="0">
+       <widget class="QLabel" name="shutterLabel">
+        <property name="text">
+         <string>Shutter:</string>
+        </property>
+        <property name="buddy">
+         <cstring>shutterCombo</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="24" column="1">
+       <widget class="QComboBox" name="shutterCombo"/>
+      </item>
+      <item row="25" column="0">
+       <widget class="QLabel" name="simplePreAmpLabel">
+        <property name="text">
+         <string>Simple pre amp:</string>
+        </property>
+        <property name="buddy">
+         <cstring>simplePreAmpCombo</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="25" column="1">
+       <widget class="QComboBox" name="simplePreAmpCombo"/>
+      </item>
+      <item row="26" column="0">
+       <widget class="QLabel" name="spuriousNoiseFilterLabel">
+        <property name="text">
+         <string>Spurious noise filter:</string>
+        </property>
+        <property name="buddy">
+         <cstring>spuriousNoiseFilterCheckBox</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="26" column="1">
+       <widget class="QCheckBox" name="spuriousNoiseFilterCheckBox">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>22</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="27" column="0">
+       <widget class="QLabel" name="timestampClockFrequencyLabel">
+        <property name="text">
+         <string>Timestamp clock freq:</string>
+        </property>
+        <property name="buddy">
+         <cstring>timestampClockFrequencySpinBox</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="27" column="1">
+       <widget class="QSpinBox" name="timestampClockFrequencySpinBox">
+        <property name="suffix">
+         <string>Hz</string>
+        </property>
+        <property name="maximum">
+         <number>999999999</number>
+        </property>
+       </widget>
+      </item>
+      <item row="28" column="0">
+       <widget class="QLabel" name="triggerModeLabel">
+        <property name="text">
+         <string>Trigger mode:</string>
+        </property>
+        <property name="buddy">
+         <cstring>triggerModeCombo</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="28" column="1">
+       <widget class="QComboBox" name="triggerModeCombo"/>
+      </item>
+      <item row="20" column="0">
+       <widget class="QLabel" name="pixelReadoutRateLabel">
+        <property name="text">
+         <string>Pixel readout rate:</string>
+        </property>
+        <property name="buddy">
+         <cstring>pixelReadoutRateCombo</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="20" column="1">
+       <widget class="QComboBox" name="pixelReadoutRateCombo"/>
+      </item>
+      <item row="23" column="0">
+       <widget class="QLabel" name="acquisitionSequenceInProgressLabel">
+        <property name="text">
+         <string>Sequence running:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="23" column="1">
+       <widget class="QCheckBox" name="acquisitionSequenceInProgressCheckBox">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>22</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="checkable">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="commandsGroupBox">
+     <property name="title">
+      <string>Camera Commands</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="0" column="1">
+       <widget class="QPushButton" name="softwareTriggerButton">
+        <property name="text">
+         <string>Send Software Trigger</string>
+        </property>
+        <property name="autoDefault">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QPushButton" name="resetTimestampClockButton">
+        <property name="text">
+         <string>Reset Timestamp Clock</string>
+        </property>
+        <property name="autoDefault">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QPushButton" name="startAcquisitionSequenceButton">
+        <property name="text">
+         <string>Start Acquisition Sequence</string>
+        </property>
+        <property name="autoDefault">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QPushButton" name="stopAcquisitionSequenceButton">
+        <property name="text">
+         <string>Stop Acquisition Sequence</string>
+        </property>
+        <property name="autoDefault">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
  </widget>
+ <tabstops>
+  <tabstop>cameraModelEdit</tabstop>
+  <tabstop>serialNumberEdit</tabstop>
+  <tabstop>interfaceTypeEdit</tabstop>
+  <tabstop>sensorWidthEdit</tabstop>
+  <tabstop>sensorHeightEdit</tabstop>
+  <tabstop>pixelWidthEdit</tabstop>
+  <tabstop>pixelHeightEdit</tabstop>
+  <tabstop>accumulateCountSpinBox</tabstop>
+  <tabstop>aoiLeftSpinBox</tabstop>
+  <tabstop>aoiTopSpinBox</tabstop>
+  <tabstop>aoiWidthSpinBox</tabstop>
+  <tabstop>aoiHeightSpinBox</tabstop>
+  <tabstop>aoiStrideEdit</tabstop>
+  <tabstop>auxiliaryOutSourceCombo</tabstop>
+  <tabstop>binningCombo</tabstop>
+  <tabstop>bytesPerPixelEdit</tabstop>
+  <tabstop>cycleModeCombo</tabstop>
+  <tabstop>exposureTimeSpinBox</tabstop>
+  <tabstop>fanSpeedCombo</tabstop>
+  <tabstop>frameCountSpinBox</tabstop>
+  <tabstop>frameRateSpinBox</tabstop>
+  <tabstop>imageSizeBytesEdit</tabstop>
+  <tabstop>ioSelectorCombo</tabstop>
+  <tabstop>ioInvertCheckBox</tabstop>
+  <tabstop>maxInterfaceTransferRateEdit</tabstop>
+  <tabstop>metadataEnabledCheckBox</tabstop>
+  <tabstop>metadataTimestampEnabledCheckBox</tabstop>
+  <tabstop>overlapCheckBox</tabstop>
+  <tabstop>pixelEncodingEdit</tabstop>
+  <tabstop>pixelReadoutRateCombo</tabstop>
+  <tabstop>readoutTimeEdit</tabstop>
+  <tabstop>sensorCoolingCheckBox</tabstop>
+  <tabstop>shutterCombo</tabstop>
+  <tabstop>simplePreAmpCombo</tabstop>
+  <tabstop>spuriousNoiseFilterCheckBox</tabstop>
+  <tabstop>timestampClockFrequencySpinBox</tabstop>
+  <tabstop>triggerModeCombo</tabstop>
+  <tabstop>resetTimestampClockButton</tabstop>
+  <tabstop>softwareTriggerButton</tabstop>
+ </tabstops>
  <resources/>
- <connections>
-  <connection>
-   <sender>pushButton_2</sender>
-   <signal>clicked()</signal>
-   <receiver>AndorManipMainWindow</receiver>
-   <slot>saveImageClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>825</x>
-     <y>122</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>727</x>
-     <y>78</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>pushButton</sender>
-   <signal>clicked()</signal>
-   <receiver>AndorManipMainWindow</receiver>
-   <slot>openImageClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>862</x>
-     <y>88</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>728</x>
-     <y>45</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>refreshAndorDeviceListButton</sender>
-   <signal>clicked()</signal>
-   <receiver>AndorManipMainWindow</receiver>
-   <slot>refreshAndorDeviceListButtonClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>933</x>
-     <y>192</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>757</x>
-     <y>272</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>connectDisconnectAndorDeviceButton</sender>
-   <signal>clicked()</signal>
-   <receiver>AndorManipMainWindow</receiver>
-   <slot>connectDisconnectAndorDeviceButtonClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>841</x>
-     <y>237</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>494</x>
-     <y>341</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>testButton</sender>
-   <signal>clicked()</signal>
-   <receiver>AndorManipMainWindow</receiver>
-   <slot>testButtonClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>789</x>
-     <y>266</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>687</x>
-     <y>225</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>acquireButton</sender>
-   <signal>clicked()</signal>
-   <receiver>AndorManipMainWindow</receiver>
-   <slot>acquireButtonClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>831</x>
-     <y>381</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>687</x>
-     <y>355</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>startStopLiveStreamButton</sender>
-   <signal>clicked()</signal>
-   <receiver>AndorManipMainWindow</receiver>
-   <slot>startStopLiveStreamButtonClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>833</x>
-     <y>416</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>721</x>
-     <y>384</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>exposureTimeSpinBox</sender>
-   <signal>valueChanged(double)</signal>
-   <receiver>AndorManipMainWindow</receiver>
-   <slot>exposureTimeSpinBoxChanged(double)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>894</x>
-     <y>311</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>683</x>
-     <y>300</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
- <slots>
-  <slot>openImageClicked()</slot>
-  <slot>saveImageClicked()</slot>
-  <slot>refreshAndorDeviceListButtonClicked()</slot>
-  <slot>andorDeviceSelected(int)</slot>
-  <slot>connectDisconnectAndorDeviceButtonClicked()</slot>
-  <slot>testButtonClicked()</slot>
-  <slot>acquireButtonClicked()</slot>
-  <slot>startStopLiveStreamButtonClicked()</slot>
-  <slot>exposureTimeSpinBoxChanged(double)</slot>
- </slots>
+ <connections/>
 </ui>

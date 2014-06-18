@@ -3,7 +3,7 @@
 
 from acquisition.andor.andor import Camera
 from acquisition.brightfield_led.brightfield_led import BrightfieldLed
-from acquisition.device import Device, Exception
+from acquisition.device import Device, DeviceException
 from acquisition.dm6000b.dm6000b import Dm6000b
 from acquisition.lumencor.lumencor import Lumencor
 from acquisition.peltier.peltier import Peltier
@@ -14,30 +14,20 @@ class Root(Device):
     directly or indirectly attached to zplab-scope.  It may make sense to abstract the root device into
     a virtual device that has individual computers as its subdevices at some point in the future.'''
     def __init__(self):
-        super().__init__('zplab-scope Linux system')
-        self._appendTypeName('Root')
+        super().__init__(deviceName='zplab-scope Linux system')
 
-        self._peltier = Peltier()
-        self._addSubDevice(self._peltier)
-
-        self._brightfieldLed = BrightfieldLed()
-        self._addSubDevice(self._brightfieldLed)
-
-        self._dm6000b = Dm6000b()
-        self._addSubDevice(self._dm6000b)
-
-        self._lumencor = Lumencor()
-        self._addSubDevice(self._lumencor)
-
-        self._camera = Camera(0)
-        self._addSubDevice(self._camera)
+#       self._peltier = Peltier(self)
+        self._brightfieldLed = BrightfieldLed(self)
+        self._dm6000b = Dm6000b(self)
+        self._lumencor = Lumencor(self)
+        self._camera = Camera(self, andorDeviceIndex=0)
 
     # Properties for accessing devices are in approximate ascending order of vertical position.  The Peltier controller box happened to be below
     # everything else when this was written.
 
-    @property
-    def peltier(self):
-        return self._peltier
+#   @property
+#   def peltier(self):
+#       return self._peltier
 
     @property
     def brightfieldLed(self):
