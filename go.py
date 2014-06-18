@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from PyQt5 import Qt
 import sys
 from ris_widget._ris_widget import RisWidget

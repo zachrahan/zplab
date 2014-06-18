@@ -761,7 +761,7 @@ class Camera(Device):
         if acquiredBuffer != imageBuffer.ctypes.data_as(ctypes.c_void_p).value:
             raise AndorException('Acquired image buffer has different address than queued image buffer.')
 
-        return imageBuffer[:self._camera.AT_GetInt(self.Feature.AOIHeight), :self._camera.AT_GetInt(self.Feature.AOIWidth)]
+        return imageBuffer[:self._aoiHeight, :self._aoiWidth]
 
     def startAcquisitionSequence(self):
         if self._acquisitionInitiatedByThisInstance or self._acquisitionSequenceInProgress:
@@ -800,7 +800,7 @@ class Camera(Device):
                 raise DeviceException(self, 'Acquired image buffer has different address than queued image buffer.')
             acquiredBuffer = self._queuedBuffers[voidp]
             del self._queuedBuffers[voidp]
-            self.imageAcquired.emit(acquiredBuffer[:self._aoiWidth, :self._aoiHeight])
+            self.imageAcquired.emit(acquiredBuffer[:self._aoiHeight, :self._aoiWidth])
             if self._acquisitionInitiatedByThisInstance:
                 newBuffer = self.makeAcquisitionBuffer()
                 self._queuedBuffers[newBuffer.ctypes.data] = newBuffer
