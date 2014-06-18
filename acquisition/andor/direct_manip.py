@@ -106,6 +106,15 @@ class CameraManipDialog(Qt.QDialog):
         addSpinBoxProp('timestampClockFrequency')
         addComboProp('triggerMode')
 
+        # The cameraInstance.waitBufferTimeout property, being the only property composed of an enum AND a float, is complex and a one-off
+        # special case.  So, unlike the properties managed above, it's not generalized into an addxxxxxx function.
+        for e in Camera.WaitBufferTimeout:
+            self.ui.waitBufferTimeoutCombo.addItem(e.name)
+        self._waitBufferTimeoutChangedSlot(self.cameraInstance.waitBufferTimeout)
+        self.cameraInstance.waitBufferTimeoutChanged.connect(self._waitBufferTimeoutChangedSlot)
+        self.ui.waitBufferTimeoutCombo.currentIndexChanged.connect(self._waitBufferComboIndexChangedSlot)
+        self.ui.waitBufferTimeoutSpinBox.valueChanged.connect(self._waitBufferSpinBoxValueChangedSlot)
+
         self.ui.resetTimestampClockButton.clicked.connect(self.cameraInstance.commandTimestampClockReset)
         self.ui.softwareTriggerButton.clicked.connect(self.cameraInstance.commandSoftwareTrigger)
         self.ui.startAcquisitionSequenceButton.clicked.connect(self.cameraInstance.startAcquisitionSequence)
@@ -114,6 +123,27 @@ class CameraManipDialog(Qt.QDialog):
     def closeEvent(self, event):
         super().closeEvent(event)
         self.deleteLater()
+
+    def _waitBufferTimeoutChangedSlot(self, waitBufferTimeout):
+        self.ui.waitBufferTimeoutCombo.setCurrentIndex(waitBufferTimeout[0].value)
+        if waitBufferTimeout[0] is Camera.WaitBufferTimeout.Override:
+            self.ui.waitBufferTimeoutSpinBox.setVisible(True)
+            self.ui.waitBufferTimeoutSpinBox.setValue(waitBufferTimeout[1])
+        else:
+            self.ui.waitBufferTimeoutSpinBox.setVisible(False)
+
+    # Note: decorator required to disambiguate by argument type between overloaded combo box index change signals
+    @Qt.pyqtSlot(int)
+    def _waitBufferComboIndexChangedSlot(self, index):
+        e = Camera.WaitBufferTimeout(index)
+        if e is Camera.WaitBufferTimeout.Override:
+            self.cameraInstance.waitBufferTimeout = (e, self.ui.waitBufferTimeoutSpinBox.value())
+        else:
+            self.cameraInstance.waitBufferTimeout = (e,)
+
+    def _waitBufferSpinBoxValueChangedSlot(self, value):
+        if self.cameraInstance.waitBufferTimeout[0] is Camera.WaitBufferTimeout.Override:
+            self.cameraInstance.waitBufferTimeout = (Camera.WaitBufferTimeout.Override, value)
 
 #   def __del__(self):
 #       print('DEL!!!!!!!!!!!!!')
