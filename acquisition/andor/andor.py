@@ -1,5 +1,6 @@
 # Copyright 2014 WUSTL ZPLAB
-import time
+# Erik Hvatum (ice.rikh@gmail.com)
+
 import ctypes
 import enum
 import numpy
@@ -184,7 +185,6 @@ class Camera(Device):
         # sequential acquisition
         self._waitBuffer.connect(self._waitBufferSlot, QtCore.Qt.QueuedConnection)
         self._waitBufferTimeout = (Camera.WaitBufferTimeout.Default,)
-        self.waits=[]
 
     def __del__(self):
         for crt in self._callbackTokens:
@@ -797,21 +797,10 @@ class Camera(Device):
 
     def _waitBufferSlot(self):
         if self._acquisitionInitiatedByThisInstance:
-            t0 = time.time()
             voidp = self._camera.AT_WaitBuffer(self._waitBufferTimeoutValue())
-            t1 = time.time()
-            if self.prevtime is None:
-                d = numpy.nan
-            else:
-                d = t1 - self.prevtime
             if voidp not in self._queuedBuffers:
                 raise DeviceException(self, 'Acquired image buffer has different address than queued image buffer.')
             acquiredBuffer = self._queuedBuffers[voidp]
-            self.prevtime = t1
-            t2 = time.time()
-#           self.rw.showImage(acquiredBuffer[:self._aoiHeight, :self._aoiWidth])
-            t3 = time.time()
-            self.waits.append((d, t1-t0, t3-t2))
             del self._queuedBuffers[voidp]
             self.imageAcquired.emit(acquiredBuffer[:self._aoiHeight, :self._aoiWidth])
             if self._acquisitionInitiatedByThisInstance:
