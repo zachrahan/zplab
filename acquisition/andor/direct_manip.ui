@@ -791,6 +791,46 @@
         </property>
        </widget>
       </item>
+      <item row="29" column="0">
+       <widget class="QLabel" name="waitBufferTimeoutLabel">
+        <property name="text">
+         <string>WaitBuffer timeout:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="29" column="1">
+       <layout class="QHBoxLayout" name="waitBufferTimeoutLayout">
+        <item>
+         <widget class="QComboBox" name="waitBufferTimeoutCombo">
+          <property name="currentText">
+           <string/>
+          </property>
+          <property name="maxVisibleItems">
+           <number>8</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QDoubleSpinBox" name="waitBufferTimeoutSpinBox">
+          <property name="suffix">
+           <string>s</string>
+          </property>
+          <property name="decimals">
+           <number>10</number>
+          </property>
+          <property name="maximum">
+           <double>4294967.294999999925494</double>
+          </property>
+          <property name="singleStep">
+           <double>0.001000000000000</double>
+          </property>
+          <property name="value">
+           <double>1.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
      </layout>
     </widget>
    </item>
