@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>641</width>
-    <height>1236</height>
+    <height>1266</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -874,6 +874,25 @@
        <widget class="QPushButton" name="stopAcquisitionSequenceButton">
         <property name="text">
          <string>Stop Acquisition Sequence</string>
+        </property>
+        <property name="autoDefault">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="liveModeGroupBox">
+     <property name="title">
+      <string>Live Mode</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QPushButton" name="enterExitLiveModeButton">
+        <property name="text">
+         <string>Enter Live Mode</string>
         </property>
         <property name="autoDefault">
          <bool>false</bool>

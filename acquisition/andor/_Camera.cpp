@@ -314,7 +314,6 @@ AT_64 _Camera::AT_GetIntMax(const Feature& feature)
     std::ptrdiff_t fi{static_cast<std::ptrdiff_t>(feature)};
     AT_64 ret;
     int r = ::AT_GetIntMax(m_dh, sm_featureNames[fi], &ret);
-    std::wcerr << sm_featureNames[fi] << std::endl;
     if(r != AT_SUCCESS)
     {
         std::ostringstream o;

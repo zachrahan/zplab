@@ -94,8 +94,9 @@ class Camera(Device):
     spuriousNoiseFilterChanged = QtCore.pyqtSignal(bool)
     timestampClockFrequencyChanged = QtCore.pyqtSignal(int)
     triggerModeChanged = QtCore.pyqtSignal(_Camera.TriggerMode)
-    # Note that the waitbufferTimeout property controls the behavior of this class and does not map to an Andor
-    # API camera property
+    # Note that the waitbufferTimeout and inLiveMode properties control the behavior of this class and do not map
+    # directly to any one specific Andor API camera property
+    inLiveModeChanged = QtCore.pyqtSignal(bool)
     waitBufferTimeoutChanged = QtCore.pyqtSignal(tuple)
 
     # Private signal used internally to queue next waitbuffer operation while allowing an opportunity for a stop signal
@@ -181,6 +182,7 @@ class Camera(Device):
         self._callbackTokens.append(self._camera.AT_RegisterFeatureCallback(_Camera.Feature.TriggerMode, self._triggerModeCb))
         # Iff true, an acquisition sequence is in progress that was initiated through this class instance's interface
         self._acquisitionInitiatedByThisInstance = False
+        self._inLiveMode = False
         # Having this be a queued connection allows a stop request to slip in between consecutive waitbuffers during
         # sequential acquisition
         self._waitBuffer.connect(self._waitBufferSlot, QtCore.Qt.QueuedConnection)
@@ -199,6 +201,11 @@ class Camera(Device):
         Device.__del__(self)
 
     def commandSoftwareTrigger(self):
+        '''Send software trigger.  If the camera is in software triggered mode, an acquisition sequence has been started,
+        and at least one suitable buffer has been queued, this will cause the camera to acquire a frame such that the current
+        or next AT_WaitBuffer() completes once the frame has been transferred to the PC.'''
+        if self._triggerMode != self.TriggerMode.Software:
+            self._warn('Sending software trigger when not in software triggered exposure mode.')
         self._camera.AT_Command(_Camera.Feature.SoftwareTrigger)
 
     def commandTimestampClockReset(self):
@@ -704,14 +711,6 @@ class Camera(Device):
             self.waitBufferTimeoutChanged.emit(self._waitBufferTimeout)
 
 
-    def softwareTrigger(self):
-        '''Send software trigger.  If the camera is in software triggered mode, an acquisition sequence has been started,
-        and at least one suitable buffer has been queued, this will cause the camera to acquire a frame such that the current
-        or next AT_WaitBuffer() completes once the frame has been transferred to the PC.'''
-        if self.triggerMode != self.TriggerMode.Software:
-            self._warn('Sending software trigger when not in software triggered exposure mode.')
-        self._camera.AT_Command(self._camera.Feature.SoftwareTrigger)
-
     def getEnumStrings(self, feature):
         '''Returns a list of valid enum value names for the specified feature.  This will throw an exception if the specified
         feature does not represent an enumerated property (for example, because it is an int or float).'''
@@ -807,7 +806,36 @@ class Camera(Device):
                 newBuffer = self.makeAcquisitionBuffer()
                 self._queuedBuffers[newBuffer.ctypes.data] = newBuffer
                 self._camera.AT_QueueBuffer(newBuffer)
+                if self._inLiveMode:
+                    self.commandSoftwareTrigger()
                 self._waitBuffer.emit()
+
+    @QtCore.pyqtProperty(bool, notify=inLiveModeChanged)
+    def inLiveMode(self):
+        return self._inLiveMode
+
+    @inLiveMode.setter
+    def inLiveMode(self, inLiveMode):
+        if inLiveMode != self._inLiveMode:
+            if inLiveMode:
+                # Enter live mode
+                if self._shutter != _Camera.Shutter.Global:
+                    self.shutter = _Camera.Shutter.Global
+                if self._triggerMode != _Camera.TriggerMode.Software:
+                    self.triggerMode = _Camera.TriggerMode.Software
+                if self._cycleMode != _Camera.CycleMode.Continuous:
+                    self.cycleMode = _Camera.CycleMode.Continuous
+                self.startAcquisitionSequence()
+                # A _waitBuffer signal has been emitted and will be acted upon sometime after this function returns.  So,
+                # the software trigger sent on the next line, which occurs immediately, happens before the _waitBufferSlot(..)
+                # function initiates AT_WaitBuffer(..).
+                self.commandSoftwareTrigger()
+                self._inLiveMode = True
+            else:
+                # Exit live mode
+                self.stopAcquisitionSequence()
+                self._inLiveMode = False
+            self.inLiveModeChanged.emit(self._inLiveMode)
 
     QtCore.Q_ENUMS(AuxiliaryOutSource)
     QtCore.Q_ENUMS(Binning)

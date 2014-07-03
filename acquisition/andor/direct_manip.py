@@ -120,6 +120,9 @@ class CameraManipDialog(Qt.QDialog):
         self.ui.startAcquisitionSequenceButton.clicked.connect(self.cameraInstance.startAcquisitionSequence)
         self.ui.stopAcquisitionSequenceButton.clicked.connect(self.cameraInstance.stopAcquisitionSequence)
 
+        self.cameraInstance.inLiveModeChanged.connect(self._inLiveModeChangedSlot)
+        self.ui.enterExitLiveModeButton.clicked.connect(self._enterExitLiveModeButtonClickedSlot)
+
     def closeEvent(self, event):
         super().closeEvent(event)
         self.deleteLater()
@@ -145,8 +148,14 @@ class CameraManipDialog(Qt.QDialog):
         if self.cameraInstance.waitBufferTimeout[0] is Camera.WaitBufferTimeout.Override:
             self.cameraInstance.waitBufferTimeout = (Camera.WaitBufferTimeout.Override, value)
 
-#   def __del__(self):
-#       print('DEL!!!!!!!!!!!!!')
+    def _inLiveModeChangedSlot(self, value):
+        if value:
+            self.ui.enterExitLiveModeButton.setText('Exit Live Mode')
+        else:
+            self.ui.enterExitLiveModeButton.setText('Enter Live Mode')
+
+    def _enterExitLiveModeButtonClickedSlot(self):
+        self.cameraInstance.inLiveMode = not self.cameraInstance.inLiveMode
 
 def show(cameraInstance=None, launcherDescription=None, moduleArgs=None):
     import argparse
