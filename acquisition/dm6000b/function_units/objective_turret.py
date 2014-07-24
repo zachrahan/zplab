@@ -12,10 +12,32 @@ from acquisition.dm6000b.packet import Packet, InvalidPacketReceivedException, T
 class Objective:
     def __init__(self, position=None, magnification=None, type_=None):
         self.position = position
-        self.magnification = magnification
+
+        # Note that, as everywhere in this file, magnification is a tuple (None for the second element of the tuple indicating
+        # that no other objective in this objective's turret has the same magnification)
+        assignedMag = False
+        try:
+            elementCount = len(magnification)
+            if elementCount == 1:
+                pass
+            elif elementCount == 2:
+                self.magnification = tuple(magnification)
+                assignedMag = True
+            else:
+                raise DeviceException(self, 'Iterable with neither one nor two elements provided for magnification.')
+        except TypeError:
+            pass
+        if not assignedMag:
+            self.magnification = (magnification, None)
+
         self.type_ = type_
+
     def __repr__(self):
-        return 'Objective(position={}, magnification={}, type_={})'.format(self.position, self.magnification, self.type_)
+        if len(self.magnification) == 1:
+            magRepr = self.magnification[0]
+        else:
+            magRepr = '"{}.{}"'.format(self.magnification[0], self.magnification[1])
+        return 'Objective(position={}, magnification={}, type_={})'.format(self.position, magRepr, self.type_)
 
 class ObjectiveTurret(FunctionUnit):
     '''AKA "nose piece" AKA "revolver" - that rotating bit of hardware to which objectives of various maginifications
@@ -33,6 +55,7 @@ class ObjectiveTurret(FunctionUnit):
         # So that we don't get confused while initing, unsubscribe from all of the objective turret function unit change events
         self._transmit(Packet(self, cmdCode=3, parameter='0 0 0 0 0 0 0 0 0 0'))
         # Begin scanning objectives by requesting min objective index (scanning will continue once this value is retrieved)
+        self._position = None
         self._objective = None
         self._objectives = {}
         self._positionMagnifications = {}
@@ -205,12 +228,17 @@ class ObjectiveTurret(FunctionUnit):
         if type(magnification) is str:
             match = re.match(r'(\d+)[xX]?')
             if match is not None:
-                magnification = int(match.group(1))
+                magnificationMajor, magnificationMinor = int(match.group(1)), None
+            elif (match = re.match(r'(\d+)[xX]?\.(\d+)[xX]?')) is not None:
+                magnificationMajor, magnificationMinor = int(match.group(1)), int(match.group(2))
             else:
-                raise ValueError('magnification must either be an integer or a string in the format "10x", or "10X", or "10" (without quotes).')
+                raise ValueError('magnification must either be an integer or a string in the format "10x", or "10X", or "10" (without quotes).  ' +
+                                 'Additionally, if there is more than one objective with a certain magnification, it may be selected by supplying ' +
+                                 'a string in the format "10x.1", or "10X.1", or "10.1", or as a floating point value such as 10.1.')
+
         if magnification not in self._objectives:
             raise IndexError('Specified magnification does not correspond to the magnification offered by any of the available objectives.')
-        if magnification != self._objective:
+        if self._ != self._objective:
             self._transmit(Packet(self, line=None, cmdCode=22, parameter='{}'.format(self._objectives[magnification].position)))
 
     def _setImmersionOrDry(self, immersionOrDry):
@@ -249,7 +277,7 @@ class ObjectiveTurret(FunctionUnit):
         return self._moving
 
     @QtCore.pyqtProperty(set)
-    def objectives(self):
+    def magnfications(self):
         return set(self._objectives.keys())
 
     @QtCore.pyqtProperty(dict)
@@ -257,9 +285,13 @@ class ObjectiveTurret(FunctionUnit):
         return copy.deepcopy(self._objectives)
 
     @QtCore.pyqtProperty(int, notify=objectiveChanged)
-    def objective(self):
+    def magnification(self):
         return self._objective
 
-    @objective.setter
-    def objective(self, magnification):
+    @magnification.setter
+    def magnification(self, magnification):
         self._setObjective(magnification)
+
+    @QtCore.pyqtProperty(int)
+    def position(self):
+        return self.

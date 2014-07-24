@@ -99,7 +99,7 @@ class _Dm6000bWorker(ThreadedDeviceWorker):
         parent class's construction.'''
         self.serialPort = serialPort
         self.serialPort.moveToThread(self.device._thread)
-        self.serialPort.setParent(self)
+#       self.serialPort.setParent(self)
         self.serialPort.error.connect(self.serialPortErrorSlot, QtCore.Qt.DirectConnection)
         self.serialPort.readyRead.connect(self.serialPortBytesReadySlot, QtCore.Qt.DirectConnection)
         self.buffer = ''
