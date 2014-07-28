@@ -25,6 +25,7 @@ class ObjectiveTurret(FunctionUnit):
         # So that we don't get confused while initing, unsubscribe from all of the objective turret function unit change events
         self._transmit(Packet(self, cmdCode=3, parameter='0 0 0 0 0 0 0 0 0 0'))
         # Begin scanning objectives by requesting min objective index (scanning will continue once this value is retrieved)
+        self._position = None
         self._objective = None
         self._objectives = {}
         self._positionMagnifications = {}
@@ -93,13 +94,131 @@ class ObjectiveTurret(FunctionUnit):
                 if self._objectivesInitPhase != self._ObjectivesInitPhase.GetMax:
                     raise DeviceException(self, 'Received data out of order during init.')
                 self._objectiveMaxPosition = int(rxPacket.parameter)
-                self._objectivesInitPhase = self._ObjectivesInitPhase.Done
-                self._postEnumerationInit()
+                self._objectivesInitPhase = self._ObjectivesInitPhase.Enumerate
+                self._objectivePositionsAwaitingInitResponse = {p:[True, True] for p in range(self._objectiveMinPosition, self._objectiveMaxPosition+1)}
+                self._objectivesByPosition = {p:Objective() for p in range(self._objectiveMinPosition, self._objectiveMaxPosition+1)}
+                for p in self._objectivePositionsAwaitingInitResponse.keys():
+                    self._transmit(Packet(self, cmdCode=33, parameter='{} 1'.format(p)))
+                    self._transmit(Packet(self, cmdCode=33, parameter='{} 5'.format(p)))
+
+            elif rxPacket.cmdCode == 33:
+                # Reponse to objective parameter query...
+                if self._objectivesInitPhase != self._ObjectivesInitPhase.Enumerate:
+                    raise DeviceException(self, 'Received data out of order during init.')
+                vs = rxPacket.parameter.split(' ')
+                position = int(vs[0])
+                par = int(vs[1])
+                awaiting = self._objectivePositionsAwaitingInitResponse[position]
+                objective = self._objectivesByPosition[position]
+                if par == 1:
+                    # ... for objective maginifacation parameter
+                    if not awaiting[0]:
+                        raise DeviceException(self, 'Received duplicate response for objective magnification.')
+                    objective.position = position
+                    if vs[2] != '-':
+                        # "-" indicates empty objective position.  magnification values for empty objectives remain None
+                        # as a result of the if statement containing this comment.
+                        objective.magnification = int(vs[2])
+                    awaiting[0] = False
+                elif par == 5:
+                    # ... for objective type parameter (eg, O for oil, D for dry, and a zoo of other exotic types too great
+                    # in their multitude to bother representing with an enum)
+                    if not awaiting[1]:
+                        raise DeviceException(self, 'Received duplicate response for objective type.')
+                    objective.type_ = vs[2]
+                    awaiting[1] = False
+                else:
+                    # ... that was never made
+                    raise DeviceException(self, 'Received extraneous (non-requested) objective parameter data.')
+
+                if not any(awaiting):
+                    del self._objectivePositionsAwaitingInitResponse[position]
+
+                # In retrospect, this is more complex than necessary and would have been better implemented as
+                # two init steps, one for each value to be enumerated, rather than as a combined step retrieving
+                # both magnification and type.  It does work, however.
+                if len(self._objectivePositionsAwaitingInitResponse) == 0:
+                    for position, objective in self._objectivesByPosition.items():
+                        if objective.magnification is not None: # Skip empty positions
+                            if objective.magnification in self._objectives:
+                                raise DeviceException(self, 'More than one objective has {}x magnification.  Because this application identifies objectives ' +
+                                                            'by magnification, having multiple objectives of the same magnification on the same objective ' +
+                                                            'turret is not supported.')
+                            self._objectives[objective.magnification] = objective
+                            self._positionMagnifications[objective.position] = objective.magnification
+                    self._objectivesInitPhase = self._ObjectivesInitPhase.Done
+                    del self._objectivePositionsAwaitingInitResponse
+                    del self._objectivesByPosition
+                    self._postEnumerationInit()
+                        
+    def _setObjective(self, magnification):
+        if type(magnification) is str:
+            match = re.match(r'(\d+)[xX]?')
+            if match is not None:
+                magnificationMajor, magnificationMinor = int(match.group(1)), None
+            elif (match = re.match(r'(\d+)[xX]?\.(\d+)[xX]?')) is not None:
+                magnificationMajor, magnificationMinor = int(match.group(1)), int(match.group(2))
+            else:
+                raise ValueError('magnification must either be an integer or a string in the format "10x", or "10X", or "10" (without quotes).  ' +
+                                 'Additionally, if there is more than one objective with a certain magnification, it may be selected by supplying ' +
+                                 'a string in the format "10x.1", or "10X.1", or "10.1", or as a floating point value such as 10.1.')
+
+        if magnification not in self._objectives:
+            raise IndexError('Specified magnification does not correspond to the magnification offered by any of the available objectives.')
+        if self._ != self._objective:
+            self._transmit(Packet(self, line=None, cmdCode=22, parameter='{}'.format(self._objectives[magnification].position)))
+
+    def _setImmersionOrDry(self, immersionOrDry):
+        if type(immersionOrDry) is str:
+            if immersionOrDry in ('d', 'D'):
+                v = ImmersionOrDry.Dry
+            elif immersionOrDry in ('i', 'I'):
+                v = ImmersionOrDry.Immersion
+            else:
+                raise ValueError('When provided as a string, the immersionOrDry parameter must be "D" or "I" (without quotes), not "{}".'.format(immersionOrDry))
+        else:
+            v = immersionOrDry
+
+        if v != self._immersionOrDry:
+            if v == ImmersionOrDry.Dry:
+                parameter = 'D'
+            elif v == ImmersionOrDry.Immersion:
+                parameter = 'I'
+            else:
+                e = 'Unsupported value "{0}" specified for immersionOrDry.  This function only knows about "{1}" and "{2}".  If it needs to support '
+                e+= '"{0}", then it has to be updated or otherwise modified to do so....  But... Do you really want to immerse your objective in '
+                e+= '"{0}"?  Really really?  Does that make sense as a thing that would happen to an objective?  Being immersed in "{0}"?'
+                raise DeviceException(self, e.format(v, ImmersionOrDry.Dry, ImmersionOrDry.Immersion))
+            self._transmit(Packet(self, cmdCode=27, parameter=parameter))
+
+    @QtCore.pyqtProperty(ImmersionOrDry, notify=immersionOrDryChanged)
+    def immersionOrDry(self):
+        return self._immersionOrDry
+
+    @immersionOrDry.setter
+    def immersionOrDry(self, immersionOrDry):
+        self._setImmersionOrDry(immersionOrDry)
+
+    @QtCore.pyqtProperty(bool, notify=objectiveTurretMovingChanged)
+    def objectiveTurretMoving(self):
+        return self._moving
+
+    @QtCore.pyqtProperty(set)
+    def magnfications(self):
+        return set(self._objectives.keys())
+
+    @QtCore.pyqtProperty(dict)
+    def objectivesDetails(self):
+        return copy.deepcopy(self._objectives)
+
+    @QtCore.pyqtProperty(int, notify=objectiveChanged)
+    def magnification(self):
+        return self._objective
+
+    @magnification.setter
+    def magnification(self, magnification):
+        self._setObjective(magnification)
 
     @QtCore.pyqtProperty(int)
     def position(self):
-        return self._position
-
-    @position.setter
-    def position(self, position):
-        self._transmit(Packet(self, cmdCode=22, parameter=str(position)))
+        return self.
