@@ -80,6 +80,10 @@ class ObjectiveTurret(FunctionUnit):
                 # stand if we wanted that information.)
                 vs = rxPacket.parameter.split(' ')
                 vs = [int(v) for v in vs]
+                # The Leica serial protocol manual documentation for 76004 seems to be inaccurate.  These values for 76004
+                # parameter have been found by testing to indicate that the objective turret is moving (1 1 1 0 indicating
+                # movement in response to a serial command, 1 0 0 1 indicating movement initiated by the user interacting
+                # with the scope).
                 if vs == [1, 1, 1, 0] or vs == [1, 0, 0, 1]:
                     moving = True
                 else:
