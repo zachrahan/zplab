@@ -62,15 +62,15 @@ class Dm6000b(ThreadedDevice):
         self.condenserApertureIris = CondenserApertureIris(self)
         # Condenser aperture iris max openness varies with objective, but there is no provision for change event notification
         # upon iris min/max openness modification.  Therefore, we must refresh min/max upon objective change.
-        self.objectiveTurret.objectiveChanged.connect(self._objectiveChangedSlot)
+        self.objectiveTurret.posChanged.connect(self._objectiveTurretPosChangedSlot)
         self.dicTurret = DicTurret(self)
         self.stageX = Stage(self, 'Stage X Axis Function Unit', 72)
         self.stageY = Stage(self, 'Stage Y Axis Function Unit', 73)
         self.stageZ = Stage(self, 'Stage Z Axis Function Unit', 71)
 
-    def _objectiveChangedSlot(self, objective):
+    def _objectiveTurretPosChangedSlot(self):
         # Only refresh iris min/max openness if the turret has reached an occupied position
-        if objective is not None:
+        if self.objectiveTurret.mag is not None:
             self.condenserApertureIris.refreshMinMaxOpenness()
 
     def _workerReceivedUnhandledLineSlot(self, line):

@@ -2,6 +2,7 @@
 # Erik Hvatum (ice.rikh@gmail.com)
 
 from PyQt5 import QtCore
+import re
 import sys
 from acquisition.device import DeviceException
 from acquisition.dm6000b.function_unit import FunctionUnit
@@ -35,12 +36,16 @@ class Stage(FunctionUnit):
         if rxPacket.statusCode == 0:
 
             if rxPacket.cmdCode in (22, 23):
-                self._pos = int(rxPacket.parameter)
-                if self._didStop:
-                    self.movingChanged.emit(self._moving)
-                    self._didStop = False
-                self.posChanged.emit(self._pos)
-#               print('requested pos: {} new pos: {}'.format(int(txPacket.parameter) if txPacket is not None and txPacket.cmdCode == 22 else '(none)', self._pos))
+                if rxPacket.cmdCode == 22 and re.match('\s*', rxPacket.parameter) is not None:
+                    # Reponse containing command code 22 with empty or whitespace only parameter indicates that a stage
+                    # movement request was issued for what is already the stage's current position.
+                    pass
+                else:
+                    self._pos = int(rxPacket.parameter)
+                    if self._didStop:
+                        self.movingChanged.emit(self._moving)
+                        self._didStop = False
+                    self.posChanged.emit(self._pos)
 
             elif rxPacket.cmdCode == 4:
                 if rxPacket.parameter[0] == '1':
