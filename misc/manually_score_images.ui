@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>791</width>
-    <height>750</height>
+    <width>830</width>
+    <height>477</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,6 +19,13 @@
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="prevGroupButton">
+       <property name="text">
+        <string>Previous Group</string>
+       </property>
+      </widget>
+     </item>
      <item>
       <widget class="QPushButton" name="prevButton">
        <property name="text">
@@ -135,10 +142,14 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QPushButton" name="nextGroupButton">
+       <property name="text">
+        <string>Next Group</string>
+       </property>
+      </widget>
+     </item>
     </layout>
-   </item>
-   <item>
-    <widget class="QListWidget" name="imageList"/>
    </item>
   </layout>
   <action name="actionBackspace">
@@ -243,6 +254,40 @@
     <enum>QAction::ApplicationSpecificRole</enum>
    </property>
   </action>
+  <action name="actionDown">
+   <property name="text">
+    <string>Go To Next Group</string>
+   </property>
+   <property name="toolTip">
+    <string>Go to next group</string>
+   </property>
+   <property name="shortcut">
+    <string>Down</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::WidgetWithChildrenShortcut</enum>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::ApplicationSpecificRole</enum>
+   </property>
+  </action>
+  <action name="actionUp">
+   <property name="text">
+    <string>Go To Previous Group</string>
+   </property>
+   <property name="toolTip">
+    <string>Go to previous group</string>
+   </property>
+   <property name="shortcut">
+    <string>Up</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::WidgetWithChildrenShortcut</enum>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::ApplicationSpecificRole</enum>
+   </property>
+  </action>
  </widget>
  <tabstops>
   <tabstop>prevButton</tabstop>
@@ -251,7 +296,6 @@
   <tabstop>radio1</tabstop>
   <tabstop>radio2</tabstop>
   <tabstop>nextButton</tabstop>
-  <tabstop>imageList</tabstop>
  </tabstops>
  <resources/>
  <connections/>
