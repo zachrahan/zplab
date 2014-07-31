@@ -23,9 +23,18 @@
 # Authors: Erik Hvatum
 
 import enum
+import numpy
 import os
+import skimage.io as skio
 from pathlib import Path
 from PyQt5 import Qt, uic
+
+class ScoreableImage:
+    def __init__(self, fileName, score=None):
+        self.fileName = fileName
+        self.score = score
+    def __repr__(self):
+        return 'ScoreableImage({}, {})'.format(self.fileName, self.score)
 
 class ManualScorer(Qt.QDialog):
     class _ScoreRadioId(enum.IntEnum):
@@ -34,20 +43,16 @@ class ManualScorer(Qt.QDialog):
         SetScore1 = 3
         SetScore2 = 4
 
-    def __init__(self, imageDbFileName, modifyDbIfExists, parent):
+    _radioIdToScore = {_ScoreRadioId.ClearScore : None,
+                       _ScoreRadioId.SetScore0 : 0,
+                       _ScoreRadioId.SetScore1 : 1,
+                       _ScoreRadioId.SetScore2 : 2}
+
+    def __init__(self, risWidget, dict_, parent):
         super().__init__(parent)
 
-        if not modifyDbIfExists:
-            imageDbFileName = Path(imageDbFileName)
-            if imageDbFileName.exists():
-                imageDbFileName.unlink()
-
-        self._db = Qt.QtSql.QSqlDatabase.addDatabase('QSQLITE')
-        if not self._db.isValid():
-            raise RuntimeError('Qt appears to be built without SQLite support...')
-        self._db.setDatabaseName(str(imageDbFileName))
-        if not self._db.open():
-            raise RuntimeError('Failed to open database file "{}".'.format(str(imageDbFileName)))
+        self._rw = risWidget
+        self._db = dict_
 
         self._ui = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'manually_score_images.ui'))[0]()
         self._ui.setupUi(self)
@@ -77,32 +82,157 @@ class ManualScorer(Qt.QDialog):
                          self._ui.action2])
 
 
-class ManualImageScorer(ManualScorer):
-    def __init__(self, imageDbFileName, modifyDbIfExists=True, imageFileNames=None, subtractPrefix=None, parent=None):
-        super().__init__(imageDbFileName, modifyDbIfExists, parent)
-
-        self.removeAction(self._ui.actionUp)
-        self.removeAction(self._ui.actionDown)
-        self._ui.actionUp.deleteLater()
-        self._ui.actionDown.deleteLater()
-        del self._ui.actionUp
-        del self._ui.actionDown
-
-        self._ui.prevGroupButton.deleteLater()
-        self._ui.nextGroupButton.deleteLater()
-        del self._ui.prevGroupButton
-        del self._ui.nextGroupButton
-
-        # Todo: add list view, etc
-
-class _ManualImageGroupScorerModel:
+#class ManualImageScorer(ManualScorer):
+#    def __init__(self, imageDbFileName, modifyDbIfExists=True, imageFileNames=None, subtractPrefix=None, parent=None):
+#        super().__init__(imageDbFileName, modifyDbIfExists, parent)
+#
+#        self.removeAction(self._ui.actionUp)
+#        self.removeAction(self._ui.actionDown)
+#        self._ui.actionUp.deleteLater()
+#        self._ui.actionDown.deleteLater()
+#        del self._ui.actionUp
+#        del self._ui.actionDown
+#
+#        self._ui.prevGroupButton.deleteLater()
+#        self._ui.nextGroupButton.deleteLater()
+#        del self._ui.prevGroupButton
+#        del self._ui.nextGroupButton
 
 class ManualImageGroupScorer(ManualScorer):
-    def __init__(self, imageDbFileName, modifyDbIfExists=True, imageFileNameGroups=None, subtractPrefix=None, parent=None):
-        '''If subtractPrefix is specified, the leading component of image file names matching subtractPrefix are chopped off
-        when saved to the DB.  For example, if subtractPrefix is '/home/userfoo', the file name field for the image at path
-        '/home/userfoo/project_bar/run1/0102.png' will be 'project_bar/run1/0102.png'.'''
-        super().__init__(imageDbFileName, modifyDbIfExists, parent)
+    '''groupDict format: {'group name' : [ScoreableImage, ScoreableImage, ...]}'''
+    _GroupIndexRole = 42
+    _FileIndexRole = 43
+    _RowIndexRole = 44
+    _Forward = 0
+    _Backward = 1
 
-        c = self._db.cursor()
-        c.execute('CREATE TABLE IF NOT EXISTS groups (id INTEGER PRIMARY KEY, name TEXT UNIQUE'))
+    def __init__(self, risWidget, groupDict, parent=None):
+        super().__init__(risWidget, groupDict, parent)
+
+        imageCount = sum((len(images) for images in self._db.values()))
+        self._ui.tableWidget.setRowCount(imageCount)
+        self._ui.tableWidget.setHorizontalHeaderLabels(['Group', 'File name', 'Rating'])
+
+        rowIndex = 0
+        self._groupNames = sorted(list(self._db.keys()))
+        for groupIndex, groupName in enumerate(self._groupNames):
+            images = self._db[groupName]
+            for imageIndex, image in enumerate(images):
+                groupItem = Qt.QTableWidgetItem(groupName)
+                groupItem.setData(self._GroupIndexRole, Qt.QVariant(groupIndex))
+                groupItem.setData(self._FileIndexRole, Qt.QVariant(imageIndex))
+                groupItem.setData(self._RowIndexRole, Qt.QVariant(rowIndex))
+                self._ui.tableWidget.setItem(rowIndex, 0, groupItem)
+                self._ui.tableWidget.setItem(rowIndex, 1, Qt.QTableWidgetItem(str(image.fileName)))
+                self._ui.tableWidget.setItem(rowIndex, 2, Qt.QTableWidgetItem('None' if image.score is None else str(image.score)))
+                rowIndex += 1
+
+        self._curGroupName = None
+        self._curGroupIndex = None
+        self._curGroupImages = None
+        self._curImage = None
+        self._curImageIndex = None
+        self._curRowIndex = None
+
+        self._inRefreshScoreButtons = False
+
+        self._ui.tableWidget.currentItemChanged.connect(self._listWidgetSelectionChange)
+        self._scoreRadioGroup.buttonClicked[int].connect(self._scoreButtonClicked)
+        self._ui.prevGroupButton.clicked.connect(lambda: self._stepGroup(self._Backward))
+        self._ui.nextGroupButton.clicked.connect(lambda: self._stepGroup(self._Forward))
+        self._ui.prevButton.clicked.connect(lambda: self._stepImage(self._Backward))
+        self._ui.nextButton.clicked.connect(lambda: self._stepImage(self._Forward))
+
+        self._ui.tableWidget.setCurrentItem(self._ui.tableWidget.item(0, 0))
+
+    def _listWidgetSelectionChange(self, curItem, prevItem):
+        groupItem = self._ui.tableWidget.item(curItem.row(), 0)
+        self._curGroupIndex = groupItem.data(self._GroupIndexRole)
+        self._curGroupName = groupItem.text()
+        self._curGroupImages = self._db[self._curGroupName]
+        self._curImageIndex = groupItem.data(self._FileIndexRole)
+        self._curImage = self._curGroupImages[self._curImageIndex]
+        self._curRowIndex = groupItem.data(self._RowIndexRole)
+        self._refreshScoreButtons()
+        image = skio.imread(str(self._curImage.fileName))
+        if image.dtype == numpy.float32:
+            image = (image * 65535).astype(numpy.uint16)
+        self._rw.showImage(image)
+
+    def _refreshScoreButtons(self):
+        self._inRefreshScoreButtons = True
+        score = self._curImage.score
+        if score is None:
+            self._ui.radioNone.click()
+        elif score is 0:
+            self._ui.radio0.click()
+        elif score is 1:
+            self._ui.radio1.click()
+        elif score is 2:
+            self._ui.radio2.click()
+        else:
+            self._inRefreshScoreButtons = False
+            raise RuntimeError('Bad value for image score.')
+        self._inRefreshScoreButtons = False
+
+    def _scoreButtonClicked(self, radioId):
+        if not self._inRefreshScoreButtons:
+            self._setScore(self._radioIdToScore[radioId])
+            self._ui.nextButton.animateClick()
+
+    def _setScore(self, score):
+        '''Set current image score.'''
+        if score != self._curImage.score:
+            self._curImage.score = score
+            self._ui.tableWidget.item(self._curRowIndex, 2).setText('None' if score is None else str(score))
+
+    def _stepImage(self, direction):
+        newRow = None
+        if direction == self._Forward:
+            if self._curRowIndex + 1 < self._ui.tableWidget.rowCount():
+                newRow = self._curRowIndex + 1
+        elif direction == self._Backward:
+            if self._curRowIndex > 0:
+                newRow = self._curRowIndex - 1
+        
+        if newRow is not None:
+            self._ui.tableWidget.setCurrentItem(self._ui.tableWidget.item(newRow, 0))
+
+    def _stepGroup(self, direction):
+        newRow = None
+        if direction == self._Forward:
+            if self._curGroupIndex + 1 < len(self._db):
+                newRow = self._curRowIndex + len(self._curGroupImages) - self._curImageIndex
+        elif direction == self._Backward:
+            if self._curGroupIndex > 0:
+                newGroup = self._curGroupIndex - 1
+                newRow = self._curRowIndex - len(self._curGroupImages) + self._curImageIndex - 1
+
+        if newRow is not None:
+            self._ui.tableWidget.setCurrentItem(self._ui.tableWidget.item(newRow, 0))
+
+def makeWeekendImagesScorer(risWidget, basePath):
+    import re
+    groups = {}
+    basePath = Path(basePath)
+
+    for well in basePath.glob('*'):
+        if well.is_dir():
+            wellIdx = well.name
+            match = re.search('^(\d\d)', wellIdx)
+            if match is not None:
+                wellIdx = match.group(1)
+                for mag in well.glob('*'):
+                    magName = mag.name
+                    if mag.is_dir() and magName in ['5x', '10x']:
+                        for run in mag.glob('*'):
+                            runNum = run.name
+                            if run.is_dir() and re.match('\d+', runNum):
+                                runNum = int(runNum)
+                                images = [ScoreableImage(imageFile) for imageFile in run.glob('*.png')]
+                                group = '{}/{}/{:02}'.format(wellIdx, magName, runNum)
+                                groups[group] = images
+
+    migs = ManualImageGroupScorer(risWidget, groups)
+    migs.show()
+    return groups, migs
