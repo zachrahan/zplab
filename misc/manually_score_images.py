@@ -22,12 +22,14 @@
 #
 # Authors: Erik Hvatum
 
+import csv
 import enum
 import numpy
 import os
-import skimage.io as skio
 from pathlib import Path
 from PyQt5 import Qt, uic
+import re
+import skimage.io as skio
 
 class ScoreableImage:
     def __init__(self, fileName, score=None):
@@ -35,6 +37,57 @@ class ScoreableImage:
         self.score = score
     def __repr__(self):
         return 'ScoreableImage({}, {})'.format(self.fileName, self.score)
+
+class MigsFmRow:
+    def __init__(self, fileName=None, well=None, mag=None, run=None, xPos=None, yPos=None, zPos=None, temperature=None, score=None, fmName=None, fmValue=None):
+        if fileName is not None:
+            self.fileName = Path(fileName)
+        else:
+            self.fileName = None
+
+        if self.fileName is not None and well is None:
+            match = re.match('''^\/mnt\/scopearray\/autofocus\/weekend\/(\d\d)_([^_]+)_([^_]+)_[^/]+/(5x|10x)/(\d+)/([^_]+)_(\d+\.?\d*)\.png$''', str(self.fileName))
+            if match is None:
+                raise RuntimeError('regex match failure')
+            self.well = int(match.group(1))
+            self.mag = match.group(4)
+            self.run = int(match.group(5))
+            self.xPos = int(match.group(2))
+            self.yPos = int(match.group(3))
+            self.zPos = int(match.group(6))
+            self.temperature = float(match.group(7))
+        else:
+            self.well = well
+            self.mag = mag
+            self.run = run
+            self.xPos = xPos
+            self.yPos = yPos
+            self.zPos = zPos
+            self.temperature = temperature
+        self.score = score
+        self.fmName = fmName
+        self.fmValue = fmValue
+    def __repr__(self):
+        return 'MigsFmRow(fileName={}, well={}, mag={}, run={}, xPos={}, yPos={}, zPos={}, temperature={}, score={}, fmName={}, fmValue={})'.format(str(self.fileName),
+                                                                                                                                                    self.well,
+                                                                                                                                                    self.mag,
+                                                                                                                                                    self.run,
+                                                                                                                                                    self.xPos,
+                                                                                                                                                    self.yPos,
+                                                                                                                                                    self.zPos,
+                                                                                                                                                    self.temperature,
+                                                                                                                                                    self.score,
+                                                                                                                                                    self.fmName,
+                                                                                                                                                    self.fmValue)
+
+def readMigsFromConsoleDumpCsv(csvFileName):
+    migsFmTable = []
+    csvFileName = Path(csvFileName)
+    with open(str(csvFileName), 'r') as f:
+        for row in csv.reader(f, delimiter=','):
+            if len(row) == 3 and re.match('''^\/mnt\/scopearray\/autofocus\/weekend\/(\d\d)_([^_]+)_([^_]+)_[^/]+/(5x|10x)/(\d+)/([^_]+)_(\d+\.?\d*)\.png$''', row[0]) is not None:
+                migsFmTable.append(MigsFmRow(fileName=row[0], fmName=row[1], fmValue=row[2]))
+    return migsFmTable
 
 class ManualScorer(Qt.QDialog):
     class _ScoreRadioId(enum.IntEnum):

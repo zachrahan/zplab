@@ -384,7 +384,7 @@ def forkFunc(stdoutLock, imageFileNames, mask):
 def runProcessPile(stdoutLock, imageFileNames, maskFileName):
     mask = (skio.imread(str(maskFileName)) == 0)
     imageFileNames = numpy.array(imageFileNames)
-    processes = [Process(target=forkFunc, args=(stdoutLock, chunk, mask)) for chunk in numpy.array_split(imageFileNames, 3)]
+    processes = [Process(target=forkFunc, args=(stdoutLock, chunk, mask)) for chunk in numpy.array_split(imageFileNames, 2)]
     for process in processes:
         process.daemon = True
         process.start()
