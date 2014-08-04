@@ -10,13 +10,14 @@ if __name__ == "__main__":
 
 import matplotlib.pyplot as plt
 from multiprocessing import Process, Pipe, Lock
+from scipy.ndimage import filters as ndfilt
 import numpy
 import pandas
 from pandas import DataFrame
 from pathlib import Path
 import pickle
 import re
-import skimage.filter as skit
+import skimage.filter as skif
 import skimage.io as skio
 
 from acquisition.acquisition_exception import AcquisitionException
@@ -98,6 +99,28 @@ def computeFocusMeasure(ftable, rtable, focusMeasure):
         rtable[focusMeasureName] = results
     return rtable
 
+def brenner(im, direction):
+    if direction == 'h':
+        xo = 2
+        yo = 0
+    elif direction == 'v':
+        xo = 0
+        yo = 2
+    else:
+        raise ValueError('direction must be h or v.')
+    iml = numpy.pad(im[0:im.shape[0]-yo, 0:im.shape[1]-xo], ((yo, 0), (xo, 0)), mode='constant')
+    imr = im.copy()
+    if direction == 'h':
+        imr[:, :xo] = 0
+    else:
+        imr[:yo, :] = 0
+    return iml - imr
+
+def brennervh(im):
+    imh = brenner(im, 'h')
+    imv = brenner(im, 'v')
+    return numpy.sqrt(imh**2 + imv**2)
+
 class FMs:
     structureElement = numpy.array([[0,0,1,0,0],
                                     [0,1,1,1,0],
@@ -113,213 +136,318 @@ class FMs:
 
     def sobel_h(im, mask=None):
         try:
-            r = FMs.ss(skit.hsobel(im), mask)
+            r = FMs.ss(skif.hsobel(im), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "horizontal sobel"
 
     def sobel_h__bilat_denoise(im, mask=None):
         try:
-            r = FMs.ss(skit.hsobel(skit.denoise_bilateral(im)), mask)
+            r = FMs.ss(skif.hsobel(skif.denoise_bilateral(im)), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "horizontal sobel + bilateral denoise"
 
     def sobel_v(im, mask=None):
         try:
-            r = FMs.ss(skit.vsobel(im), mask)
+            r = FMs.ss(skif.vsobel(im), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "vertical sobel"
 
     def sobel_v__bilat_denoise(im, mask=None):
         try:
-            r = FMs.ss(skit.hsobel(skit.denoise_bilateral(im)), mask)
+            r = FMs.ss(skif.hsobel(skif.denoise_bilateral(im)), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "vertical sobel + bilateral denoise"
 
     def canny(im, mask=None):
         try:
-            r = FMs.ss(skit.canny(im).astype(int) * 100)
+            r = FMs.ss(skif.canny(im).astype(int) * 100)
         except ValueError as e:
             r = numpy.NaN
         return r, "canny"
 
     def bottomhat(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.bottomhat(im, FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.bottomhat(im, FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "bottomhat"
 
     def bottomhat__gaussian_0_5(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.bottomhat(skit.gaussian_filter(im, 0.5), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.bottomhat(skif.gaussian_filter(im, 0.5), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "bottomhat + gaussian 0.5"
 
     def bottomhat__gaussian_1(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.bottomhat(skit.gaussian_filter(im, 1), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.bottomhat(skif.gaussian_filter(im, 1), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "bottomhat + gaussian 1.0"
 
     def bottomhat__gaussian_2(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.bottomhat(skit.gaussian_filter(im, 2), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.bottomhat(skif.gaussian_filter(im, 2), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "bottomhat + gaussian 2.0"
 
     def bottomhat__gaussian_5(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.bottomhat(skit.gaussian_filter(im, 5), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.bottomhat(skif.gaussian_filter(im, 5), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "bottomhat + gaussian 5.0"
 
     def tophat(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.tophat(im, FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.tophat(im, FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "tophat"
 
     def tophat__gaussian_0_5(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.tophat(skit.gaussian_filter(im, 0.5), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.tophat(skif.gaussian_filter(im, 0.5), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "tophat + gaussian 0.5"
 
     def tophat__gaussian_1(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.tophat(skit.gaussian_filter(im, 1), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.tophat(skif.gaussian_filter(im, 1), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "tophat + gaussian 1.0"
 
     def tophat__gaussian_2(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.tophat(skit.gaussian_filter(im, 2), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.tophat(skif.gaussian_filter(im, 2), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "tophat + gaussian 2.0"
 
     def tophat__gaussian_5(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.tophat(skit.gaussian_filter(im, 5), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.tophat(skif.gaussian_filter(im, 5), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "tophat + gaussian 5.0"
 
     def entropy(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.entropy(im, FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.entropy(im, FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "entropy"
 
     def entropy__gaussian_0_5(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.entropy(skit.gaussian_filter(im, 0.5), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.entropy(skif.gaussian_filter(im, 0.5), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "entropy + gaussian 0.5"
 
     def entropy__gaussian_1(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.entropy(skit.gaussian_filter(im, 1), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.entropy(skif.gaussian_filter(im, 1), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "entropy + gaussian 1.0"
 
     def entropy__gaussian_2(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.entropy(skit.gaussian_filter(im, 2), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.entropy(skif.gaussian_filter(im, 2), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "entropy + gaussian 2.0"
 
     def entropy__gaussian_5(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.entropy(skit.gaussian_filter(im, 5), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.entropy(skif.gaussian_filter(im, 5), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "entropy + gaussian 5.0"
 
     def tophat__entropy(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.tophat(skit.rank.entropy(im, FMs.structureElement), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.tophat(skif.rank.entropy(im, FMs.structureElement), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "tophat + entropy"
 
     def tophat__entropy__gaussian_0_5(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.tophat(skit.rank.entropy(skit.gaussian_filter(im, 0.5), FMs.structureElement), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.tophat(skif.rank.entropy(skif.gaussian_filter(im, 0.5), FMs.structureElement), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "tophat + entropy + gaussian 0.5"
 
     def tophat__entropy__gaussian_1(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.tophat(skit.rank.entropy(skit.gaussian_filter(im, 1), FMs.structureElement), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.tophat(skif.rank.entropy(skif.gaussian_filter(im, 1), FMs.structureElement), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "tophat + entropy + gaussian 1.0"
 
     def tophat__entropy__gaussian_2(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.tophat(skit.rank.entropy(skit.gaussian_filter(im, 2), FMs.structureElement), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.tophat(skif.rank.entropy(skif.gaussian_filter(im, 2), FMs.structureElement), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "tophat + entropy + gaussian 2.0"
 
     def tophat__entropy__gaussian_5(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.tophat(skit.rank.entropy(skit.gaussian_filter(im, 5), FMs.structureElement), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.tophat(skif.rank.entropy(skif.gaussian_filter(im, 5), FMs.structureElement), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "tophat + entropy + gaussian 5.0"
 
     def bottomhat__entropy(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.bottomhat(skit.rank.entropy(im, FMs.structureElement), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.bottomhat(skif.rank.entropy(im, FMs.structureElement), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "bottomhat + entropy"
 
     def bottomhat__entropy__gaussian_0_5(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.bottomhat(skit.rank.entropy(skit.gaussian_filter(im, 0.5), FMs.structureElement), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.bottomhat(skif.rank.entropy(skif.gaussian_filter(im, 0.5), FMs.structureElement), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "bottomhat + entropy + gaussian 0.5"
 
     def bottomhat__entropy__gaussian_1(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.bottomhat(skit.rank.entropy(skit.gaussian_filter(im, 1), FMs.structureElement), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.bottomhat(skif.rank.entropy(skif.gaussian_filter(im, 1), FMs.structureElement), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "bottomhat + entropy + gaussian 1.0"
 
     def bottomhat__entropy__gaussian_2(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.bottomhat(skit.rank.entropy(skit.gaussian_filter(im, 2), FMs.structureElement), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.bottomhat(skif.rank.entropy(skif.gaussian_filter(im, 2), FMs.structureElement), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "bottomhat + entropy + gaussian 2.0"
 
     def bottomhat__entropy__gaussian_5(im, mask=None):
         try:
-            r = FMs.ss(skit.rank.bottomhat(skit.rank.entropy(skit.gaussian_filter(im, 5), FMs.structureElement), FMs.structureElement), mask)
+            r = FMs.ss(skif.rank.bottomhat(skif.rank.entropy(skif.gaussian_filter(im, 5), FMs.structureElement), FMs.structureElement), mask)
         except ValueError as e:
             r = numpy.NaN
         return r, "bottomhat + entropy + gaussian 5.0"
+
+    def gaussian_gradient_0_5(im, mask=None):
+        try:
+            r = FMs.ss(ndfilt.gaussian_gradient_magnitude(im, 0.5), mask)
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "gaussian gradient magnitude 0.5"
+
+    def gaussian_gradient_1(im, mask=None):
+        try:
+            r = FMs.ss(ndfilt.gaussian_gradient_magnitude(im, 1.0), mask)
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "gaussian gradient magnitude 1.0"
+
+    def median_2__gaussian_gradient_0_5(im, mask=None):
+        try:
+            r = FMs.ss(ndfilt.gaussian_gradient_magnitude(ndfilt.median_filter(im, size=2), 0.5), mask)
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "median 2 + gaussian gradient magnitude 0.5"
+
+    def median_2__gaussian_gradient_1(im, mask=None):
+        try:
+            r = FMs.ss(ndfilt.gaussian_gradient_magnitude(ndfilt.median_filter(im, size=2), 1.0), mask)
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "median 2 + gaussian gradient magnitude 1.0"
+
+    def median_4__gaussian_gradient_0_5(im, mask=None):
+        try:
+            r = FMs.ss(ndfilt.gaussian_gradient_magnitude(ndfilt.median_filter(im, size=4), 0.5), mask)
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "median 4 + gaussian gradient magnitude 0.5"
+
+    def median_4__gaussian_gradient_1(im, mask=None):
+        try:
+            r = FMs.ss(ndfilt.gaussian_gradient_magnitude(ndfilt.median_filter(im, size=4), 1.0), mask)
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "median 4 + gaussian gradient magnitude 1.0"
+
+    def brennerh(im, mask=None):
+        try:
+            r = FMs.ss(brenner(im, 'h'), mask)
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "brenner h"
+
+    def brennerv(im, mask=None):
+        try:
+            r = FMs.ss(brenner(im, 'v'), mask)
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "brenner v"
+
+    def brennervh(im, mask=None):
+        try:
+            r = FMs.ss(brennervh(im), mask)
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "brenner vh"
+
+    def median_2__brennerh(im, mask=None):
+        try:
+            r = FMs.ss(brenner(ndfilt.median_filter(im, size=2), 'h'), mask)
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "median 2 + brenner h"
+
+    def median_2__brennerv(im, mask=None):
+        try:
+            r = FMs.ss(brenner(ndfilt.median_filter(im, size=2), 'v'), mask)
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "median 2 + brenner v"
+
+    def median_2__brennervh(im, mask=None):
+        try:
+            r = FMs.ss(brennervh(ndfilt.median_filter(im, size=2)), mask)
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "median 2 + brenner vh"
+
+    def median_4__brennerh(im, mask=None):
+        try:
+            r = FMs.ss(brenner(ndfilt.median_filter(im, size=4), 'h'), mask)
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "median 4 + brenner h"
+
+    def median_4__brennerv(im, mask=None):
+        try:
+            r = FMs.ss(brenner(ndfilt.median_filter(im, size=4), 'v'), mask)
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "median 4 + brenner v"
+
+    def median_4__brennervh(im, mask=None):
+        try:
+            r = FMs.ss(brennervh(ndfilt.median_filter(im, size=4)), mask)
+        except ValueError as e:
+            r = numpy.NaN
+        return r, "median 4 + brenner vh"
 
     fmFuncs = [sobel_h,
                sobel_h__bilat_denoise,
@@ -366,7 +494,7 @@ class FMs:
         store['rtable'] = rtable
         store['index'] = pandas.Series(ftable.index)
 
-def forkFunc(stdoutLock, imageFileNames, mask):
+def forkFunc(stdoutLock, fmFuncs, imageFileNames, mask):
     for imageFileName in imageFileNames:
         image = skio.imread(str(imageFileName))
         skip = False
@@ -376,21 +504,31 @@ def forkFunc(stdoutLock, imageFileNames, mask):
                     print(image.dtype, '{},SKIPPED (unsupported format)'.format(str(imageFileName)))
                     continue
             image = (image / 65535).astype(numpy.float32)
-        for fm in FMs.fmFuncs:
+        for fm in fmFuncs:
             result, fmName = fm(image, mask)
             with stdoutLock:
                 print('{},{},{}'.format(str(imageFileName), fmName, result))
 
-def runProcessPile(stdoutLock, imageFileNames, maskFileName):
+def runProcessPile(stdoutLock, fmFuncs, imageFileNames, maskFileName):
     mask = (skio.imread(str(maskFileName)) == 0)
     imageFileNames = numpy.array(imageFileNames)
-    processes = [Process(target=forkFunc, args=(stdoutLock, chunk, mask)) for chunk in numpy.array_split(imageFileNames, 2)]
+    processes = [Process(target=forkFunc, args=(stdoutLock, fmFuncs, chunk, mask)) for chunk in numpy.array_split(imageFileNames, 4)]
     for process in processes:
         process.daemon = True
         process.start()
     return processes
 
 if __name__ == '__main__':
+    fmFuncs = [FMs.brennerh,
+               FMs.brennerv,
+               FMs.brennervh,
+               FMs.median_2__brennerh,
+               FMs.median_2__brennerv,
+               FMs.median_2__brennervh,
+               FMs.median_4__brennerh,
+               FMs.median_4__brennerv,
+               FMs.median_4__brennervh]
+
     stdoutLock = Lock()
     with open('/mnt/scopearray/autofocus/weekend/migsdat_scopemachine.pickle', 'rb') as f:
         migsdat = pickle.load(f)
@@ -400,13 +538,13 @@ if __name__ == '__main__':
             if scoreableImage.score is not None:
                 if str(scoreableImage.fileName).find('/5x/') != -1 or str(scoreableImage.fileName).find('\/5x\/') != -1:
                     imageFileNames.append(scoreableImage.fileName)
-    processes = runProcessPile(stdoutLock, imageFileNames, Path('/mnt/scopearray/autofocus/weekend/5x_mask.png'))
+    processes = runProcessPile(stdoutLock, fmFuncs, imageFileNames, Path('/mnt/scopearray/autofocus/weekend/5x_mask.png'))
     imageFileNames = []
     for groupName, scoreableImages in migsdat.items():
         for scoreableImage in scoreableImages:
             if scoreableImage.score is not None:
                 if str(scoreableImage.fileName).find('/10x/') != -1 or str(scoreableImage.fileName).find('\/10x\/') != -1:
                     imageFileNames.append(scoreableImage.fileName)
-    processes.extend(runProcessPile(stdoutLock, imageFileNames, Path('/mnt/scopearray/autofocus/weekend/10x_mask.png')))
+    processes.extend(runProcessPile(stdoutLock, fmFuncs, imageFileNames, Path('/mnt/scopearray/autofocus/weekend/10x_mask.png')))
     for process in processes:
         process.join()

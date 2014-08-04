@@ -279,7 +279,7 @@ class ManualImageGroupScorer(ManualScorer):
         if newRow is not None:
             self._ui.tableWidget.setCurrentItem(self._ui.tableWidget.item(newRow, 0))
 
-def makeWeekendImagesScorer(risWidget, basePath):
+def makeInitialWeekendImagesScorer(risWidget, basePath):
     import re
     groups = {}
     basePath = Path(basePath)
@@ -304,3 +304,8 @@ def makeWeekendImagesScorer(risWidget, basePath):
     migs = ManualImageGroupScorer(risWidget, groups)
     migs.show()
     return groups, migs
+
+def makeResumeWeekendImagesScorer(risWidget, groups):
+    migs = ManualImageGroupScorer(risWidget, groups)
+    migs.show()
+    return migs
