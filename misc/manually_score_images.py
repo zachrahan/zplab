@@ -24,10 +24,12 @@
 
 import csv
 import enum
+import pandas
+from pathlib import Path
+import pickle
+from PyQt5 import Qt, uic
 import numpy
 import os
-from pathlib import Path
-from PyQt5 import Qt, uic
 import re
 import skimage.io as skio
 
@@ -67,6 +69,8 @@ class MigsFmRow:
         self.score = score
         self.fmName = fmName
         self.fmValue = fmValue
+        if self.fmValue is not None:
+            self.fmValue = float(self.fmValue)
     def __repr__(self):
         return 'MigsFmRow(fileName={}, well={}, mag={}, run={}, xPos={}, yPos={}, zPos={}, temperature={}, score={}, fmName={}, fmValue={})'.format(str(self.fileName),
                                                                                                                                                     self.well,
@@ -79,15 +83,26 @@ class MigsFmRow:
                                                                                                                                                     self.score,
                                                                                                                                                     self.fmName,
                                                                                                                                                     self.fmValue)
+    def rawCols():
+        return ['Well', 'Mag', 'Run', 'xPos', 'yPos', 'zPos', 'Score', 'FocusMeasureName', 'FocusMeasureValue', 'Temperature', 'FileName']
+    def rawRow(self):
+        return [self.well, self.mag, self.run, self.xPos, self.yPos, self.zPos, self.score, self.fmName, self.fmValue, self.temperature, self.fileName]
 
-def readMigsFromConsoleDumpCsv(csvFileName):
+def readMigsFromConsoleDumpCsvAndGroupsPickle(csvFileName, migsdatFileName):
+    with open(str(migsdatFileName), 'rb') as f:
+        migsdat = pickle.load(f)
+    imageFnToScores = {}
+    for group, scoreableImages in migsdat.items():
+        for scoreableImage in scoreableImages:
+            imageFnToScores[scoreableImage.fileName] = scoreableImage.score
     migsFmTable = []
-    csvFileName = Path(csvFileName)
     with open(str(csvFileName), 'r') as f:
         for row in csv.reader(f, delimiter=','):
             if len(row) == 3 and re.match('''^\/mnt\/scopearray\/autofocus\/weekend\/(\d\d)_([^_]+)_([^_]+)_[^/]+/(5x|10x)/(\d+)/([^_]+)_(\d+\.?\d*)\.png$''', row[0]) is not None:
-                migsFmTable.append(MigsFmRow(fileName=row[0], fmName=row[1], fmValue=row[2]))
-    return migsFmTable
+                imageFileName = Path(row[0])
+                r = MigsFmRow(fileName=imageFileName, fmName=row[1], fmValue=row[2], score=imageFnToScores[imageFileName])
+                migsFmTable.append(r.rawRow())
+    return pandas.DataFrame(columns=MigsFmRow.rawCols(), data=migsFmTable)
 
 class ManualScorer(Qt.QDialog):
     class _ScoreRadioId(enum.IntEnum):
