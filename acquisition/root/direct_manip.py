@@ -27,7 +27,7 @@ class RootManipDialog(Qt.QDialog):
             exec(execstr.format(rootSubdeviceName), {'self':self, 'Qt':Qt, 'layout':layout, 'DialogClass':eval(dialogClassName)})
         
         addDirectManip('lumencor')
-        addDirectManip('brightfieldLed')
+#       addDirectManip('brightfieldLed')
         addDirectManip('camera')
 
 def show(rootInstance=None, launcherDescription=None, moduleArgs=None):

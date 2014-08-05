@@ -90,20 +90,6 @@ class FunctionUnit(Device):
         a race condition: the main thread's event loop may be running and, if it is, it will eat a stateChanged signal
         emitted before we can start executing our local event loop.'''
         if self._state == self.State.Busy:
-            timedOut = False
-            eventLoop = QtCore.QEventLoop()
-            self.stateChanged.connect(eventLoop.quit)
-            if timeout is not None:
-                timer = QtCore.QTimer()
-                timer.setSingleShot(True)
-                def ontimeout():
-                    nonlocal timedOut
-                    timedOut = True
-                    eventLoop.quit()
-                timer.timeout.connect(ontimeout)
-                timer.start(timeout * 1000)
-            eventLoop.exec_()
-            if timedOut:
-                raise DeviceTimeoutException(self, 'waitForReady(..) timed out.')
+            self._waitForSignal(self.stateChanged, timeout)
         if self._state == self.State.Bad:
             raise DeviceException(self, 'Device is in bad state.')

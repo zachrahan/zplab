@@ -519,7 +519,15 @@ def runProcessPile(stdoutLock, fmFuncs, imageFileNames, maskFileName):
     return processes
 
 if __name__ == '__main__':
-    fmFuncs = [FMs.brennerh,
+    fmFuncs = [FMs.gaussian_gradient_0_5,
+               FMs.gaussian_gradient_1,
+               FMs.median_2__gaussian_gradient_0_5,
+               FMs.median_2__gaussian_gradient_1,
+               FMs.median_4__gaussian_gradient_0_5,
+               FMs.median_4__gaussian_gradient_1,
+               FMs.sobel_h,
+               FMs.sobel_v,
+               FMs.brennerh,
                FMs.brennerv,
                FMs.brennervh,
                FMs.median_2__brennerh,

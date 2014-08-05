@@ -115,3 +115,7 @@ void _AndorException::lookupErrorName(const int& errorCode, std::string& errorNa
         errorName = "UNKNOWN ERROR CODE";
     }
 }
+
+Overridden by Device implementations in order to offer an efficient method of blocking until all outstanding
+asynchronous operations for that Device complete.  Note that, in general, this method should only be called from the
+thread owning the Device (normally the main thread or GUI thread).
