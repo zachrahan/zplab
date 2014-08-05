@@ -39,7 +39,7 @@ class Stage(FunctionUnit):
                 if rxPacket.cmdCode == 22 and re.match('\s*', rxPacket.parameter) is not None:
                     # Reponse containing command code 22 with empty or whitespace only parameter indicates that a stage
                     # movement request was issued for what is already the stage's current position.
-                    pass
+                    self.posChanged.emit(self._pos)
                 else:
                     self._pos = int(rxPacket.parameter)
                     if self._didStop:
@@ -98,7 +98,7 @@ class Stage(FunctionUnit):
 
     @pos.setter
     def pos(self, pos):
-        self._transmit(Packet(self, line=None, cmdCode=22, parameter=str(pos)))
+        self._transmit(Packet(self, line=None, cmdCode=22, parameter=str(int(pos))))
 
     @QtCore.pyqtProperty(bool, notify=movingChanged)
     def moving(self):

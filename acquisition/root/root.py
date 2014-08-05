@@ -23,7 +23,7 @@ class Root(Device):
         super().__init__(deviceName='zplab-scope Linux system')
 
 #       self._peltier = Peltier(self)
-#       self._brightfieldLed = BrightfieldLed(self)
+        self._brightfieldLed = BrightfieldLed(self, serialPortDescriptor='/dev/ttyACM0')
         self._dm6000b = Dm6000b(self)
         self._lumencor = Lumencor(self)
         self._camera = Camera(self, andorDeviceIndex=0)
@@ -56,7 +56,6 @@ class Root(Device):
         if pos in self._objectivePositionAutoFocusMasks:
             self._autoFocuser.useMask = True
             self._autoFocuser.mask = self._objectivePositionAutoFocusMasks[pos]
-            print(self._autoFocuser.mask)
         else:
             self._autoFocuser.useMask = False
 
@@ -67,9 +66,9 @@ class Root(Device):
 #   def peltier(self):
 #       return self._peltier
 
-#   @property
-#   def brightfieldLed(self):
-#       return self._brightfieldLed
+    @property
+    def brightfieldLed(self):
+        return self._brightfieldLed
 
     @property
     def dm6000b(self):

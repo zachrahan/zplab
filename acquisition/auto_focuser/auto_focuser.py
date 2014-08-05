@@ -40,12 +40,94 @@ class AutoFocuser(Device):
         self._useMask = False
         # PyQt doesn't like assigning None to properties of type object...
         self._mask = object()
-        zDrive.movingChanged.connect(self._zDriveMovingChanged)
+        self._zDrive.posChanged.connect(self._zDrivePosChanged)
+        self._steps = None
+        self._stepIdx = None
+        self._results = None
+        self._round = None
+        self.rw = None
 
-    def _zDriveMovingChanged(self, moving):
+    def _brenner(self, im, direction):
+        if direction == 'h':
+            xo = 2
+            yo = 0
+        elif direction == 'v':
+            xo = 0
+            yo = 2
+        else:
+            raise ValueError('direction must be h or v.')
+        iml = numpy.pad(im[0:im.shape[0]-yo, 0:im.shape[1]-xo], ((yo, 0), (xo, 0)), mode='constant')
+        imr = im.copy()
+        if direction == 'h':
+            imr[:, :xo] = 0
+        else:
+            imr[:yo, :] = 0
+        return iml - imr
+
+    def _brennervh(self, im):
+        imh = self._brenner(im, 'h')
+        imv = self._brenner(im, 'v')
+        return numpy.sqrt(imh**2 + imv**2)
+
+    def _ss(self, im):
+        im = im.astype(numpy.float64)
+#       if self._useMask:
+#           im = numpy.ma.array(im, mask=self._mask)
+        return (im**2).sum()
+
+    def _zDrivePosChanged(self, foo):
         # If we are currently auto-focusing and the z drive has stopped moving...
-        if self._busy and not moving:
-
+        if self._busy and not self._zDrive.moving:
+            zDrivePos = self._zDrive.pos
+            reqzDrivePos = self._steps[self._stepIdx]
+            if zDrivePos != reqzDrivePos:
+                w = 'Current Z position ({0}) does not match requested Z position ({1}).  '
+                w+= 'The autofocus step for {1} is being skipped.  This can occur if the requested Z position '
+                w+= 'is out of range or if the scope\'s Z position controller has been moved during the '
+                w+= 'auto-focus operation.'
+                self._warn(w.format(zDrivePos, reqzDrivePos))
+            else:
+                im = self._camera.acquireImage()
+                if self.rw is not None:
+                    self.rw.showImage(im)
+                im = (im.astype(numpy.float32) / 65535)
+                im = self._brennervh(im)
+                result = self._ss(im)
+                print(result)
+                self._results.append((zDrivePos, result))
+            self._stepIdx += 1
+            if self._stepIdx == len(self._steps):
+                noResults = len(self._results) == 0
+                if not noResults:
+                    if self._round == 1:
+                        self._round += 1
+                        self._stepIdx = 0
+                        bestZidx = numpy.array([r[1] for r in self._results], dtype=numpy.float64).argmax()
+                        belowZidx = max(bestZidx - 1, 0)
+                        aboveZidx = min(bestZidx + 1, len(self._results) - 1)
+                        self._steps = numpy.linspace(self._steps[belowZidx], self._steps[aboveZidx], len(self._steps)).astype(numpy.int64)
+                        self._results = []
+                        self._zDrive.pos = self._steps[0]
+                    else:
+                        self._stepIdx = None
+                        self._busy = False
+                        self.busyChanged.emit(self._busy)
+                        if noResults:
+                            raise DeviceException(self, 'Failed to move to any of the specified Z positions.')
+                        # Sort position/focus measure result pairs by focus measure result in descending order
+                        self._results.sort(key=lambda v:v[1], reverse=True)
+                        # Move to the best position
+                        self._zDrive.pos = self._results[0][0]
+                        self._zDrive.waitForReady()
+                        im = self._camera.acquireImage()
+                        self.rw.showImage(im)
+                if noResults:
+                    self._stepIdx = None
+                    self._busy = False
+                    self.busyChanged.emit(self._busy)
+                    raise DeviceException(self, 'Failed to move to any of the specified Z positions.')
+            else:
+                self._zDrive.pos = self._steps[self._stepIdx]
 
     @QtCore.pyqtProperty(object)
     def camera(self):
@@ -89,7 +171,13 @@ class AutoFocuser(Device):
         if self._busy:
             # If an auto focus operation is already in progress, requests to start another are ignored
             return
-
+        self._stepIdx = 0
+        self._steps = numpy.linspace(minZ, maxZ, initialStepCount).astype(numpy.int64)
+        self._results = []
+        self._busy = True
+        self._round = 1
+        self._zDrive.pos = self._steps[0]
+        self.busyChanged.emit(self._busy)
 
     def stopAutoFocus(self):
         if not self._busy:

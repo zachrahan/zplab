@@ -45,7 +45,7 @@ class LumencorManipDialog(QtWidgets.QDialog):
 
         self.tempUpdateTimer = QtCore.QTimer(self)
         self.tempUpdateTimer.timeout.connect(self.tempUpdateTimerFiredSlot)
-        self.tempUpdateTimer.start(2000)
+#       self.tempUpdateTimer.start(2000)
 
     def closeEvent(self, event):
         self.lumencorInstance.disable()
