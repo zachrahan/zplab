@@ -118,9 +118,10 @@ class AutoFocuser(Device):
                         self._results.sort(key=lambda v:v[1], reverse=True)
                         # Move to the best position
                         self._zDrive.pos = self._results[0][0]
-                        self._zDrive.waitForReady()
-                        im = self._camera.acquireImage()
-                        self.rw.showImage(im)
+                        if self.rw is not None:
+                            self._zDrive.waitForReady()
+                            im = self._camera.acquireImage()
+                            self.rw.showImage(im)
                 if noResults:
                     self._stepIdx = None
                     self._busy = False
