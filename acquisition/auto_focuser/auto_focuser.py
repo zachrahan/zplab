@@ -99,13 +99,13 @@ class AutoFocuser(Device):
             if self._stepIdx == len(self._steps):
                 noResults = len(self._results) == 0
                 if not noResults:
-                    if self._round == 1:
+                    if self._round in (1,2):
                         self._round += 1
                         self._stepIdx = 0
                         bestZidx = numpy.array([r[1] for r in self._results], dtype=numpy.float64).argmax()
                         belowZidx = max(bestZidx - 1, 0)
                         aboveZidx = min(bestZidx + 1, len(self._results) - 1)
-                        self._steps = numpy.linspace(self._steps[belowZidx], self._steps[aboveZidx], len(self._steps)).astype(numpy.int64)
+                        self._steps = numpy.linspace(self._steps[belowZidx], self._steps[aboveZidx], len(self._steps))
                         self._results = []
                         self._zDrive.pos = self._steps[0]
                     else:
@@ -172,7 +172,7 @@ class AutoFocuser(Device):
             # If an auto focus operation is already in progress, requests to start another are ignored
             return
         self._stepIdx = 0
-        self._steps = numpy.linspace(minZ, maxZ, initialStepCount).astype(numpy.int64)
+        self._steps = numpy.linspace(minZ, maxZ, initialStepCount)
         self._results = []
         self._busy = True
         self._round = 1

@@ -64,9 +64,9 @@ class Dm6000b(ThreadedDevice):
         # upon iris min/max openness modification.  Therefore, we must refresh min/max upon objective change.
         self.objectiveTurret.posChanged.connect(self._objectiveTurretPosChangedSlot)
         self.dicTurret = DicTurret(self)
-        self.stageX = Stage(self, 'Stage X Axis Function Unit', 72)
-        self.stageY = Stage(self, 'Stage Y Axis Function Unit', 73)
-        self.stageZ = Stage(self, 'Stage Z Axis Function Unit', 71)
+        self.stageX = Stage(self, 'Stage X Axis Function Unit', 72, 0.00001953125)
+        self.stageY = Stage(self, 'Stage Y Axis Function Unit', 73, 0.00001953125)
+        self.stageZ = Stage(self, 'Stage Z Axis Function Unit', 71, 0.000003800)
 
     def _objectiveTurretPosChangedSlot(self):
         # Only refresh iris min/max openness if the turret has reached an occupied position

@@ -2,6 +2,7 @@
 # Erik Hvatum (ice.rikh@gmail.com)
 
 from PyQt5 import QtCore
+import numpy
 import re
 import sys
 from acquisition.device import DeviceException
@@ -13,12 +14,13 @@ class Stage(FunctionUnit):
     These are the Z-DRIVE (function code 71), X-AXIS (72), Y-AXIS (73).  This Device is meant to act as a subdevice of
     Dm6000b and, as such, depends on its parent to send requests to the DM6000B and to deliver responses from it.'''
 
-    posChanged = QtCore.pyqtSignal(int)
+    posChanged = QtCore.pyqtSignal(float)
     movingChanged = QtCore.pyqtSignal(bool)
 
-    def __init__(self, dm6000b, deviceName, funitCode):
+    def __init__(self, dm6000b, deviceName, funitCode, factor):
         super().__init__(dm6000b, deviceName, funitCode)
-        self._pos = None
+        self._factor = factor
+        self._pos = numpy.nan
         self.refreshPos()
         self._moving = None
         # Used to delay signaling of movingChanged(False) until new stage position has been retrieved
@@ -39,13 +41,13 @@ class Stage(FunctionUnit):
                 if rxPacket.cmdCode == 22 and re.match('\s*', rxPacket.parameter) is not None:
                     # Reponse containing command code 22 with empty or whitespace only parameter indicates that a stage
                     # movement request was issued for what is already the stage's current position.
-                    self.posChanged.emit(self._pos)
+                    self.posChanged.emit(self._pos * self._factor)
                 else:
                     self._pos = int(rxPacket.parameter)
                     if self._didStop:
                         self.movingChanged.emit(self._moving)
                         self._didStop = False
-                    self.posChanged.emit(self._pos)
+                    self.posChanged.emit(self._pos * self._factor)
 
             elif rxPacket.cmdCode == 4:
                 if rxPacket.parameter[0] == '1':
@@ -77,8 +79,8 @@ class Stage(FunctionUnit):
                         # certainly be somewhat out of date even at the time the posChanged signal is emitted, and will
                         # grow ever more out of date until refreshPos() is called again or the stage finishes moving,
                         # at which point pos is always updated.
-                        self._pos = None
-                        self.posChanged.emit(self._pos)
+                        self._pos = numpy.nan
+                        self.posChanged.emit(self._pos * self._factor)
                         self.movingChanged.emit(self._moving)
                     else:
                         # Stage stopped moving.  Delay emitting signal indicating this until pos has been updated.
@@ -92,13 +94,13 @@ class Stage(FunctionUnit):
     def refreshPos(self):
         self._transmit(Packet(self, line=None, cmdCode=23))
 
-    @QtCore.pyqtProperty(int, notify=posChanged)
+    @QtCore.pyqtProperty(float, notify=posChanged)
     def pos(self):
-        return self._pos
+        return self._pos * self._factor
 
     @pos.setter
     def pos(self, pos):
-        self._transmit(Packet(self, line=None, cmdCode=22, parameter=str(int(pos))))
+        self._transmit(Packet(self, line=None, cmdCode=22, parameter=str(int(pos / self._factor))))
 
     @QtCore.pyqtProperty(bool, notify=movingChanged)
     def moving(self):
