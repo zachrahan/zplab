@@ -45,7 +45,8 @@ class LumencorManipDialog(QtWidgets.QDialog):
 
         self.tempUpdateTimer = QtCore.QTimer(self)
         self.tempUpdateTimer.timeout.connect(self.tempUpdateTimerFiredSlot)
-#       self.tempUpdateTimer.start(2000)
+        self.tempUpdateConsecutiveFailures = 0
+        self.tempUpdateTimer.start(2000)
 
     def closeEvent(self, event):
         self.lumencorInstance.disable()
@@ -63,8 +64,17 @@ class LumencorManipDialog(QtWidgets.QDialog):
         text = str()
         if temp is None:
             text = 'Temp: unavailable'
+            self.tempUpdateConsecutiveFailures += 1
+            if self.tempUpdateConsecutiveFailures > 3:
+                # If the last three temperature queries failed, query temperature only every sixty seconds so as to
+                # reduce hitching caused by waiting for blocking read to time out
+                self.tempUpdateTimer.start(60000)
         else:
             text = 'Temp: {}ºC'.format(temp)
+            if self.tempUpdateConsecutiveFailures > 3:
+                # A temperature read finally succeeded.  Revert back to querying every two seconds.
+                self.tempUpdateTimer.start(2000)
+            self.tempUpdateConsecutiveFailures = 0
         self.ui.tempLabel.setText(text)
 
     def maxAllLampsSlot(self):

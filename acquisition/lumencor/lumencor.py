@@ -60,7 +60,7 @@ class Lumencor(Device):
 
     def __init__(self, parent=None, deviceName='Lumencor Spectra-X', serialPortDescriptor='/dev/ttySptrx'):
         super().__init__(parent, deviceName)
-        self._serialPort = serial.Serial(serialPortDescriptor, 9600, timeout=1)
+        self._serialPort = serial.Serial(serialPortDescriptor, 9600, timeout=0.2)
         if not self._serialPort.isOpen():
             raise LumencorException('Failed to open {}.'.format(serialPortDescriptor))
         # RS232 Lumencor docs state: "The [following] two commands MUST be issued after every power cycle to properly configure controls for further commands."
