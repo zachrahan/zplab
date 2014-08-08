@@ -82,6 +82,12 @@
 			<F N="acquisition/auto_focuser/__init__.py"/>
 			<F N="acquisition/auto_focuser/auto_focuser.py"/>
 		</Folder>
+		<Folder
+			Name="pedals"
+			Filters="">
+			<F N="acquisition/pedals/__init__.py"/>
+			<F N="acquisition/pedals/pedal.py"/>
+		</Folder>
 		<F N="acquisition/__init__.py"/>
 		<F N="acquisition_direct_manip.py"/>
 		<F N="acquisition/acquisition_exception.py"/>
