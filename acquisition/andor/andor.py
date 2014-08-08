@@ -455,7 +455,8 @@ class Camera(Device):
 
     @frameRate.setter
     def frameRate(self, frameRate):
-        self._camera.AT_SetFloat(_Camera.Feature.FrameRate, frameRate)
+        pass
+#       self._camera.AT_SetFloat(_Camera.Feature.FrameRate, frameRate)
 
     def _frameRateCb(self, feature):
         self._frameRate = self._camera.AT_GetFloat(_Camera.Feature.FrameRate)

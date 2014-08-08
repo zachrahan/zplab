@@ -12,7 +12,8 @@ from acquisition.brightfield_led.brightfield_led import BrightfieldLed
 from acquisition.device import Device, DeviceException
 from acquisition.dm6000b.dm6000b import Dm6000b
 from acquisition.lumencor.lumencor import Lumencor
-from acquisition.peltier.peltier import Peltier
+#from acquisition.peltier.peltier import Peltier
+from acquisition.peltier.incubator import Incubator
 
 class Root(Device):
     '''The Device representing the root of the device hierarchy.  At the moment, it is convenient for the
@@ -23,6 +24,7 @@ class Root(Device):
         super().__init__(deviceName='zplab-scope Linux system')
 
 #       self._peltier = Peltier(self)
+        self._incubator = Incubator('/dev/ttyPeltier')
         self._brightfieldLed = BrightfieldLed(self, serialPortDescriptor='/dev/ttyACM0')
         self._dm6000b = Dm6000b(self)
         self._lumencor = Lumencor(self)
@@ -65,6 +67,10 @@ class Root(Device):
 #   @property
 #   def peltier(self):
 #       return self._peltier
+
+    @property
+    def incubator(self):
+        return self._incubator
 
     @property
     def brightfieldLed(self):

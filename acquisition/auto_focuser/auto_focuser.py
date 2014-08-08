@@ -25,6 +25,7 @@
 from enum import Enum
 import numpy
 from PyQt5 import QtCore
+import sys
 from acquisition.device import Device, DeviceException
 
 class AutoFocuser(Device):
@@ -80,7 +81,7 @@ class AutoFocuser(Device):
         if self._busy and not self._zDrive.moving:
             zDrivePos = self._zDrive.pos
             reqzDrivePos = self._steps[self._stepIdx]
-            if zDrivePos != reqzDrivePos:
+            if abs(zDrivePos - reqzDrivePos) > self._zDrive._factor - sys.float_info.epsilon:
                 w = 'Current Z position ({0}) does not match requested Z position ({1}).  '
                 w+= 'The autofocus step for {1} is being skipped.  This can occur if the requested Z position '
                 w+= 'is out of range or if the scope\'s Z position controller has been moved during the '
@@ -93,7 +94,7 @@ class AutoFocuser(Device):
                 im = (im.astype(numpy.float32) / 65535)
                 im = self._brennervh(im)
                 result = self._ss(im)
-                print(result)
+                print(result, zDrivePos)
                 self._results.append((zDrivePos, result))
             self._stepIdx += 1
             if self._stepIdx == len(self._steps):

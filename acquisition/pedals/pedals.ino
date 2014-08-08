@@ -36,36 +36,36 @@
 // };
 // 
 
-const unsigned int ulong_max = __LONG_MAX__ * 2UL + 1UL;
-
-const String cmd_isOk("isOk");
-const String cmd_setOn("on=");
-const String cmd_getPower("getPower");
-const String cmd_setPower("power=");
-const String arg_true("true");
-const String arg_false("false");
-
-struct Pedal
-{
-    const int id;
-    const int ledPin;
-    const int pedalPin;
-    bool initing;
-    const int upState;
-    int state;
-    unsigned long changeTimestamp;
-    unsigned long debounceInterval;
-};
-
-Pedal pedals[] =
-{
-    {0, 2, 3, true, HIGH, 0, 0, __ULONG_MAX__},
-    {1, 4, 5, true, HIGH, 0, 0, 50}
-};
-
-Pedal * const pedalsEnd{pedals + sizeof(pedals) / sizeof(Pedal)};
-
-const int pedalsLen = pedalsEnd - pedals;
+// const unsigned int ulong_max = __LONG_MAX__ * 2UL + 1UL;
+// 
+// const String cmd_isOk("isOk");
+// const String cmd_setOn("on=");
+// const String cmd_getPower("getPower");
+// const String cmd_setPower("power=");
+// const String arg_true("true");
+// const String arg_false("false");
+// 
+// struct Pedal
+// {
+//     const int id;
+//     const int ledPin;
+//     const int pedalPin;
+//     bool initing;
+//     const int upState;
+//     int state;
+//     unsigned long changeTimestamp;
+//     unsigned long debounceInterval;
+// };
+// 
+// Pedal pedals[] =
+// {
+//     {0, 2, 3, true, HIGH, 0, 0, ulong_max},
+//     {1, 4, 5, true, HIGH, 0, 0, 50}
+// };
+// 
+// Pedal * const pedalsEnd{pedals + sizeof(pedals) / sizeof(Pedal)};
+// 
+// const int pedalsLen = pedalsEnd - pedals;
 // 
 // char input[1025] = "12345";
 // char* inputIt{input};
@@ -74,22 +74,31 @@ const int pedalsLen = pedalsEnd - pedals;
 // 
 void setup()
 {
-    for ( Pedal *pedal{pedals};
-          pedal != pedalsEnd;
-          ++pedal )
-    {
-        pinMode(pedal->ledPin, OUTPUT);
-        pinMode(pedal->pedalPin, INPUT);
-        // Turn on internal pull-up resistor on pedal pin
-        digitalWrite(pedal->pedalPin, HIGH);
-
-    }
-
-    Serial.begin(115200);
+    pinMode(2, OUTPUT);
+    digitalWrite(2, HIGH);
+//  for ( Pedal *pedal{pedals};
+//        pedal != pedalsEnd;
+//        ++pedal )
+//  {
+//      pinMode(pedal->ledPin, OUTPUT);
+//      pinMode(pedal->pedalPin, INPUT);
+//      // Turn on internal pull-up resistor on pedal pin
+//      digitalWrite(pedal->pedalPin, HIGH);
+//  }
+//  digitalWrite(pedals[0].ledPin, HIGH);
+// 
+//  Serial.begin(115200);
+//  digitalWrite(pedals[1].ledPin, HIGH);
 }
 
 void loop()
 {
+//  for ( Pedal *pedal{pedals};
+//        pedal != pedalsEnd;
+//        ++pedal )
+//  {
+//      digitalWrite(pedal->ledPin, digitalRead(pedal->pedalPin));
+//  }
 //     if(Serial.available())
 //     {
 //         char inChr = Serial.read();
