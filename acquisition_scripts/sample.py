@@ -114,6 +114,8 @@ class Experiment(Qt.QObject):
         if self.runTimer.isSingleShot():
             self.runTimer.setSingleShot(False)
             self.runTimer.start(self.interval * 1000)
+        elif not self.runTimer.isActive():
+            self.runTimer.start(self.interval * 1000)
         self.runTime = time.time()
         self.runIndex += 1
         self._writeCheckpoint()
@@ -148,11 +150,19 @@ class Experiment(Qt.QObject):
             self.root.brightfieldLed.enabled = False
             self.root.lumencor.cyanEnabled = True
             self.root.lumencor.cyanPower = 255
-            time.sleep(0.02)
+            time.sleep(0.008)
             self.root.camera.commandSoftwareTrigger()
+            time.sleep(0.020)
+            self.root.lumencor.blueEnabled = True
+            self.root.lumencor.bluePower = 255
+            self.root.lumencor.UVEnabled = True
+            self.root.lumencor.UVPower = 255
             time.sleep(2)
             self.root.lumencor.cyanEnabled = False
+            self.root.lumencor.blueEnabled = False
+            self.root.lumencor.UVEnabled = False
             self.root.brightfieldLed.enabled = True
+            time.sleep(0.008)
             self.root.camera.commandSoftwareTrigger()
             time.sleep(1)
             self.root.camera.commandSoftwareTrigger()
