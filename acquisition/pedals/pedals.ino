@@ -70,7 +70,7 @@ Pedal pedals[] =
 
 Pedal * const pedalsEnd{pedals + sizeof(pedals) / sizeof(Pedal)};
 
-const int pedalsLen = pedalsEnd - pedals;
+const int pedalCount = pedalsEnd - pedals;
 
 char input[129];
 char* inputIt{input};
@@ -270,17 +270,13 @@ void processInput()
     advanceIfWhitespace();
     bool ok{false};
     int pedalId;
-    if(advanceIfStr("get ok") && *inputIt == '\0')
-    {
-        Serial.println("ok is true");
-        ok = true;
-    }
-    else if ( advanceIfStr("set")
-           && advanceIfWhitespace()
-           && advanceIfStr("pedal")
-           && advanceIfWhitespace()
-           && advanceIfGetPositiveInt(pedalId) && pedalId >= 0 && pedalId < pedalsLen
-           && advanceIfWhitespace() )
+
+    if ( advanceIfStr("set")
+      && advanceIfWhitespace()
+      && advanceIfStr("pedal")
+      && advanceIfWhitespace()
+      && advanceIfGetPositiveInt(pedalId) && pedalId >= 0 && pedalId < pedalCount
+      && advanceIfWhitespace() )
     {
         Pedal* pedal{pedals + pedalId};
         unsigned long debounceInterval;
@@ -323,37 +319,49 @@ void processInput()
             }
         }
     }
-    else if ( advanceIfStr("get")
-           && advanceIfWhitespace()
-           && advanceIfStr("pedal")
-           && advanceIfWhitespace()
-           && advanceIfGetPositiveInt(pedalId) && pedalId >= 0 && pedalId < pedalsLen
-           && advanceIfWhitespace() )
+    else if(advanceIfStr("get") && advanceIfWhitespace())
     {
-        Pedal* pedal{pedals + pedalId};
-        if(advanceIfStr("debounceInterval") && *inputIt == '\0')
+        if(advanceIfStr("ok") && *inputIt == '\0')
         {
-            Serial.print("pedal ");
-            Serial.print(pedal->id);
-            Serial.print(" debounceInterval is ");
-            Serial.println(pedal->debounceInterval);
+            Serial.println("ok is true");
             ok = true;
         }
-        else if(advanceIfStr("downState") && *inputIt == '\0')
+        else if(advanceIfStr("numberOfPedals") && *inputIt == '\0')
         {
-            Serial.print("pedal ");
-            Serial.print(pedal->id);
-            Serial.print(" downState is ");
-            Serial.println(pedal->downState == LOW ? "low" : "high");
+            Serial.print("numberOfPedals is ");
+            Serial.println(pedalCount);
             ok = true;
         }
-        else if(advanceIfStr("state") && *inputIt == '\0')
+        else if ( advanceIfStr("pedal")
+               && advanceIfWhitespace()
+               && advanceIfGetPositiveInt(pedalId) && pedalId >= 0 && pedalId < pedalCount
+               && advanceIfWhitespace() )
         {
-            Serial.print("pedal ");
-            Serial.print(pedal->id);
-            Serial.print(" state is ");
-            Serial.println(pedal->downAtLastUpdate ? "down" : "up");
-            ok = true;
+            Pedal* pedal{pedals + pedalId};
+            if(advanceIfStr("debounceInterval") && *inputIt == '\0')
+            {
+                Serial.print("pedal ");
+                Serial.print(pedal->id);
+                Serial.print(" debounceInterval is ");
+                Serial.println(pedal->debounceInterval);
+                ok = true;
+            }
+            else if(advanceIfStr("downState") && *inputIt == '\0')
+            {
+                Serial.print("pedal ");
+                Serial.print(pedal->id);
+                Serial.print(" downState is ");
+                Serial.println(pedal->downState == LOW ? "low" : "high");
+                ok = true;
+            }
+            else if(advanceIfStr("state") && *inputIt == '\0')
+            {
+                Serial.print("pedal ");
+                Serial.print(pedal->id);
+                Serial.print(" state is ");
+                Serial.println(pedal->downAtLastUpdate ? "down" : "up");
+                ok = true;
+            }
         }
     }
 
@@ -364,24 +372,26 @@ void processInput()
 
         Serial.println("*    get ok");
 
+        Serial.println("*    get numberOfPedals");
+
         Serial.print("*    set pedal [0, ");
-        Serial.print(pedalsLen);
+        Serial.print(pedalCount);
         Serial.println(") debounceInterval to POSITIVE_INTEGER");
 
         Serial.print("*    get pedal [0, ");
-        Serial.print(pedalsLen);
+        Serial.print(pedalCount);
         Serial.println(") debounceInterval");
 
         Serial.print("*    set pedal [0, ");
-        Serial.print(pedalsLen);
+        Serial.print(pedalCount);
         Serial.println(") downState to [low|high]");
 
         Serial.print("*    get pedal [0, ");
-        Serial.print(pedalsLen);
+        Serial.print(pedalCount);
         Serial.println(") downState");
 
         Serial.print("*    get pedal [0, ");
-        Serial.print(pedalsLen);
+        Serial.print(pedalCount);
         Serial.println(") state");
 
         Serial.println("*Commands are terminated by cr, lf or crlf.  Warning and error replies are prepended with *.");

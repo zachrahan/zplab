@@ -88,6 +88,7 @@
 			<F N="acquisition/pedals/__init__.py"/>
 			<F N="acquisition/pedals/pedal.py"/>
 			<F N="acquisition/pedals/pedals.ino"/>
+			<F N="acquisition/pedals/pedals.py"/>
 		</Folder>
 		<F N="acquisition/__init__.py"/>
 		<F N="acquisition_direct_manip.py"/>
