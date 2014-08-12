@@ -183,7 +183,7 @@ void updateStateAccordingToUser()
                 {
                     // The character received is not a command terminator (a line return of some kind), and yet we are out of
                     // space in our input buffer for anything but the required null terminator
-                    Serial.println("*WARNING: The input buffer overflowed and previous contents have been cleared.");
+                    Serial.println("//WARNING: The input buffer overflowed and previous contents have been cleared.");
                     inputIt = input;
                     *inputIt = inChr;
                     ++inputIt;
@@ -367,33 +367,37 @@ void processInput()
 
     if(!ok)
     {
-        Serial.println("*ERROR: Unknown or invalid command.");
-        Serial.println("*Valid command are:");
+        Serial.println("/*ERROR: Unknown or invalid command.");
+        Serial.println("Valid command are:");
 
-        Serial.println("*    get ok");
+        Serial.println("    get ok");
 
-        Serial.println("*    get numberOfPedals");
+        Serial.println("    get numberOfPedals");
 
-        Serial.print("*    set pedal [0, ");
+        Serial.print("    set pedal [0, ");
         Serial.print(pedalCount);
         Serial.println(") debounceInterval to POSITIVE_INTEGER");
 
-        Serial.print("*    get pedal [0, ");
+        Serial.print("    get pedal [0, ");
         Serial.print(pedalCount);
         Serial.println(") debounceInterval");
 
-        Serial.print("*    set pedal [0, ");
+        Serial.print("    set pedal [0, ");
         Serial.print(pedalCount);
         Serial.println(") downState to [low|high]");
 
-        Serial.print("*    get pedal [0, ");
+        Serial.print("    get pedal [0, ");
         Serial.print(pedalCount);
         Serial.println(") downState");
 
-        Serial.print("*    get pedal [0, ");
+        Serial.print("    get pedal [0, ");
         Serial.print(pedalCount);
         Serial.println(") state");
 
-        Serial.println("*Commands are terminated by cr, lf or crlf.  Warning and error replies are prepended with *.");
+        Serial.println("Commands to this device must be terminated with cr, lf, or crlf.  Messages from this device ");
+        Serial.println("come in three essential flavors: ");
+        Serial.println("    machine parsable normal message terminated by crlf");
+        Serial.println("    single line error or warning beginning with // and terminated by crlf");
+        Serial.println("    multiline error or warning beginning with /* and terminated by */crlf (this is such a message)*/");
     }
 }
