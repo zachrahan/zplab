@@ -394,7 +394,7 @@ double _Camera::AT_GetFloatMin(const Feature& feature)
 void _Camera::AT_SetBool(const Feature& feature, const bool& value)
 {
     std::ptrdiff_t fi{static_cast<std::ptrdiff_t>(feature)};
-    int r = ::AT_SetBool(m_dh, sm_featureNames[fi], value);
+    int r = ::AT_SetBool(m_dh, sm_featureNames[fi], value ? AT_TRUE : AT_FALSE);
     if(r != AT_SUCCESS)
     {
         std::ostringstream o;
