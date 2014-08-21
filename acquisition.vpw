@@ -3,5 +3,6 @@
 	<Projects>
 		<Project File="acquisition.vpj"/>
 		<Project File="ris_widget/ris_widget.vpj"/>
+		<Project File="zacquisition/zacquisition.vpj"/>
 	</Projects>
 </Workspace>

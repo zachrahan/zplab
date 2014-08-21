@@ -8,6 +8,7 @@
 		<Folder
 			Name="camera"
 			Filters=""/>
+		<F N="../misc/image_transfer_zmq_benchmark.py"/>
 		<F N="service.py"/>
 	</Files>
 	<Config
