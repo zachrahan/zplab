@@ -22,32 +22,9 @@
 #
 # Authors: Erik Hvatum
 
-import zmq
+from zacquisition.service import Service
 from zacquisition.service_property import ServiceProperty
 from zacquisition import service_property_validators as spvs
 
-class Service:
-    name = ServiceProperty(default='UNNAMED SERVICE', validators=lambda _, value: spvs.isOfType(_, value, str))
-
-    def __init__(self, zmqContext=None, name=None):
-        # Enumerate ServiceProperties so that a list of their names is available via the serviceProperties property
-        # (which is itself a standard Python property and not a ServiceProperty descriptor instance).
-        self._serviceProperties = set()
-        for type_ in self.__class__.mro()[:-1]:
-            for attrName, attrInstance in type_.__dict__.items():
-                if issubclass(type(attrInstance), ServiceProperty):
-                    self._serviceProperties.add(attrName)
-
-        if zmqContext is None:
-            self._zc = zmq.Context()
-        else:
-            self._zc = zmqContext
-
-        if name is not None:
-            self.name = name
-
-    @property
-    def serviceProperties(self):
-        '''Returns a list of the names of ServiceProperties provided by this instance.  At minimum, this list
-        contains ['name'].'''
-        return self._serviceProperties.copy()
+class Camera(Service):
+    exposureTime = ServiceProperty(default=0.01, validators=lambda _, value: spvs.isFloatLike(_, value))

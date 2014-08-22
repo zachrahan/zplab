@@ -7,7 +7,9 @@
 	<Files>
 		<Folder
 			Name="camera"
-			Filters=""/>
+			Filters="">
+			<F N="camera/andor.py"/>
+		</Folder>
 		<F N="../misc/image_transfer_zmq_benchmark.py"/>
 		<F N="service.py"/>
 		<F N="service_property.py"/>
