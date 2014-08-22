@@ -10,6 +10,8 @@
 			Filters=""/>
 		<F N="../misc/image_transfer_zmq_benchmark.py"/>
 		<F N="service.py"/>
+		<F N="service_property.py"/>
+		<F N="service_property_validators.py"/>
 	</Files>
 	<Config
 		Name="Debug"
