@@ -28,3 +28,6 @@ from zacquisition import service_property_validators as spvs
 
 class Camera(Service):
     exposureTime = ServiceProperty(default=0.01, validators=lambda _, value: spvs.isFloatLike(_, value))
+
+    def __init__(self, zmqContext=None, name='Andor Camera (Zyla 5.5)'):
+        super().__init__(zmqContext, name)

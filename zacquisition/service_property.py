@@ -93,6 +93,16 @@ class ServiceProperty:
                 for callback in self._instanceToCallbacks[instance]:
                     callback(instance, value)
 
+    def setWithoutValidating(self, instance, value):
+        '''Replace stored value without executing validators.  Useful, for example, to initialize or update
+        a read-only (non user modifiable) property.'''
+        if instance not in self._instanceToValue or value != self._instanceToValue[instance]:
+            with self._getLock(instance):
+                self._instanceToValue[instance] = value
+            if instance in self._instanceToCallbacks:
+                for callback in self._instanceToCallbacks[instance]:
+                    callback(instance, value)
+
     def addCallback(self, instance, callback):
         '''Add callback to execute upon modification of the property value represented by this descriptor and
         instance combination.  Returns For example:

@@ -23,7 +23,7 @@
 # Authors: Erik Hvatum
 
 def readOnly(_, value):
-    raise ValueError('Can not modify read-only property.')
+    raise ValueError('Can not modify a read-only property.')
 
 def isOfType(_, value, type_):
     if type(value) is not type_:

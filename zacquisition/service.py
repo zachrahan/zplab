@@ -22,12 +22,15 @@
 #
 # Authors: Erik Hvatum
 
+import enum
 import zmq
 from zacquisition.service_property import ServiceProperty
 from zacquisition import service_property_validators as spvs
 
 class Service:
-    name = ServiceProperty(default='UNNAMED SERVICE', validators=lambda _, value: spvs.isOfType(_, value, str))
+    # Because service name is used to identify the Unix domain socket (IPC socket), service name can only be set by providing
+    # a name argument to __init__(..) and is otherwise read-only.
+    name = ServiceProperty(default='UNNAMED SERVICE', validators=spvs.readOnly)
 
     def __init__(self, zmqContext=None, name=None):
         # Enumerate ServiceProperties so that a list of their names is available via the serviceProperties property
@@ -44,7 +47,8 @@ class Service:
             self._zc = zmqContext
 
         if name is not None:
-            self.name = name
+            name = str(name)
+            Service.name.setWithoutValidating(self, name)
 
     @property
     def serviceProperties(self):
