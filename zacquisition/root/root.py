@@ -26,8 +26,20 @@ from zacquisition.service import Service
 from zacquisition.service_property import ServiceProperty
 from zacquisition import service_property_validators as spvs
 
-class Camera(Service):
-    exposureTime = ServiceProperty(default=0.01, validators=spvs.isFloatLike)
+from zacquisition.camera.andor import Camera
 
-    def __init__(self, zmqContext=None, instanceType=Service.InstanceType.Daemon, parent=None, name='Andor Camera (Zyla 5.5)'):
-        super().__init__('zacquisition.camera.andor.Camera', zmqContext, instanceType, parent, name)
+class Root(Service):
+    def __init__(self, zmqContext=None, instanceType=Service.InstanceType.Daemon, parent=None, name='Service Tree Root', \
+                 ipcSocketPath='/tmp/zacquisition', eventTcpPortNumber=51500, reqTcpPortNumber=51501):
+        super().__init__('zacquisition.root.root', zmqContext, instanceType, parent, name, ipcSocketPath, eventTcpPortNumber, reqTcpPortNumber)
+
+        if instanceType == Service.InstanceType.Daemon:
+            self._makeServiceTree()
+
+    def _makeServiceTree(self):
+        self._camera = Camera(self._zc, parent=self)
+        self._children.append(self._camera)
+
+    @property
+    def camera(self):
+        return self._camera

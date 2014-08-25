@@ -10,6 +10,11 @@
 			Filters="">
 			<F N="camera/andor.py"/>
 		</Folder>
+		<Folder
+			Name="root"
+			Filters="">
+			<F N="root/root.py"/>
+		</Folder>
 		<F N="../misc/image_transfer_zmq_benchmark.py"/>
 		<F N="service.py"/>
 		<F N="service_property.py"/>
