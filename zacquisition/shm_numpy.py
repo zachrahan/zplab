@@ -25,29 +25,56 @@
 import ctypes
 import errno
 import numpy
+import sys
 
-libc = ctypes.CDLL('libc.so.6')
-librt = ctypes.CDLL('librt.so.1')
+if sys.platform == 'linux':
+    libc = ctypes.CDLL('libc.so.6')
+    librt = ctypes.CDLL('librt.so.1')
+    shm_open   = librt.shm_open
+    shm_unlink = librt.shm_unlink
+    ftruncate  = libc.ftruncate
+    mmap       = libc.mmap
+    munmap     = libc.munmap
+    close      = libc.close
+    O_RDONLY = 0
+    O_RDWR   = 2
+    O_CREAT  = 64
+    O_EXCL   = 128
+    O_TRUNC  = 512
+    PROT_READ  = 1
+    PROT_WRITE = 2
+    MAP_SHARED = 1
+    # NB: 3rd argument, mode_t, is 4 bytes on linux and 2 bytes on osx (64 bit linux and osx, that is.  32
+    # bit?  Refer to: http://dilbert.com/strips/comic/1995-06-24/ ...)
+    shm_open.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.c_uint32]
+elif sys.platform == 'darwin':
+    libc = ctypes.CDLL('libc.dylib')
+    shm_open   = libc.shm_open
+    shm_unlink = libc.shm_unlink
+    ftruncate  = libc.ftruncate
+    mmap       = libc.mmap
+    munmap     = libc.munmap
+    close      = libc.close
+    O_RDONLY = 0
+    O_RDWR   = 2
+    O_CREAT  = 512
+    O_EXCL   = 2048
+    O_TRUNC  = 1024
+    PROT_READ  = 1
+    PROT_WRITE = 2
+    MAP_SHARED = 1
+    shm_open.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.c_uint16]
+else:
+    raise NotImplementedError('Platform "{}" is unsupported.  Only linux and darwin are supported.')
 
-librt.shm_open.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.c_uint32]
-librt.shm_unlink.argtypes = [ctypes.c_char_p]
-
-libc.ftruncate.argtypes = [ctypes.c_int, ctypes.c_int64]
-libc.mmap.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int64]
-libc.mmap.restype = ctypes.c_void_p
-libc.munmap.argtypes = [ctypes.c_void_p, ctypes.c_size_t]
-libc.close.argtypes = [ctypes.c_int]
-
-O_RDONLY = 0
-O_RDWR   = 2
-O_CREAT  = 64
-O_EXCL   = 128
-O_TRUNC  = 512
-PROT_READ  = 1
-PROT_WRITE = 2
-MAP_SHARED = 1
-MAP_FAILED = ctypes.cast(-1, ctypes.c_void_p)
 c_uint16_p = ctypes.POINTER(ctypes.c_uint16)
+MAP_FAILED = ctypes.cast(-1, ctypes.c_void_p)
+shm_unlink.argtypes = [ctypes.c_char_p]
+ftruncate.argtypes = [ctypes.c_int, ctypes.c_int64]
+mmap.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int64]
+mmap.restype = ctypes.c_void_p
+munmap.argtypes = [ctypes.c_void_p, ctypes.c_size_t]
+close.argtypes = [ctypes.c_int]
 
 class SharedMem:
     def __init__(self, name, shape, create=True, own=True):
@@ -59,31 +86,31 @@ class SharedMem:
         self.ndarray = None
         if create:
             # NB: 0o600 represents the unix permission value readable/writeable by owner
-            self.fd = librt.shm_open(self.name, O_RDWR | O_CREAT | O_EXCL, 0o600)
+            self.fd = shm_open(self.name, O_RDWR | O_CREAT | O_EXCL, 0o600)
             if self.fd == -1:
-                self._rose('libc.shm_open')
-            if libc.ftruncate(self.fd, self.byteCount) == -1:
-                self._rose('libc.ftruncate')
+                self._rose('shm_open')
+            if ftruncate(self.fd, self.byteCount) == -1:
+                self._rose('ftruncate')
         else:
-            self.fd = librt.shm_open(self.name, O_RDWR, 0)
+            self.fd = shm_open(self.name, O_RDWR, 0)
             if self.fd == -1:
-                self._rose('libc.shm_open')
-        data = libc.mmap(ctypes.c_void_p(0), self.byteCount, PROT_READ | PROT_WRITE, MAP_SHARED, self.fd, 0)
+                self._rose('shm_open')
+        data = mmap(ctypes.c_void_p(0), self.byteCount, PROT_READ | PROT_WRITE, MAP_SHARED, self.fd, 0)
         if data == MAP_FAILED or data == ctypes.c_void_p(0):
-            self._rose('libc.mmap')
+            self._rose('mmap')
         self.data = ctypes.cast(data, c_uint16_p)
         self.ndarray = numpy.ctypeslib.as_array(self.data, shape)
 
     def __del__(self):
         del self.ndarray
         if self.data is not None:
-            libc.munmap(ctypes.cast(self.data, ctypes.c_void_p), self.byteCount)
+            munmap(ctypes.cast(self.data, ctypes.c_void_p), self.byteCount)
         if self.fd is not None:
-            if libc.close(self.fd) == -1:
-                self._rose('libc.close')
+            if close(self.fd) == -1:
+                self._rose('close')
             if self.own:
-                if librt.shm_unlink(self.name) == -1:
-                    self._rose('librt.shm_unlink')
+                if shm_unlink(self.name) == -1:
+                    self._rose('shm_unlink')
 
     @staticmethod
     def _rose(fname):
