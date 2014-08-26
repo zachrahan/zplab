@@ -23,8 +23,9 @@
 # Authors: Erik Hvatum
 
 import enum
+import gevent
 import pathlib
-import zmq
+import zmq.green as zmq
 from zacquisition.service_property import ServiceProperty
 from zacquisition import service_property_validators as spvs
 
@@ -34,6 +35,8 @@ class Service:
         Client = 2
 
     ipcSocketPath = ServiceProperty(default=None, validators=spvs.readOnly)
+    eventIpcSocketFPath = ServiceProperty(default=None, validators=spvs.readOnly)
+    reqIpcSocketFPath = ServiceProperty(default=None, validators=spvs.readOnly)
     eventTcpPortNumber = ServiceProperty(default=None, validators=spvs.readOnly)
     reqTcpPortNumber = ServiceProperty(default=None, validators=spvs.readOnly)
     pyClassString = ServiceProperty(default=None, validators=spvs.readOnly)
@@ -94,10 +97,14 @@ class Service:
             ipcsp /= self.name
             if not ipcsp.exists():
                 ipcsp.mkdir(parents=True)
+            eipcsfp = ipcsp / (self.name + '__EVENT__.ipc')
+            ripcsfp = ipcsp / (self.name + '__REQUEST__.ipc')
             Service.ipcSocketPath.setWithoutValidating(self, ipcsp)
             # Use our name for IPC socket filenames
-            self._pubSocket.bind('ipc://' + str( ipcsp / (self.name + '__EVENT__.ipc')   ))
-            self._repSocket.bind('ipc://' + str( ipcsp / (self.name + '__REQUEST__.ipc') ))
+            self._pubSocket.bind('ipc://' + str(eipcsfp))
+            self._repSocket.bind('ipc://' + str(ripcsfp))
+            Service.eventIpcSocketFPath.setWithoutValidating(self, eipcsfp)
+            Service.reqIpcSocketFPath.setWithoutValidating(self, ripcsfp)
             if self._parent is None:
                 # If we are using port numbers supplied directly by the user, then only those ports will do
                 self._pubSocket.bind('tcp://*:{}'.format(etcpn))
@@ -119,6 +126,22 @@ class Service:
                 rtcpn = openTcpPort(self._repSocket, rtcpn)
             Service.eventTcpPortNumber.setWithoutValidating(self, etcpn)
             Service.reqTcpPortNumber.setWithoutValidating(self, rtcpn)
+
+            self._reqListenerGreenlet = gevent.spawn(self._reqListener)
+
+    def _describeRecursive(self):
+        ret = {'pyClassString':self.pyClassString,
+               'name':self.name,
+               'ipcSocketPath':str(self.ipcSocketPath)
+
+    def _reqListener(self):
+        '''Intended to run in a greenlet.'''
+        while True:
+            md = self._repSocket.recv_json()
+            if issubclass(type(md), dict):
+                if md['type'] == 'query':
+                    if md['query'] == 'describe recursive':
+
 
     @property
     def serviceProperties(self):
