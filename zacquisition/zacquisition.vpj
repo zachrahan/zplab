@@ -19,6 +19,7 @@
 		<F N="service.py"/>
 		<F N="service_property.py"/>
 		<F N="service_property_validators.py"/>
+		<F N="shm_numpy.py"/>
 	</Files>
 	<Config
 		Name="Debug"
