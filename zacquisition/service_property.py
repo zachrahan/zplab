@@ -44,7 +44,7 @@ class ServiceProperty:
     descriptors are not meant to be used through the member function decorator syntax, the benefit of
     the .property syntactic sugar offered by using @property member function decorators is preserved.'''
 
-    def __init__(self, default, validators=None):
+    def __init__(self, default, name, validators=None):
         '''Validators may be None, a function or some other kind of callable, or an iterable of callables.
         The return value from a validator is ignored - if it returns at all rather than raising an exception,
         the validator is assumed to have confirmed the validity of the value to be __set__.  Additionally, the
@@ -55,6 +55,7 @@ class ServiceProperty:
         meanTemperature's validator must know if the Season class instance's designation value is 'Summer' in
         order to determine that -28 is invalid for meanTemperature.'''
         self.default = default
+        self.name = name
         self._validators = validators
         self._instanceToValue = weakref.WeakKeyDictionary()
         self._instanceToCallbacks = weakref.WeakKeyDictionary()
@@ -78,24 +79,35 @@ class ServiceProperty:
                 return self._instanceToValue.get(instance, self.default)
 
     def __set__(self, instance, value):
-        '''Note that setting a property for the first time always results in property change callbacks being
-        executed, even if the value assigned is identical to the property's default value.'''
+        '''Note that setting a property for the first time on the client end always results in the transmission of
+        a property change request, even if the value assigned is identical to the property's default value.
+        Likewise, setting a property for the first time on the daemon end always results in the transmission of a
+        property change notification, even if the value assigned is identical to the property's default value.'''
         if self._validators is not None:
             if callable(self._validators):
                 self._validators(instance, value)
             else:
                 for validator in self._validators:
                     validator(instance, value)
-        if instance not in self._instanceToValue or value != self._instanceToValue[instance]:
+
+        def getcurrval():
             with self._getLock(instance):
-                self._instanceToValue[instance] = value
-            if instance in self._instanceToCallbacks:
-                for callback in self._instanceToCallbacks[instance]:
-                    callback(instance, value)
+                return self._instanceToValue[instance]
+
+        if instance not in self._instanceToValue or value != getcurrval()
+            if instance.instanceType == instance.InstanceType.Client:
+                instance._sendPropChangeReq(self.name, value)
+            else:
+                with self._getLock(instance):
+                    self._instanceToValue[instance] = value
+                instance._sendPropChangeNotification(self.name, value)
+                if instance in self._instanceToCallbacks:
+                    for callback in self._instanceToCallbacks[instance]:
+                        callback(instance, value)
 
     def setWithoutValidating(self, instance, value):
-        '''Replace stored value without executing validators.  Useful, for example, to initialize or update
-        a read-only (non user modifiable) property.'''
+        '''Replace stored value without executing validators.  Useful for initializing or updating a property
+        that is not directly user modifiable.'''
         if instance not in self._instanceToValue or value != self._instanceToValue[instance]:
             with self._getLock(instance):
                 self._instanceToValue[instance] = value

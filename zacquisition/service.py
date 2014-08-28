@@ -34,15 +34,15 @@ class Service:
         Daemon = 1
         Client = 2
 
-    ipcSocketPath = ServiceProperty(default=None, validators=spvs.readOnly)
-    eventIpcSocketFPath = ServiceProperty(default=None, validators=spvs.readOnly)
-    reqIpcSocketFPath = ServiceProperty(default=None, validators=spvs.readOnly)
-    eventTcpPortNumber = ServiceProperty(default=None, validators=spvs.readOnly)
-    reqTcpPortNumber = ServiceProperty(default=None, validators=spvs.readOnly)
-    pyClassString = ServiceProperty(default=None, validators=spvs.readOnly)
+    ipcSocketPath = ServiceProperty(default=None, name='ipcSocketPath', validators=spvs.readOnly)
+    eventIpcSocketFPath = ServiceProperty(default=None, name='eventIpcSocketFPath', validators=spvs.readOnly)
+    reqIpcSocketFPath = ServiceProperty(default=None, name='reqIpcSocketFPath', validators=spvs.readOnly)
+    eventTcpPortNumber = ServiceProperty(default=None, name='eventTcpPortNumber', validators=spvs.readOnly)
+    reqTcpPortNumber = ServiceProperty(default=None, name='reqTcpPortNumber', validators=spvs.readOnly)
+    pyClassString = ServiceProperty(default=None, name='pyClassString', validators=spvs.readOnly)
     # Because service name is used to identify the Unix domain socket (IPC socket), service name can only be set by providing
     # a name argument to __init__(..) and is otherwise read-only.
-    name = ServiceProperty(default='UNNAMED SERVICE', validators=spvs.readOnly)
+    name = ServiceProperty(default='UNNAMED SERVICE', name='name', validators=spvs.readOnly)
 
     def __init__(self, pyClassString, zmqContext=None, instanceType=InstanceType.Daemon, parent=None, name=None, \
                  ipcSocketPath='/tmp/zacquisition', eventTcpPortNumber=51500, reqTcpPortNumber=51501):
@@ -127,7 +127,19 @@ class Service:
             Service.eventTcpPortNumber.setWithoutValidating(self, etcpn)
             Service.reqTcpPortNumber.setWithoutValidating(self, rtcpn)
 
+            self._reqTypeHandlers = \
+            {
+                'query' : self._reqQueryHandler
+            }
+
+            self._reqQueryHandlers = \
+            {
+                'describe recursive' : self._reqQueryDescribeRecursiveHandler
+            }
+
             self._reqListenerGreenlet = gevent.spawn(self._reqListener)
+        else:
+            self._reqSocket = self._zc.socket(zmq.REQ)
 
     def _describeRecursive(self):
         ret = {'pyClassString':self.pyClassString,
@@ -141,6 +153,8 @@ class Service:
             if issubclass(type(md), dict):
                 if md['type'] == 'query':
                     if md['query'] == 'describe recursive':
+
+    def _sendPropChangeReq(self, name, value):
 
 
     @property

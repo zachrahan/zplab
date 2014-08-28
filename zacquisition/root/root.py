@@ -65,10 +65,12 @@ def makeRootDaemonTree(zmqContext=None, name='Service Tree Root', ipcSocketPath=
     rootSetEvent = threading.Event()
     def threadProc():
         nonlocal root
+        loop = gevent.get_hub().loop
         with rootLock:
             root = Root(zmqContext, name=name, ipcSocketPath=ipcSocketPath, eventTcpPortNumber=eventTcpPortNumber, reqTcpPortNumber=reqTcpPortNumber)
         rootSetEvent.set()
-        gevent.wait()
+        while True:
+            loop.run()
     thread = threading.Thread(target=threadProc)
     thread.start()
     rootSetEvent.wait()
