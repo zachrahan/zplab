@@ -127,24 +127,24 @@ class Service:
             Service.eventTcpPortNumber.setWithoutValidating(self, etcpn)
             Service.reqTcpPortNumber.setWithoutValidating(self, rtcpn)
 
-            self._reqTypeHandlers = \
-            {
-                'query' : self._reqQueryHandler
-            }
-
-            self._reqQueryHandlers = \
-            {
-                'describe recursive' : self._reqQueryDescribeRecursiveHandler
-            }
-
             self._reqListenerGreenlet = gevent.spawn(self._reqListener)
         else:
             self._reqSocket = self._zc.socket(zmq.REQ)
 
-    def _describeRecursive(self):
-        ret = {'pyClassString':self.pyClassString,
-               'name':self.name,
-               'ipcSocketPath':str(self.ipcSocketPath)
+
+    def describeRecursive(self):
+        if self.instanceType == self.InstanceType.Client:
+
+        md = \
+        {
+            'type':'query reply',
+            'hostName':socket.gethostname(),
+            'pyClassString':self.pyClassString,
+            'name':self.name,
+            'eventIpcSocketFPath':str(self.eventIpcSocketFPath),
+            'reqIpcSocketFPath':str(self.reqIpcSocketFPath),
+            'eventTcpPortNumber':self.eventTcpPortNumber,
+            'reqTcpPortNumber':self.reqTcpPortNumber
 
     def _reqListener(self):
         '''Intended to run in a greenlet.'''
@@ -153,6 +153,7 @@ class Service:
             if issubclass(type(md), dict):
                 if md['type'] == 'query':
                     if md['query'] == 'describe recursive':
+                        self._describeRecursive()
 
     def _sendPropChangeReq(self, name, value):
 
