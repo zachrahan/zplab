@@ -34,27 +34,27 @@ class Dm6000b_Client:
     def waitForReady(self):
         self._reqSocket.send_json({'command':'ping'})
         md = self._reqSocket.recv_json()
-        if md.get('reply_to_command') != 'ping' or md.get('reply') != 'pong':
+        if md.get('reply to command') != 'ping' or md.get('reply') != 'pong':
             raise RuntimeError('Received incorrect reply to "ping" command.')
 
     def shutDownDaemon(self):
         self._reqSocket.send_json({'command':'shut down'})
         md = self._reqSocket.recv_json()
-        if md.get('reply_to_command') != 'shut down' or md.get('reply') != 'shutting down':
+        if md.get('reply to command') != 'shut down' or md.get('reply') != 'shutting down':
             raise RuntimeError('Received incorrect reply to "shut down" command.')
 
     def blockDaemonFor(self, seconds):
         self._reqSocket.send_json({'command':'block',
                                    'seconds':seconds})
         md = self._reqSocket.recv_json()
-        if md.get('reply_to_command') != 'block' or md.get('reply') not in ('blocking...', 'block complete'):
+        if md.get('reply to command') != 'block' or md.get('reply') not in ('blocking...', 'block complete'):
             raise RuntimeError('Received incorrect reply to "block" command.')
 
     @property
     def async(self):
         self._reqSocket.send_json({'command':'get async'})
         md = self._reqSocket.recv_json()
-        if md.get('reply_to_command') != 'get async' or 'async' not in md:
+        if md.get('reply to command') != 'get async' or 'async' not in md:
             raise RuntimeError('Received incorrect reply to "get async" command.')
         return md['async']
 
@@ -63,5 +63,5 @@ class Dm6000b_Client:
         self._reqSocket.send_json({'command':'set async',
                                    'async':async})
         md = self._reqSocket.recv_json()
-        if md.get('reply_to_command') != 'set async' or md.get('reply') != 'async set':
+        if md.get('reply to command') != 'set async' or md.get('reply') != 'async set':
             raise RuntimeError('Received incorrect reply to "set async" command.')
