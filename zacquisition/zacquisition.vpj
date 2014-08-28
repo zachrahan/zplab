@@ -21,7 +21,8 @@
 			<Folder
 				Name="function_units"
 				Filters=""/>
-			<F N="dm6000b/dm6000b.py"/>
+			<F N="dm6000b/client.py"/>
+			<F N="dm6000b/daemon.py"/>
 		</Folder>
 		<F N="../misc/image_transfer_zmq_benchmark.py"/>
 		<F N="service.py"/>
