@@ -35,28 +35,30 @@ class _FutureResponse:
         self.responseParameters = None
         self.responseCallback = responseCallback
 
-    def get_response(self):
+    def getResponse(self):
         self.hasResponse.wait()
         return (self.responseDispositionCode, self.responseParameters)
 
-    def _set_response(self, responseDispositionCode, responseParamters):
+    def _setResponse(self, responseDispositionCode, responseParamters):
         self.responseDispositionCode = responseDispositionCode
         self.responseParameters = responseParamters
         self.hasResponse.set()
         if self.responseCallback:
-            responseCallback(self.responseDispositionCode, self.responseParameters)
+            self.responseCallback(self.responseDispositionCode, self.responseParameters)
 
 class _Router(threading.Thread):
     def __init__(self, serialPortDescriptor):
-        super().__init__()
+        super().__init__(daemon=True)
         self._serialPort = serial.Serial(serialPortDescriptor, baudrate=115200)
+        self._lock = threading.RLock()
         self._receiveRegistry = collections.defaultdict(list)
 
     def run(self):
         while True:
             line = self._readLine()
+            print(line)
             if line[0] != '$' and len(line) >= 5:
-                self._receive(line[0:2], line[2:3], line[3:5], line[5:])
+                self._receive(line[0:2], line[2:3], line[3:5], line[6:])
 
     def sendMessage(self, message, responseCallback=None):
         assert(len(message) >= 5)
@@ -67,15 +69,19 @@ class _Router(threading.Thread):
 
     def _send(self, message, response):
         responseId = message[0:2] + message[3:5]
-        message = message.encode('utf-8')
-        self._receiveRegistry[responseId].append(response)
+        print(responseId)
+        message = (message + '\r').encode('utf-8')
+        with self._lock:
+            self._receiveRegistry[responseId].append(response)
+            assert(self._serialPort.write(message) == len(message))
 
     def _receive(self, functionUnitId, dispositionCode, commandId, parameters):
         responseId = functionUnitId + commandId # NB: this represents string concatenation
-        if responseId in self._receiveRegistry:
-            responses = self._receiveRegistry.pop(responseId)
-            for response in responses:
-                response._set_response(dispositionCode, parameters)
+        with self._lock:
+            if responseId in self._receiveRegistry:
+                responses = self._receiveRegistry.pop(responseId)
+                for response in responses:
+                    response._setResponse(dispositionCode, parameters)
 
     def _readLine(self):
         line = ''
@@ -85,6 +91,7 @@ class _Router(threading.Thread):
                 break
             else:
                 line += c
+        return line
 
 class Dm6000b_Daemon:
     def __init__(self, zmqContext, controlUri, serialPort='/dev/ttyScope'):
