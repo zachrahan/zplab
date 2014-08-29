@@ -28,8 +28,8 @@ import pathlib
 import threading
 import weakref
 import zmq.green as zmq
-#from zacquisition.service_property import ServiceProperty
-#from zacquisition import service_property_validators as spvs
+from zacquisition.service_property import ServiceProperty
+from zacquisition import service_property_validators as spvs
 
 class _ClientEventThread(threading.Thread):
     _nextId = 0
@@ -75,6 +75,7 @@ class Service:
         Daemon = 1
         Client = 2
 
+    daemonHostName = ServiceProperty(default=None, name='daemonHostName', validators=spvs.readOnly)
     ipcSocketPath = ServiceProperty(default=None, name='ipcSocketPath', validators=spvs.readOnly)
     eventIpcSocketFPath = ServiceProperty(default=None, name='eventIpcSocketFPath', validators=spvs.readOnly)
     commandIpcSocketFPath = ServiceProperty(default=None, name='commandIpcSocketFPath', validators=spvs.readOnly)
@@ -87,12 +88,16 @@ class Service:
 
     def __init__(self, pyClassString, zmqContext=None, instanceType=InstanceType.Daemon, parent=None, name=None, \
                  ipcSocketPath='/tmp/zacquisition', eventTcpPortNumber=51500, commandTcpPortNumber=51501, \
-                 hostName=None):
+                 daemonHostName=None):
         '''ipcPathPrefix, eventTcpPortNumber, and commandTcpPortNumber are only used if parent is None.
         If parent is not None, these values are computed from those of the parent and the values supplied
         are ignored.
 
-        The hostName argument is only used if instanceType is Client.'''
+        The daemonHostName argument is required if instanceType is Client.  If instanceType is Daemon,
+        specifying daemonHostName overrides the default behavior of using socket.gethostname(), which is useful
+        in the case where clients will connect to the daemon over the network without being able to resolve
+        the daemon host name to an IP, requiring daemon host name to be specified directly as an IP address.'''
+
         # Enumerate ServiceProperties so that a list of their names is available via the serviceProperties property
         # (which is itself a standard Python property and not a ServiceProperty descriptor instance).
         self._serviceProperties = set()
@@ -132,8 +137,8 @@ class Service:
             self._clientInit(ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber)
 
     def _daemonInit(self, ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber):
-        self._pubSocket = self._zc.socket(zmq.PUB)
-        self._repSocket = self._zc.socket(zmq.REP)
+        self._eventSocket = self._zc.socket(zmq.PUB)
+        self._commandSocket = self._zc.socket(zmq.REP)
         if self._parent is None:
             ipcsp = pathlib.Path(ipcSocketPath)
             etcpn = eventTcpPortNumber
@@ -151,14 +156,14 @@ class Service:
         ripcsfp = ipcsp / (self.name + '__REQUEST__.ipc')
         Service.ipcSocketPath.setWithoutValidating(self, ipcsp)
         # Use our name for IPC socket filenames
-        self._pubSocket.bind('ipc://' + str(eipcsfp))
-        self._repSocket.bind('ipc://' + str(ripcsfp))
+        self._eventSocket.bind('ipc://' + str(eipcsfp))
+        self._commandSocket.bind('ipc://' + str(ripcsfp))
         Service.eventIpcSocketFPath.setWithoutValidating(self, eipcsfp)
         Service.commandIpcSocketFPath.setWithoutValidating(self, ripcsfp)
         if self._parent is None:
             # If we are using port numbers supplied directly by the user, then only those ports will do
-            self._pubSocket.bind('tcp://*:{}'.format(etcpn))
-            self._repSocket.bind('tcp://*:{}'.format(rtcpn))
+            self._eventSocket.bind('tcp://*:{}'.format(etcpn))
+            self._commandSocket.bind('tcp://*:{}'.format(rtcpn))
         else:
             # If we are using computed port numbers, then we use the first available ports greater than or
             # equal to desired
@@ -172,47 +177,50 @@ class Service:
                         if number >= 65536:
                             raise RuntimeError('Failed to find available TCP port number.')
                 return number
-            etcpn = openTcpPort(self._pubSocket, etcpn)
-            rtcpn = openTcpPort(self._repSocket, rtcpn)
+            etcpn = openTcpPort(self._eventSocket, etcpn)
+            rtcpn = openTcpPort(self._commandSocket, rtcpn)
         Service.eventTcpPortNumber.setWithoutValidating(self, etcpn)
         Service.commandTcpPortNumber.setWithoutValidating(self, rtcpn)
 
-        self._reqListenerGreenlet = gevent.spawn(self._reqListener)
+        self._daemonCommandSocketListenerGt = gevent.spawn(self._daemonCommandSocketListener)
 
     def _clientInit(self, ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber):
-        self._reqSocket = self._zc.socket(zmq.REQ)
+        self._commandSocket = self._zc.socket(zmq.REQ)
+        self._clientEventThread = _ClientEventThread(self, self._eventSocketURI)
 
     def describeRecursive(self):
-        if self.instanceType == self.InstanceType.Client:
-
-        md = \
+        ret = \
         {
-            'type':'query reply',
-            'hostName':socket.gethostname(),
+            'daemonHostName':self.daemonHostName,
             'pyClassString':self.pyClassString,
             'name':self.name,
             'eventIpcSocketFPath':str(self.eventIpcSocketFPath),
             'commandIpcSocketFPath':str(self.commandIpcSocketFPath),
             'eventTcpPortNumber':self.eventTcpPortNumber,
-            'commandTcpPortNumber':self.commandTcpPortNumber
+            'commandTcpPortNumber':self.commandTcpPortNumber,
+            'children':{child.name:child.describeRecursive() for child in self.children}
+        }
+        return ret
 
-    def _reqListener(self):
-        '''Intended to run in a greenlet.'''
+    def _daemonCommandSocketListener(self):
         while True:
-            md = self._repSocket.recv_json()
-            if issubclass(type(md), dict):
-                if md['type'] == 'query':
-                    if md['query'] == 'describe recursive':
-                        self._describeRecursive()
+            md = self._commandSocket.recv_json()
+            assert(issubclass(type(md), dict))
+            if md['type'] == 'query':
+                if md['query'] == 'describe recursive':
+                    self._describeRecursive()
 
-    def _sendPropChangeReq(self, name, value):
+    def _sendChangePropCommand(self, name, value):
+        pass
 
+    def _sendPropChangedNotification(self, name, value):
+        pass
 
     @property
     def serviceProperties(self):
         '''Returns a list of the names of ServiceProperties provided by this instance.  At minimum, this list
         contains ['name'].'''
-        return self._serviceProperties.copy()
+        return self._serviceProperties
 
     @property
     def instanceType(self):

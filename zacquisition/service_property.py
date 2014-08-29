@@ -94,9 +94,9 @@ class ServiceProperty:
             with self._getLock(instance):
                 return self._instanceToValue[instance]
 
-        if instance not in self._instanceToValue or value != getcurrval()
+        if instance not in self._instanceToValue or value != getcurrval():
             if instance.instanceType == instance.InstanceType.Client:
-                instance._sendPropChangeReq(self.name, value)
+                instance._sendChangePropCommand(self.name, value)
             else:
                 with self._getLock(instance):
                     self._instanceToValue[instance] = value
