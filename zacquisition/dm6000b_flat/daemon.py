@@ -93,8 +93,42 @@ class _SerialPortRouter(threading.Thread):
                 line += c
         return line
 
-class Dm6000b_Daemon:
+class _Async_Daemon:
+    '''Mixin providing async property for daemons.'''
+    def __init__(self, async=False):
+        try:
+            handlers = self.handlers
+        except AttributeError:
+            self.handlers = {}
+            handlers = self.handlers
+        handlers['get async'] = self._handleGetAsync
+        handlers['set async'] = self._setAsync
+        self._asyncLock = threading.Lock()
+        with self._asyncLock:
+            self._async = async
+
+    @property
+    def async(self):
+        with self._asyncLock:
+            return self._async
+
+    @async.setter
+    def async(self, async):
+        with self._asyncLock:
+            self._async = async
+
+    def _handleGetAsync(self, replyMd):
+        replyMd['async'] = self.async
+        return (True, replyMd)
+
+    def _handleSetAsync(self, replyMd, async):
+        self.async = async
+        replyMd['reply'] = 'async set'
+        return (True, replyMd)
+
+class Dm6000b_Daemon(_Async_Daemon):
     def __init__(self, zmqContext, controlUri, serialPort='/dev/ttyScope'):
+        _Async_Daemon.__init__(self)
         self._zc = zmqContext
         self._controlUri = controlUri
         self._repSocket = self._zc.socket(zmq.REP)
@@ -104,7 +138,7 @@ class Dm6000b_Daemon:
         self._router.start()
 
     def run(self):
-        while self._takeReq:
+        while self._takeReq():
             pass
 
     def _handlePing(self, replyMd):
@@ -130,19 +164,9 @@ class Dm6000b_Daemon:
             self._repSocket.send_json(md)
         return True
 
-    def _handleGetAsync(self, replyMd):
-        self._repSocket.send_json({'reply to command':'get async',
-                                   'async':self._async})
-        return True
-
-    def _handleSetAsync(self, replyMd, async):
-        self._async = async
-        self._repSocket.send_json({'reply to command':'set async',
-                                   'reply':'async set'})
-        return True
-
     def _defaultHandler(self, replyMd):
         print('received unknown command')
+        replyMd['error'] = 'unknown command'
         self._repSocket.send_json({'error':'unknown command'})
         return True
 
@@ -163,6 +187,10 @@ class Dm6000b_Daemon:
         if 'command' in md:
             del md['command']
         return Dm6000b_Daemon.handlers.get(command, Dm6000b_Daemon._defaultHandler)(self, **md)
+
+#class Stage_Daemon:
+#   def __init__(self, dm6000b_daemon):
+
 
 if __name__ == '__main__':
     import sys
