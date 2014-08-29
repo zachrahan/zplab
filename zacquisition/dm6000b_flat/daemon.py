@@ -46,7 +46,7 @@ class _FutureResponse:
         if self.responseCallback:
             self.responseCallback(self.responseDispositionCode, self.responseParameters)
 
-class _Router(threading.Thread):
+class _SerialPortRouter(threading.Thread):
     def __init__(self, serialPortDescriptor):
         super().__init__(daemon=True)
         self._serialPort = serial.Serial(serialPortDescriptor, baudrate=115200)
@@ -100,7 +100,7 @@ class Dm6000b_Daemon:
         self._repSocket = self._zc.socket(zmq.REP)
         self._repSocket.bind(self._controlUri)
         self._async = False
-        self._router = _Router(serialPort)
+        self._router = _SerialPortRouter(serialPort)
         self._router.start()
 
     def run(self):
