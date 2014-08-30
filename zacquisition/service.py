@@ -25,6 +25,7 @@
 import enum
 import gevent
 import pathlib
+import socket
 import threading
 import weakref
 import zmq.green as zmq
@@ -93,10 +94,11 @@ class Service:
         If parent is not None, these values are computed from those of the parent and the values supplied
         are ignored.
 
-        The daemonHostName argument is required if instanceType is Client.  If instanceType is Daemon,
-        specifying daemonHostName overrides the default behavior of using socket.gethostname(), which is useful
-        in the case where clients will connect to the daemon over the network without being able to resolve
-        the daemon host name to an IP, requiring daemon host name to be specified directly as an IP address.'''
+        If instanceType is Client and daemonHostName is None, the daemon is assumed to be accessible via IPC.
+        If instanceType is Daemon, specifying daemonHostName overrides the default behavior of using
+        socket.gethostname(), which is useful in the case where clients will connect to the daemon over the
+        network without being able to resolve the daemon host name to an IP, requiring daemon host name to
+        be specified directly as an IP address.'''
 
         # Enumerate ServiceProperties so that a list of their names is available via the serviceProperties property
         # (which is itself a standard Python property and not a ServiceProperty descriptor instance).
@@ -132,11 +134,14 @@ class Service:
         self._instanceType = Service.InstanceType(instanceType)
 
         if self._instanceType == Service.InstanceType.Daemon:
-            self._daemonInit(ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber)
+            self._daemonInit(ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName)
         else:
-            self._clientInit(ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber)
+            self._clientInit(ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName)
 
-    def _daemonInit(self, ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber):
+    def _daemonInit(self, ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName):
+        if daemonHostName is None:
+            daemonHostName = socket.gethostname()
+        Service.daemonHostName.setWithoutValidating(self, daemonHostName)
         self._eventSocket = self._zc.socket(zmq.PUB)
         self._commandSocket = self._zc.socket(zmq.REP)
         if self._parent is None:
@@ -184,7 +189,7 @@ class Service:
 
         self._daemonCommandSocketListenerGt = gevent.spawn(self._daemonCommandSocketListener)
 
-    def _clientInit(self, ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber):
+    def _clientInit(self, ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName):
         self._commandSocket = self._zc.socket(zmq.REQ)
         self._clientEventThread = _ClientEventThread(self, self._eventSocketURI)
 
@@ -198,7 +203,7 @@ class Service:
             'commandIpcSocketFPath':str(self.commandIpcSocketFPath),
             'eventTcpPortNumber':self.eventTcpPortNumber,
             'commandTcpPortNumber':self.commandTcpPortNumber,
-            'children':{child.name:child.describeRecursive() for child in self.children}
+            'children':[child[1].describeRecursive() for child in self.children]
         }
         return ret
 
@@ -207,8 +212,19 @@ class Service:
             md = self._commandSocket.recv_json()
             assert(issubclass(type(md), dict))
             if md['type'] == 'query':
+                replyMd = {'type':'query reply',
+                           'query':md['query']}
+                self._commandSocket.send_json(replyMd, zmq.SNDMORE)
                 if md['query'] == 'describe recursive':
-                    self._describeRecursive()
+                    replyMd = self.describeRecursive()
+                    replyMd['disposition'] = 'ok'
+                    self._commandSocket.send_json(replyMd)
+            elif md['type'] == 'command':
+                replyMd = {'type':'command reply',
+                           'command':md['command']}
+                self._commandSocket.send_json(replyMd, zmq.SNDMORE)
+                if md['command'] == 'shut down':
+                    self._commandSocket.send_json({'disposition':'ok'})
 
     def _sendChangePropCommand(self, name, value):
         pass
@@ -239,12 +255,12 @@ class Service:
     def children(self):
         return self._children
 
-def makeClientTree(zmqContext, uri):
-    req_socket = zmqContext.socket(zmq.REQ)
-    req_socket.connect(uri)
-    req_socket.send_json({'type':'query',
-                          'query':'describe recursive'})
-    rep = req_socket.recv_json()
-    if rep['type'] != 'query reply':
-        raise RuntimeError('Reply received for "describe recursive" query is not a "query reply", but a "{}".'.format(rep['type']))
+#def makeClientTree(zmqContext, uri):
+#    req_socket = zmqContext.socket(zmq.REQ)
+#    req_socket.connect(uri)
+#    req_socket.send_json({'type':'query',
+#                          'query':'describe recursive'})
+#    rep = req_socket.recv_json()
+#    if rep['type'] != 'query reply':
+#        raise RuntimeError('Reply received for "describe recursive" query is not a "query reply", but a "{}".'.format(rep['type']))
 

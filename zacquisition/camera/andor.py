@@ -27,7 +27,11 @@ from zacquisition.service_property import ServiceProperty
 from zacquisition import service_property_validators as spvs
 
 class Camera(Service):
-    exposureTime = ServiceProperty(default=0.01, validators=spvs.isFloatLike)
+    exposureTime = ServiceProperty(default=0.01, name='exposureTime', validators=spvs.isFloatLike)
 
-    def __init__(self, zmqContext=None, instanceType=Service.InstanceType.Daemon, parent=None, name='Andor Camera (Zyla 5.5)'):
-        super().__init__('zacquisition.camera.andor.Camera', zmqContext, instanceType, parent, name)
+    def __init__(self, pyClassString, zmqContext=None, instanceType=Service.InstanceType.Daemon, parent=None, name='Andor Camera (Zyla 5.5)', \
+                 ipcSocketPath='/tmp/zacquisition', eventTcpPortNumber=51500, commandTcpPortNumber=51501, \
+                 daemonHostName=None):
+        super().__init__('zacquisition.camera.andor.Camera', zmqContext, instanceType, parent, name, \
+                         ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, \
+                         daemonHostName)

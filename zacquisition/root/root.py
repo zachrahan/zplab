@@ -32,10 +32,12 @@ from zacquisition import service_property_validators as spvs
 from zacquisition.camera.andor import Camera
 
 class Root(Service):
-    def __init__(self, zmqContext=None, instanceType=Service.InstanceType.Daemon, parent=None, name='Service Tree Root', \
-                 ipcSocketPath='/tmp/zacquisition', eventTcpPortNumber=51500, reqTcpPortNumber=51501):
-        super().__init__('zacquisition.root.root', zmqContext, instanceType, parent, name, \
-                         ipcSocketPath, eventTcpPortNumber, reqTcpPortNumber)
+    def __init__(self, pyClassString, zmqContext=None, instanceType=Service.InstanceType.Daemon, name='Service Tree Root', \
+                 ipcSocketPath='/tmp/zacquisition', eventTcpPortNumber=51500, commandTcpPortNumber=51501, \
+                 daemonHostName=None):
+        super().__init__('zacquisition.root.root', zmqContext, instanceType, None, name, \
+                         ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, \
+                         daemonHostName)
 
         if instanceType == Service.InstanceType.Daemon:
             self._makeServiceTree()
@@ -48,7 +50,7 @@ class Root(Service):
     def camera(self):
         return self._camera
 
-def makeRootDaemonTree(zmqContext=None, name='Service Tree Root', ipcSocketPath='/tmp/zacquisition', eventTcpPortNumber=51500, reqTcpPortNumber=51501):
+def makeRootDaemonTree(zmqContext=None, name='Service Tree Root', ipcSocketPath='/tmp/zacquisition', eventTcpPortNumber=51500, commandTcpPortNumber=51501):
     '''Suppose you want to use the Root backend in an iPython interactive session.  You may instantiate Root directly,
     but because you are retaining control of the main thread, none of Root's greenlets will have an opportunity to
     execute unless you do gevent.wait() or equivalent.  However, gevent.wait() will block forever, preventing you
@@ -67,7 +69,7 @@ def makeRootDaemonTree(zmqContext=None, name='Service Tree Root', ipcSocketPath=
         nonlocal root
         loop = gevent.get_hub().loop
         with rootLock:
-            root = Root(zmqContext, name=name, ipcSocketPath=ipcSocketPath, eventTcpPortNumber=eventTcpPortNumber, reqTcpPortNumber=reqTcpPortNumber)
+            root = Root(zmqContext, name=name, ipcSocketPath=ipcSocketPath, eventTcpPortNumber=eventTcpPortNumber, commandTcpPortNumber=commandTcpPortNumber)
         rootSetEvent.set()
         while True:
             loop.run()
@@ -76,3 +78,8 @@ def makeRootDaemonTree(zmqContext=None, name='Service Tree Root', ipcSocketPath=
     rootSetEvent.wait()
     with rootLock:
         return root, thread
+
+if __name__ == '__main__':
+    context = zmq.Context()
+    root, thread = makeRootDaemonTree(context)
+    print(root.describeRecursive())
