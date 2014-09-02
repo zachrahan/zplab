@@ -100,9 +100,11 @@ class Service:
         are ignored.
 
         If instanceType is Client and daemonHostName is None, the daemon is assumed to be accessible via IPC.
-        If instanceType is Daemon, specifying daemonHostName overrides the default behavior of using
-        socket.gethostname(), which is useful in the case where clients will connect to the daemon over the
-        network without being able to resolve the daemon host name to an IP, requiring daemon host name to
+        If instanceType is Client and daemonHostName is not, the daemon is assumed to be accessible via IPC if
+        daemonHostName is the same as that of the computer executing the interpreter.
+        If instanceType is Daemon, specifying daemonHostName overrides the default behavior of using the value
+        from socket.gethostname(), which is useful in the case where clients will connect to the daemon over
+        the network without being able to resolve the daemon host name to an IP, requiring daemon host name to
         be specified directly as an IP address.'''
 
         # Enumerate ServiceProperties so that a list of their names is available via the serviceProperties property
@@ -126,51 +128,44 @@ class Service:
             name = str(name)
             Service.name.setWithoutValidating(self, name)
 
-        if parent is None:
-            self._parent = None
-        else:
-            if not issubclass(type(parent), Service):
-                raise TypeError('parent must be a sub class of zacquisition.Service.')
-            self._parent = parent
-
         self._children = []
 
         # Note that the typecast causes a ValueError to be raised if nonsense is supplied for instanceType
         self._instanceType = Service.InstanceType(instanceType)
 
         if self._instanceType == Service.InstanceType.Daemon:
-            self._daemonInit(ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName)
+            self._daemonInit(ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName, parent)
         else:
-            self._clientInit(ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName)
+            self._clientInit(ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName, parent)
 
-    def _daemonInit(self, ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName):
+    def _daemonInit(self, ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName, parent):
         if daemonHostName is None:
             daemonHostName = socket.gethostname()
         Service.daemonHostName.setWithoutValidating(self, daemonHostName)
         self._eventSocket = self._zc.socket(zmq.PUB)
         self._commandSocket = self._zc.socket(zmq.REP)
-        if self._parent is None:
+        if parent is None:
             ipcsp = pathlib.Path(ipcSocketPath)
             etcpn = eventTcpPortNumber
             rtcpn = commandTcpPortNumber
         else:
             # Use directory in which parent's IPC sockets reside as IPC path prefix
-            ipcsp = self._parent.ipcSocketPath
-            etcpn = self._parent.eventTcpPortNumber + 2
-            rtcpn = self._parent.commandTcpPortNumber + 2
+            ipcsp = parent.ipcSocketPath
+            etcpn = parent.eventTcpPortNumber + 2
+            rtcpn = parent.commandTcpPortNumber + 2
         # Place our IPC socket in a subdirectory with our (this service's) name
         ipcsp /= self.name
         if not ipcsp.exists():
             ipcsp.mkdir(parents=True)
         eipcsfp = ipcsp / (self.name + '__EVENT__.ipc')
-        ripcsfp = ipcsp / (self.name + '__REQUEST__.ipc')
+        ripcsfp = ipcsp / (self.name + '__COMMAND__.ipc')
         Service.ipcSocketPath.setWithoutValidating(self, ipcsp)
         # Use our name for IPC socket filenames
         self._eventSocket.bind('ipc://' + str(eipcsfp))
         self._commandSocket.bind('ipc://' + str(ripcsfp))
         Service.eventIpcSocketFPath.setWithoutValidating(self, eipcsfp)
         Service.commandIpcSocketFPath.setWithoutValidating(self, ripcsfp)
-        if self._parent is None:
+        if parent is None:
             # If we are using port numbers supplied directly by the user, then only those ports will do
             self._eventSocket.bind('tcp://*:{}'.format(etcpn))
             self._commandSocket.bind('tcp://*:{}'.format(rtcpn))
@@ -196,10 +191,26 @@ class Service:
         self._daemonCommandSocketListenerGt = gevent.spawn(self._daemonCommandSocketListener)
         self.daemonGreenThreads.add(self._daemonCommandSocketListenerGt)
 
-    def _clientInit(self, ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName):
+    def _clientInit(self, ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName, parent):
         self._async = False
         self._commandSocket = self._zc.socket(zmq.REQ)
-        self._clientEventThread = _ClientEventThread(self, self._eventSocketURI)
+        if ipcSocketPath is None or daemonHostName != socket.gethostname():
+            print(self.name, 'connecting via tcp...')
+            self._commandSocket.connect('tcp://{}:{}'.format(daemonHostName, commandTcpPortNumber))
+            eventSocketURI = 'tcp://{}:{}'.format(daemonHostName, eventTcpPortNumber)
+            Service.eventTcpPortNumber.setWithoutValidating(self, eventTcpPortNumber)
+            Service.commandTcpPortNumber.setWithoutValidating(self, commandTcpPortNumber)
+        else:
+            print(self.name, 'connecting via ipc...')
+            ipcsp = pathlib.Path(ipcSocketPath) / self.name
+            eipcsp = ipcsp / (self.name + '__EVENT__.ipc')
+            cipcsp = ipcsp / (self.name + '__COMMAND__.ipc')
+            self._commandSocket.connect('ipc://' + str(cipcsp))
+            eventSocketURI = 'ipc://' + str(eipcsp)
+            Service.eventIpcSocketFPath.setWithoutValidating(self, eipcsp)
+            Service.commandIpcSocketFPath.setWithoutValidating(self, cipcsp)
+        self._clientEventThread = _ClientEventThread(self, eventSocketURI)
+        self._clientEventThread.start()
 
     def describeRecursive(self):
         ret = \
@@ -245,6 +256,7 @@ class Service:
     def _daemonCommandSocketListener(self):
         while True:
             md = self._commandSocket.recv_json()
+            print(md)
             assert(issubclass(type(md), dict))
             if md['type'] == 'query':
                 replyMd = {'type':'query reply',
@@ -264,6 +276,7 @@ class Service:
                     else:
                         replyMd['status'] = 'ok'
                         self._commandSocket.send_json(replyMd)
+                        print('shutting down...')
                         break
 
     def _sendChangePropCommand(self, name, value):
@@ -276,7 +289,10 @@ class Service:
         '''Stop the daemon and all of its children.'''
         for child in self.children:
             child.shutDown()
-        self.shutDown()
+        if self.instanceType == Service.InstanceType.Client:
+            self._commandSocket.send_json({'type':'command', 'command':'shut down'})
+            self._commandSocket.recv_json()
+            self._clientEventThread.stop()
 
     @property
     def serviceProperties(self):
@@ -294,10 +310,6 @@ class Service:
         return self._instanceType
 
     @property
-    def parent(self):
-        return self._parent
-
-    @property
     def children(self):
         return self._children
 
@@ -309,14 +321,4 @@ class Service:
     @async.setter
     def async(self, async):
         self._async = async
-
-
-#def makeClientTree(zmqContext, uri):
-#    req_socket = zmqContext.socket(zmq.REQ)
-#    req_socket.connect(uri)
-#    req_socket.send_json({'type':'query',
-#                          'query':'describe recursive'})
-#    rep = req_socket.recv_json()
-#    if rep['type'] != 'query reply':
-#        raise RuntimeError('Reply received for "describe recursive" query is not a "query reply", but a "{}".'.format(rep['type']))
 

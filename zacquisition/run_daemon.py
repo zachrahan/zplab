@@ -60,5 +60,4 @@ execLines.append('daemon.daemonGreenThreads.join()')
 gevent.signal(signal.SIGINT, keyboardInterruptHandler)
 
 execStr = '\n'.join(execLines)
-print(execStr)
 exec(execStr)
