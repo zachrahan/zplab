@@ -24,6 +24,7 @@
 
 import enum
 import gevent
+import gevent.pool
 import pathlib
 import socket
 import threading
@@ -33,6 +34,10 @@ from zacquisition.service_property import ServiceProperty
 from zacquisition import service_property_validators as spvs
 
 class _ClientEventThread(threading.Thread):
+    # _nextId is used for formulating a unique thread control zmq socket URI.  Sending messages between threads through zmq is the
+    # most convenient mechanism for controling execution of a real thread (ie not greenlet) in this particular situation: waiting
+    # on real syncronization primitives (ie non gevent monkeypatched) is not green, but waiting on a zmq socket is due to our use
+    # of zmq.green.
     _nextId = 0
     _nextIdLock = threading.Lock()
 
@@ -87,7 +92,7 @@ class Service:
     # a name argument to __init__(..) and is otherwise read-only.
     name = ServiceProperty(default='UNNAMED SERVICE', name='name', validators=spvs.readOnly)
 
-    def __init__(self, pyClassString, zmqContext=None, instanceType=InstanceType.Daemon, parent=None, name=None, \
+    def __init__(self, pyClassString, zmqContext=None, instanceType=InstanceType.Client, parent=None, name=None, \
                  ipcSocketPath='/tmp/zacquisition', eventTcpPortNumber=51500, commandTcpPortNumber=51501, \
                  daemonHostName=None):
         '''ipcPathPrefix, eventTcpPortNumber, and commandTcpPortNumber are only used if parent is None.
@@ -187,9 +192,12 @@ class Service:
         Service.eventTcpPortNumber.setWithoutValidating(self, etcpn)
         Service.commandTcpPortNumber.setWithoutValidating(self, rtcpn)
 
+        self.daemonGreenThreads = gevent.pool.Group()
         self._daemonCommandSocketListenerGt = gevent.spawn(self._daemonCommandSocketListener)
+        self.daemonGreenThreads.add(self._daemonCommandSocketListenerGt)
 
     def _clientInit(self, ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName):
+        self._async = False
         self._commandSocket = self._zc.socket(zmq.REQ)
         self._clientEventThread = _ClientEventThread(self, self._eventSocketURI)
 
@@ -241,23 +249,34 @@ class Service:
             if md['type'] == 'query':
                 replyMd = {'type':'query reply',
                            'query':md['query']}
-                self._commandSocket.send_json(replyMd, zmq.SNDMORE)
                 if md['query'] == 'describe recursive':
                     replyMd = self.describeRecursive()
-                    replyMd['disposition'] = 'ok'
+                    replyMd['status'] = 'ok'
                     self._commandSocket.send_json(replyMd)
             elif md['type'] == 'command':
                 replyMd = {'type':'command reply',
                            'command':md['command']}
-                self._commandSocket.send_json(replyMd, zmq.SNDMORE)
                 if md['command'] == 'shut down':
-                    self._commandSocket.send_json({'disposition':'ok'})
+                    if len(self.children) > 0:
+                        replyMd['status'] = 'rejected'
+                        replyMd['error'] = 'At least one child still exists...'
+                        self._commandSocket.send_json(replyMd)
+                    else:
+                        replyMd['status'] = 'ok'
+                        self._commandSocket.send_json(replyMd)
+                        break
 
     def _sendChangePropCommand(self, name, value):
         pass
 
     def _sendPropChangedNotification(self, name, value):
         pass
+
+    def shutDown(self):
+        '''Stop the daemon and all of its children.'''
+        for child in self.children:
+            child.shutDown()
+        self.shutDown()
 
     @property
     def serviceProperties(self):
@@ -281,6 +300,16 @@ class Service:
     @property
     def children(self):
         return self._children
+
+    @property
+    def async(self):
+        '''Note that this is a client only property.  It has no effect on the behavior of daemons.'''
+        return self._async
+
+    @async.setter
+    def async(self, async):
+        self._async = async
+
 
 #def makeClientTree(zmqContext, uri):
 #    req_socket = zmqContext.socket(zmq.REQ)

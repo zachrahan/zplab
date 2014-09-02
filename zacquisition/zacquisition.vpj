@@ -11,6 +11,12 @@
 			<F N="camera/andor.py"/>
 		</Folder>
 		<Folder
+			Name="dm6000b"
+			Filters="">
+			<F N="dm6000b/__init__.py"/>
+			<F N="dm6000b/dm6000b.py"/>
+		</Folder>
+		<Folder
 			Name="dm6000b_flat"
 			Filters="">
 			<F N="dm6000b_flat/__init__.py"/>
@@ -23,13 +29,14 @@
 			<F N="root/root.py"/>
 		</Folder>
 		<Folder
-			Name="dm6000b"
+			Name="simple_example"
 			Filters="">
-			<F N="dm6000b/__init__.py"/>
-			<F N="dm6000b/dm6000b.py"/>
+			<F N="simple_example/__init__.py"/>
+			<F N="simple_example/simple_example.py"/>
 		</Folder>
 		<F N="__init__.py"/>
 		<F N="../misc/image_transfer_zmq_benchmark.py"/>
+		<F N="run_daemon.py"/>
 		<F N="service.py"/>
 		<F N="service_property.py"/>
 		<F N="service_property_validators.py"/>

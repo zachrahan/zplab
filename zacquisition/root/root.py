@@ -51,7 +51,7 @@ class Root(Service):
         return self._camera
 
 def makeRootDaemonTree(zmqContext=None, name='Service Tree Root', ipcSocketPath='/tmp/zacquisition', eventTcpPortNumber=51500, commandTcpPortNumber=51501):
-    '''Suppose you want to use the Root backend in an iPython interactive session.  You may instantiate Root directly,
+    '''Suppose you want to use the Root backend in an IPython interactive session.  You may instantiate Root directly,
     but because you are retaining control of the main thread, none of Root's greenlets will have an opportunity to
     execute unless you do gevent.wait() or equivalent.  However, gevent.wait() will block forever, preventing you
     from interacting further.  Furthermore, strange and bad things will happen if you attempt to gevent.wait() from
