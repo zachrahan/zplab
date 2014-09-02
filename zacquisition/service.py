@@ -207,6 +207,33 @@ class Service:
         }
         return ret
 
+    def prettyDescribeRecursive(self):
+        '''Returns a string containing a human parsable representation of the Service tree.'''
+        ret = []
+        t = self.describeRecursive()
+        wantlf = False
+        def r(t, depth):
+            nonlocal ret
+            indention = ' ' * (depth * 4)
+            for k in sorted(t.keys()):
+                if k != 'children':
+                    ret.append('{}{:<23}{}'.format(indention, k + ': ', t[k]))
+            children = t['children']
+            if len(children) == 0:
+                ret.append(indention + 'children: None')
+            else:
+                ret.append(indention + 'children:')
+                children.sort(key=lambda c: c['name'])
+                firstChild = True
+                for childt in children:
+                    if firstChild:
+                        firstChild = False
+                    else:
+                        ret.append('')
+                    r(childt, depth+1)
+        r(t, 0)
+        return '\n'.join(ret)
+
     def _daemonCommandSocketListener(self):
         while True:
             md = self._commandSocket.recv_json()

@@ -82,4 +82,4 @@ def makeRootDaemonTree(zmqContext=None, name='Service Tree Root', ipcSocketPath=
 if __name__ == '__main__':
     context = zmq.Context()
     root, thread = makeRootDaemonTree(context)
-    print(root.describeRecursive())
+    print(root.prettyDescribeRecursive())
