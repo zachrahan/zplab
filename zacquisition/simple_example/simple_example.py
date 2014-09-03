@@ -24,6 +24,7 @@
 
 import gevent
 import gevent.pool
+import subprocess
 import threading
 import zmq.green as zmq
 from zacquisition.service import Service
@@ -38,6 +39,21 @@ class SimpleExampleService(Service):
                          zmqContext, instanceType, parent, name,
                          ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber,
                          daemonHostName)
+        if self.instanceType == Service.InstanceType.Daemon:
+            self._childDaemons = []
+            self._childDaemons.append(subprocess.Popen(['/home/ehvatum/zplrepo/zacquisition/run_daemon.py zacquisition.simple_example.simple_example.SimpleExampleChildService'], shell=True))
+            self._exampleChild = SimpleExampleChildService(self._zc, parent=self, daemonHostName=self.daemonHostName, ipcSocketPath=self.ipcSocketPath)
+            self._children.append(('childservice', self._exampleChild))
+
+class SimpleExampleChildService(Service):
+    def __init__(self, zmqContext=None, instanceType=Service.InstanceType.Client, parent=None, name="Simple Example Child Service",
+                 ipcSocketPath='/tmp/zacquisition', eventTcpPortNumber=51502, commandTcpPortNumber=51503,
+                 daemonHostName=None):
+        super().__init__('zacquisition.simple_example.simple_example.SimpleExampleChildService',
+                         zmqContext, instanceType, parent, name,
+                         ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber,
+                         daemonHostName)
+
 
 #class SimpleExampleService:
 #    def __init__(self, blarf):

@@ -24,8 +24,11 @@
 
 import enum
 import gevent
+import gevent.lock
 import gevent.pool
+import importlib
 import pathlib
+import re
 import socket
 import threading
 import weakref
@@ -130,18 +133,25 @@ class Service:
 
         self._children = []
 
+        if daemonHostName is None:
+            daemonHostName = socket.gethostname()
+        Service.daemonHostName.setWithoutValidating(self, daemonHostName)
+
         # Note that the typecast causes a ValueError to be raised if nonsense is supplied for instanceType
         self._instanceType = Service.InstanceType(instanceType)
 
         if self._instanceType == Service.InstanceType.Daemon:
-            self._daemonInit(ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName, parent)
+            self._daemonInit(ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, parent)
         else:
-            self._clientInit(ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName, parent)
+            self._clientInit(ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, parent)
 
-    def _daemonInit(self, ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName, parent):
-        if daemonHostName is None:
-            daemonHostName = socket.gethostname()
-        Service.daemonHostName.setWithoutValidating(self, daemonHostName)
+    def __del__(self):
+        if   self.instanceType == Service.InstanceType.Client \
+         and self._clientEventThread is not None \
+         and self._clientEventThread.is_alive():
+            self._clientEventThread.stop()
+
+    def _daemonInit(self, ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, parent):
         self._eventSocket = self._zc.socket(zmq.PUB)
         self._commandSocket = self._zc.socket(zmq.REP)
         if parent is None:
@@ -157,8 +167,8 @@ class Service:
         ipcsp /= self.name
         if not ipcsp.exists():
             ipcsp.mkdir(parents=True)
-        eipcsfp = ipcsp / (self.name + '__EVENT__.ipc')
-        ripcsfp = ipcsp / (self.name + '__COMMAND__.ipc')
+        eipcsfp = ipcsp / '__EVENT__.ipc'
+        ripcsfp = ipcsp / '__COMMAND__.ipc'
         Service.ipcSocketPath.setWithoutValidating(self, ipcsp)
         # Use our name for IPC socket filenames
         self._eventSocket.bind('ipc://' + str(eipcsfp))
@@ -191,24 +201,42 @@ class Service:
         self._daemonCommandSocketListenerGt = gevent.spawn(self._daemonCommandSocketListener)
         self.daemonGreenThreads.add(self._daemonCommandSocketListenerGt)
 
-    def _clientInit(self, ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, daemonHostName, parent):
+    def _clientInit(self, ipcSocketPath, eventTcpPortNumber, commandTcpPortNumber, parent):
         self._async = False
+        self._clientEventThread = None
         self._commandSocket = self._zc.socket(zmq.REQ)
-        if ipcSocketPath is None or daemonHostName != socket.gethostname():
-            print(self.name, 'connecting via tcp...')
-            self._commandSocket.connect('tcp://{}:{}'.format(daemonHostName, commandTcpPortNumber))
-            eventSocketURI = 'tcp://{}:{}'.format(daemonHostName, eventTcpPortNumber)
-            Service.eventTcpPortNumber.setWithoutValidating(self, eventTcpPortNumber)
-            Service.commandTcpPortNumber.setWithoutValidating(self, commandTcpPortNumber)
+        Service.eventTcpPortNumber.setWithoutValidating(self, eventTcpPortNumber)
+        Service.commandTcpPortNumber.setWithoutValidating(self, commandTcpPortNumber)
+        if True:#ipcSocketPath is None or self.daemonHostName != socket.gethostname():
+            print('connecting to', self.name, 'via tcp...')
+            print('tcp://{}:{}'.format(self.daemonHostName, commandTcpPortNumber))
+            self._commandSocket.connect('tcp://{}:{}'.format(self.daemonHostName, commandTcpPortNumber))
+            eventSocketURI = 'tcp://{}:{}'.format(self.daemonHostName, eventTcpPortNumber)
         else:
-            print(self.name, 'connecting via ipc...')
+            print('connecting to', self.name, 'via ipc...')
             ipcsp = pathlib.Path(ipcSocketPath) / self.name
-            eipcsp = ipcsp / (self.name + '__EVENT__.ipc')
-            cipcsp = ipcsp / (self.name + '__COMMAND__.ipc')
+            eipcsp = ipcsp / '__EVENT__.ipc'
+            print(eipcsp)
+            cipcsp = ipcsp / '__COMMAND__.ipc'
             self._commandSocket.connect('ipc://' + str(cipcsp))
             eventSocketURI = 'ipc://' + str(eipcsp)
             Service.eventIpcSocketFPath.setWithoutValidating(self, eipcsp)
             Service.commandIpcSocketFPath.setWithoutValidating(self, cipcsp)
+        self._commandSocket.send_json({'type':'query', 'query':'describe recursive'})
+        tree = self._commandSocket.recv_json()
+        print(tree)
+        for childTree in tree['children']:
+            childModuleAndClassName = childTree['pyClassString']
+            match = re.match(r'^(.+)\.([^.]+)$', childModuleAndClassName)
+            assert(match)
+            ChildModule = importlib.import_module(match.group(1))
+            ChildClass = ChildModule.__getattribute__(match.group(2))
+            childInstance = ChildClass(zmqContext=self._zc, instanceType=Service.InstanceType.Client,
+                                       parent=self, name=childTree['name'], daemonHostName=childTree['daemonHostName'],
+#                                      ipcSocketPath=self.eventIpcSocketFPath.parent,
+                                       eventTcpPortNumber=childTree['eventTcpPortNumber'],
+                                       commandTcpPortNumber=childTree['commandTcpPortNumber'])
+            self._children.append(childInstance)
         self._clientEventThread = _ClientEventThread(self, eventSocketURI)
         self._clientEventThread.start()
 
@@ -229,34 +257,34 @@ class Service:
     def prettyDescribeRecursive(self):
         '''Returns a string containing a human parsable representation of the Service tree.'''
         ret = []
-        t = self.describeRecursive()
-        wantlf = False
-        def r(t, depth):
+        tree = self.describeRecursive()
+        def r(tree, depth):
             nonlocal ret
             indention = ' ' * (depth * 4)
-            for k in sorted(t.keys()):
+            for k in sorted(tree.keys()):
                 if k != 'children':
-                    ret.append('{}{:<23}{}'.format(indention, k + ': ', t[k]))
-            children = t['children']
+                    ret.append('{}{:<23}{}'.format(indention, k + ': ', tree[k]))
+            children = tree['children']
             if len(children) == 0:
                 ret.append(indention + 'children: None')
             else:
                 ret.append(indention + 'children:')
                 children.sort(key=lambda c: c['name'])
                 firstChild = True
-                for childt in children:
+                for childtree in children:
                     if firstChild:
                         firstChild = False
                     else:
                         ret.append('')
-                    r(childt, depth+1)
-        r(t, 0)
+                    r(childtree, depth+1)
+        r(tree, 0)
         return '\n'.join(ret)
 
     def _daemonCommandSocketListener(self):
         while True:
+            print(self.name, self.instanceType)
             md = self._commandSocket.recv_json()
-            print(md)
+            print(self.name, self.instanceType, md)
             assert(issubclass(type(md), dict))
             if md['type'] == 'query':
                 replyMd = {'type':'query reply',

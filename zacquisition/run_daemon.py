@@ -33,31 +33,31 @@ import time
 
 zplSourceDir = str(pathlib.Path(__file__).absolute().parent.parent)
 
-prevShutdownPrintTime = None
-def keyboardInterruptHandler(*_):
-    global prevShutdownPrintTime
-    curTime = time.time()
-    if prevShutdownPrintTime is None or curTime - prevShutdownPrintTime > 0.5:
-        print('\nshutting down...\n')
-        prevShutdownPrintTime = curTime
-    daemon.daemonGreenThreads.kill()
-
 args = sys.argv.copy()
 args.reverse()
 args.pop()
 classPackageAndName = args.pop()
 match = re.match(r'^(.+)\.([^.]+)$', classPackageAndName)
+assert(match)
 classPackage = match.group(1)
 className = match.group(2)
 args.insert(0, 'instanceType=zacquisition.service.Service.InstanceType.Daemon')
 execLines = ['sys.path.insert(0, "{}")'.format(zplSourceDir)]
 execLines.append('import zacquisition.service')
 execLines.append('import ' + classPackage)
+execLines.append('''prevShutdownPrintTime = None
+def keyboardInterruptHandler():
+    global prevShutdownPrintTime
+    global daemon
+    curTime = time.time()
+    if prevShutdownPrintTime is None or curTime - prevShutdownPrintTime > 0.5:
+        print('shutting down "{}"...'.format(classPackageAndName))
+        prevShutdownPrintTime = curTime
+    daemon.daemonGreenThreads.kill()''')
+execLines.append('gevent.signal(signal.SIGINT, keyboardInterruptHandler)')
 execLines.append('daemon = {}({})'.format(classPackageAndName, ', '.join(args)))
-execLines.append('''gevent.signal(signal.SIGINT, keyboardInterruptHandler)''')
+execLines.append('gevent.signal(signal.SIGINT, keyboardInterruptHandler)')
 execLines.append('daemon.daemonGreenThreads.join()')
-
-gevent.signal(signal.SIGINT, keyboardInterruptHandler)
 
 execStr = '\n'.join(execLines)
 exec(execStr)
