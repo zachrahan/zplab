@@ -23,16 +23,13 @@
 # Authors: Erik Hvatum
 
 import enum
+import re
 from PyQt5 import QtCore, QtSerialPort
 from acquisition.device import Device
 from acquisition.device import DeviceException, DeviceTimeoutException
 
 class Pedals(Device):
-    class Command:
-        def __init__(self, raw, replyPrefix, replyCallback):
-            self.raw = raw
-            self.replyPrefix = replyPrefix
-            self.replyCallback = replyCallback
+    pedalUpChanged = QtCore.pyqtSignal(int, bool)
 
     def __init__(self, parent=None, deviceName='Multiple Pedal Controller', serialPortDescriptor='/dev/ttyPedals'):
         super().__init__(parent)
@@ -45,22 +42,14 @@ class Pedals(Device):
             raise DeviceException(self, 'Failed to set serial port {} to 115200 baud.'.format(serialPortDescriptor))
 
         self._inBuffer = ''
-        self._commandsAwaitingReplyQueue = []
 
         self._serialPort.error.connect(self._serialPortErrorSlot)
         self._serialPort.readyRead.connect(self._serialPortBytesReadySlot)
-
-        loop = QtCore.QEventLoop()
-        self._sendCommand(self.Command('get pedal 0 state', 'pedal 0 state is', loop.quit))
-        print('starte sløyfe')
-        loop.exec_()
-        print('sløyfe døde')
 
     def _serialPortErrorSlot(self, serialPortError):
         self._warn('Serial port error #{} ({}).'.format(serialPortError, self._serialPort.errorString()))
 
     def _serialPortBytesReadySlot(self):
-        print('_serialPortBytesReadySlot')
         inba = self._serialPort.readAll()
         # Note: Serial port errors are handled by serialPortErrorSlot which has already been called during execution of the readAll
         # in the line above if an error occurred.  If an exception was thrown by serialPortErrorSlot, it passes through the readAll
@@ -81,7 +70,7 @@ class Pedals(Device):
                         break
                     message = self._inBuffer[:eolLoc]
                     self._inBuffer = self._inBuffer[eolLoc + 2:]
-                    self._messageReceived(message)
+                    self._warn('Error or warning from device: "{}"'.format(message))
                 elif self._inBuffer.startswith('/*'):
                     eomLoc = self._inBuffer.find('*/\r\n')
                     if eomLoc < 0:
@@ -89,7 +78,7 @@ class Pedals(Device):
                         break
                     message = self._inBuffer[:eomLoc].replace('\r\n', '\n')
                     self._inBuffer = self._inBuffer[eomLoc + 4:]
-                    self._messageReceived(message)
+                    self._warn('Error or warning from device: "{}"'.format(message))
                 else:
                     eolLoc = self._inBuffer.find('\r\n')
                     if eolLoc < 0:
@@ -98,19 +87,6 @@ class Pedals(Device):
                         break
                     message = self._inBuffer[:eolLoc]
                     self._inBuffer = self._inBuffer[eolLoc + 2:]
-                    self._messageReceived(message)
-
-    def _messageReceived(self, message):
-        handled = False
-        if len(self._commandsAwaitingReplyQueue) > 0 and message.startswith(self._commandsAwaitingReplyQueue[0].replyPrefix):
-            print('handling "{}"'.format(message))
-            command = self._commandsAwaitingReplyQueue.pop()
-            command.replyCallback()
-        else:
-            print('ignoring "{}"'.format(message))
-
-    def _sendCommand(self, command):
-        print('send command')
-        self._commandsAwaitingReplyQueue.insert(0, command)
-        self._serialPort.write(command.raw + '\r')
-        print('wrote')
+                    match = re.match('pedal (\d+) state changed to (down|up)', message)
+                    if match is not None:
+                        self.pedalUpChanged.emit(int(match.group(1)), match.group(2) == 'up')
