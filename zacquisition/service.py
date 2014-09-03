@@ -207,7 +207,7 @@ class Service:
         self._commandSocket = self._zc.socket(zmq.REQ)
         Service.eventTcpPortNumber.setWithoutValidating(self, eventTcpPortNumber)
         Service.commandTcpPortNumber.setWithoutValidating(self, commandTcpPortNumber)
-        if True:#ipcSocketPath is None or self.daemonHostName != socket.gethostname():
+        if ipcSocketPath is None or self.daemonHostName != socket.gethostname():
             print('connecting to', self.name, 'via tcp...')
             print('tcp://{}:{}'.format(self.daemonHostName, commandTcpPortNumber))
             self._commandSocket.connect('tcp://{}:{}'.format(self.daemonHostName, commandTcpPortNumber))
@@ -233,7 +233,7 @@ class Service:
             ChildClass = ChildModule.__getattribute__(match.group(2))
             childInstance = ChildClass(zmqContext=self._zc, instanceType=Service.InstanceType.Client,
                                        parent=self, name=childTree['name'], daemonHostName=childTree['daemonHostName'],
-#                                      ipcSocketPath=self.eventIpcSocketFPath.parent,
+                                       ipcSocketPath=self.eventIpcSocketFPath.parent,
                                        eventTcpPortNumber=childTree['eventTcpPortNumber'],
                                        commandTcpPortNumber=childTree['commandTcpPortNumber'])
             self._children.append(childInstance)
