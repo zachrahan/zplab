@@ -26,6 +26,7 @@ from enum import Enum
 import numpy
 from PyQt5 import QtCore
 import sys
+import time
 from acquisition.device import Device, DeviceException
 
 class AutoFocuser(Device):
@@ -47,8 +48,11 @@ class AutoFocuser(Device):
         self._results = None
         self._round = None
         self.rw = None
+        self.brennerTotal = 0
+        self.acqTotal = 0
 
     def _brenner(self, im, direction):
+        t0 = time.time()
         if direction == 'h':
             xo = 2
             yo = 0
@@ -63,6 +67,7 @@ class AutoFocuser(Device):
             imr[:, :xo] = 0
         else:
             imr[:yo, :] = 0
+        self.brennerTotal += time.time() - t0
         return iml - imr
 
     def _brennervh(self, im):
@@ -88,7 +93,9 @@ class AutoFocuser(Device):
                 w+= 'auto-focus operation.'
                 self._warn(w.format(zDrivePos, reqzDrivePos))
             else:
+                t0 = time.time()
                 im = self._camera.acquireImage()
+                self.acqTotal += time.time() - t0
                 if self.rw is not None:
                     self.rw.showImage(im)
                 im = (im.astype(numpy.float32) / 65535)
