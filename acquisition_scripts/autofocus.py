@@ -85,7 +85,34 @@ class LinearSearchAutofocuser:
             print('Starting autofocus round {}.'.format(roundIdx))
             fmvs = []
             stepIdxsDone = []
-            steps = numpy.linspace(*curZRange, num=self._stepsPerRound)
+            if roundIdx == 0:
+                # The first round computes focus measures for every step in the Z range, including endpoints
+                steps = numpy.linspace(*curZRange, num=self._stepsPerRound)
+            else:
+                # Every subsequent round's Z range is the interval between the previous round's Z steps bracketing the Z step
+                # with the highest focus measure value:
+                #
+                # ----- Previous Z step above best previous Z
+                #   | --- Current Z step
+                #   | --- "
+                #   | --- "
+                # ----- Previous Z step with best focus measure value
+                #   | --- Current Z step
+                #   | --- "
+                #   | --- "
+                # ----- Previous Z step below best previous Z
+                #
+                # So, if a subsequent round's step sequence is computed in the same manner as the first round's step sequence,
+                # it will include the previous round's bracketing Z step positions as endpoints, repeating the focus measure
+                # computation for those positions, increasing the computational expense of the linear search.  This is most clearly
+                # illustrated by the case where stepsPerRound is 3 and first round best Z step is the middle position: in this case,
+                # the linear search will repeat the same calculations at the same Z step positions for an arbitrary number of rounds,
+                # failing to refine the best Z step position.
+                #
+                # This is avoided while maintaining uniform step size by treating subsequent Z ranges as an open interval bounded
+                # by bracketing Z step positions.  If stepsPerRound is odd, the best previous Z step position focus measure is
+                # still recomputed, but this is considered acceptable.
+                steps = numpy.linspace(*curZRange, num=self._stepsPerRound+2)[1:-1]
             self._camera._camera.AT_Flush()
             self._camera.shutter = self._camera.Shutter.Rolling
             self._camera.triggerMode = self._camera.TriggerMode.Software
