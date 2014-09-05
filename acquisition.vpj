@@ -96,6 +96,7 @@
 		<F N="acquisition_scripts/autofocus.py"/>
 		<F N="acquisition/device.py"/>
 		<F N="acquisition/focus_range_stack.py"/>
+		<F N="misc/make_mask_from_fluorescence.py"/>
 	</Files>
 	<Config
 		Name="Debug"
