@@ -37,7 +37,7 @@ def makeMaskFromFluorescence(fluoImage, erosionDivisor=2, propagationDivisor=3):
     return filled
 
 def makeExperiment00FluoMasks(rw, tryDivisors=None):
-    imFPaths = sorted(list(Path('/Volumes/coalsack/experiment00').glob('**/*oxIs*/**/fluo_image.png')), key=lambda p:str(p), reverse=True)
+    imFPaths = sorted(list(Path('/Volumes/coalsack/experiment00').glob('**/*oxIs*/**/fluo_image.png')), key=lambda p:str(p), reverse=False)
     if tryDivisors is None:
         tryDivisors = ((3, 5),
                        (3, 4),
@@ -57,8 +57,8 @@ def makeExperiment00FluoMasks(rw, tryDivisors=None):
             litCount = imm.sum()
             pixelCount = len(im.flat)
             litFrac = litCount / pixelCount
-            print(str(imFPath), litFrac, runNumber, 0.002 + runNumber * 5.4347826086956524e-05)
-            if litFrac > 0 and litFrac < 0.002 + runNumber * 5.4347826086956524e-05:
+            print(str(imFPath), litFrac, runNumber, 0.002 + runNumber * 7.4347826086956524e-05)
+            if litFrac > 0 and litFrac < 0.002 + runNumber * 7.4347826086956524e-05:
                 # Throw away all but the biggest labeled region under the assumption that it is the worm
                 immlabels = skimage.measure.label(imm)
                 immregions = skimage.measure.regionprops(immlabels)
