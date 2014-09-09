@@ -295,7 +295,7 @@ class ImageServer:
             for imageServerURI in imageServerURIs:
                 self._repToClient.bind(imageServerURI)
 
-    def _send_array(self, A, copy=False, track=True):
+    def _send_array(self, A, flags=0, copy=False, track=True):
         """send a numpy array with metadata"""
         md = dict(
             dtype = str(A.dtype),
@@ -308,11 +308,12 @@ class ImageServer:
         while True:
             md = self._repToClient.recv_pyobj()
             if md['command'] == 'quit':
-                self._repToClient.send_pyobj('ok')
+                self._repToClient.send_pyobj({'status' : 'ok'})
                 print('received quit request...')
                 break
             elif md['command'] == 'send image array':
                 image = skio.imread(str(md['imageFPath']))
+                self._repToClient.send_pyobj({'status' : 'ok'}, zmq.SNDMORE)
                 self._send_array(image)
 
 class ManualImageGroupScorer(ManualScorer):
