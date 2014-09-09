@@ -97,6 +97,7 @@
 		<F N="acquisition/device.py"/>
 		<F N="acquisition/focus_range_stack.py"/>
 		<F N="misc/make_mask_from_fluorescence.py"/>
+		<F N="misc/manually_score_images.py"/>
 	</Files>
 	<Config
 		Name="Debug"

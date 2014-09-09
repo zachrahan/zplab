@@ -253,14 +253,14 @@ class ManualImageScorer(ManualScorer):
     def imageDict(self):
         return self._db
 
-class RemoteManualImageScorer(ManualScorer):
+class RemoteManualImageScorer(ManualImageScorer):
     def __init__(self, risWidget, imageDict, imageServerURI, zmqContext, parent=None):
-        super().__init__(risWidget, imageDict, parent)
         self._zc = zmqContext
         self._reqToServer = self._zc.socket(zmq.REQ)
         self._reqToServer.connect(imageServerURI)
+        super().__init__(risWidget, imageDict, parent)
 
-    def _recv_array(self, copy=False, track=True):
+    def _recv_array(self, flags=0, copy=False, track=True):
         """recv a numpy array"""
         md = self._reqToServer.recv_pyobj(flags=flags)
         msg = self._reqToServer.recv(flags=flags, copy=copy, track=track)
