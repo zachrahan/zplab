@@ -149,22 +149,104 @@ class ManualScorer(Qt.QDialog):
                          self._ui.action1,
                          self._ui.action2])
 
+class ManualImageScorer(ManualScorer):
+    '''imageDict format: {pathlib.Path object referring to image : score (None if no score assigned)}'''
+    _ImageFPathRole = 42
+    _Forward = 0
+    _Backward = 1
 
-#class ManualImageScorer(ManualScorer):
-#    def __init__(self, imageDbFileName, modifyDbIfExists=True, imageFileNames=None, subtractPrefix=None, parent=None):
-#        super().__init__(imageDbFileName, modifyDbIfExists, parent)
-#
-#        self.removeAction(self._ui.actionUp)
-#        self.removeAction(self._ui.actionDown)
-#        self._ui.actionUp.deleteLater()
-#        self._ui.actionDown.deleteLater()
-#        del self._ui.actionUp
-#        del self._ui.actionDown
-#
-#        self._ui.prevGroupButton.deleteLater()
-#        self._ui.nextGroupButton.deleteLater()
-#        del self._ui.prevGroupButton
-#        del self._ui.nextGroupButton
+    def __init__(self, risWidget, imageDict, parent=None):
+        super().__init__(risWidget, imageDict, parent)
+
+        self.removeAction(self._ui.actionUp)
+        self.removeAction(self._ui.actionDown)
+        self._ui.actionUp.deleteLater()
+        self._ui.actionDown.deleteLater()
+        del self._ui.actionUp
+        del self._ui.actionDown
+
+        self._ui.prevGroupButton.deleteLater()
+        self._ui.nextGroupButton.deleteLater()
+        del self._ui.prevGroupButton
+        del self._ui.nextGroupButton
+
+        self._ui.tableWidget.setColumnCount(2)
+
+        self._db = imageDict
+        self._imageFPaths = sorted(list(self._db.keys()))
+
+        self._ui.tableWidget.setRowCount(len(self._db))
+        self._ui.tableWidget.setHorizontalHeaderLabels(['Image', 'Rating'])
+        for rowIndex, imageFPath in enumerate(self._imageFPaths):
+            imageScore = self._db[imageFPath]
+            imageItem = Qt.QTableWidgetItem(str(imageFPath));
+            imageItem.setData(self._ImageFPathRole, Qt.QVariant(imageFPath))
+            self._ui.tableWidget.setItem(rowIndex, 0, imageItem)
+            self._ui.tableWidget.setItem(rowIndex, 1, Qt.QTableWidgetItem('None' if imageScore is None else str(imageScore)))
+
+        self._curImageFPath = None
+        self._inRefreshScoreButtons = False
+
+        self._ui.tableWidget.currentItemChanged.connect(self._listWidgetSelectionChange)
+        self._scoreRadioGroup.buttonClicked[int].connect(self._scoreButtonClicked)
+        self._ui.prevButton.clicked.connect(lambda: self._stepImage(self._Backward))
+        self._ui.nextButton.clicked.connect(lambda: self._stepImage(self._Forward))
+
+        self._ui.tableWidget.setCurrentItem(self._ui.tableWidget.item(0, 0))
+
+    def _listWidgetSelectionChange(self, curItem, prevItem):
+        imageItem = self._ui.tableWidget.item(curItem.row(), 0)
+        self._curImageFPath = imageItem.data(self._ImageFPathRole)
+        self._refreshScoreButtons()
+        image = skio.imread(str(self._curImageFPath))
+        if image.dtype == numpy.float32:
+            image = (image * 65535).astype(numpy.uint16)
+        self._rw.showImage(image)
+
+    def _refreshScoreButtons(self):
+        self._inRefreshScoreButtons = True
+        score = self._db[self._curImageFPath]
+        if score is None:
+            self._ui.radioNone.click()
+        elif score is 0:
+            self._ui.radio0.click()
+        elif score is 1:
+            self._ui.radio1.click()
+        elif score is 2:
+            self._ui.radio2.click()
+        else:
+            self._inRefreshScoreButtons = False
+            raise RuntimeError('Bad value for image score.')
+        self._inRefreshScoreButtons = False
+
+    def _scoreButtonClicked(self, radioId):
+        if not self._inRefreshScoreButtons:
+            self._setScore(self._radioIdToScore[radioId])
+            self._ui.nextButton.animateClick()
+
+    def _setScore(self, score):
+        '''Set current image score.'''
+        if score != self._db[self._curImageFPath]:
+            self._db[self._curImageFPath] = score
+            self._ui.tableWidget.item(self._ui.tableWidget.currentRow(), 1).setText('None' if score is None else str(score))
+
+    def _stepImage(self, direction):
+        curRow = self._ui.tableWidget.currentRow()
+        newRow = None
+        
+        if direction == self._Forward:
+            if curRow + 1 < self._ui.tableWidget.rowCount():
+                newRow = curRow + 1
+        elif direction == self._Backward:
+            if curRow > 0:
+                newRow = curRow - 1
+        
+        if newRow is not None:
+            self._ui.tableWidget.setCurrentItem(self._ui.tableWidget.item(newRow, 0))
+
+    @property
+    def imageDict(self):
+        return self._db
 
 class ManualImageGroupScorer(ManualScorer):
     '''groupDict format: {'group name' : [ScoreableImage, ScoreableImage, ...]}'''
