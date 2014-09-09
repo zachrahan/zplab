@@ -32,6 +32,7 @@ import numpy
 import os
 import re
 import skimage.io as skio
+import zmq
 
 class ScoreableImage:
     def __init__(self, fileName, score=None):
@@ -198,9 +199,10 @@ class ManualImageScorer(ManualScorer):
         imageItem = self._ui.tableWidget.item(curItem.row(), 0)
         self._curImageFPath = imageItem.data(self._ImageFPathRole)
         self._refreshScoreButtons()
-        image = skio.imread(str(self._curImageFPath))
-        if image.dtype == numpy.float32:
-            image = (image * 65535).astype(numpy.uint16)
+        image = self._getImage(self._curImageFPath)
+        if image is not None:
+            if image.dtype == numpy.float32:
+                image = (image * 65535).astype(numpy.uint16)
         self._rw.showImage(image)
 
     def _refreshScoreButtons(self):
@@ -244,9 +246,74 @@ class ManualImageScorer(ManualScorer):
         if newRow is not None:
             self._ui.tableWidget.setCurrentItem(self._ui.tableWidget.item(newRow, 0))
 
+    def _getImage(self, imageFPath):
+        return skio.imread(str(imageFPath))
+
     @property
     def imageDict(self):
         return self._db
+
+class RemoteManualImageScorer(ManualScorer):
+    def __init__(self, risWidget, imageDict, imageServerURI, zmqContext, parent=None):
+        super().__init__(risWidget, imageDict, parent)
+        self._zc = zmqContext
+        self._reqToServer = self._zc.socket(zmq.REQ)
+        self._reqToServer.connect(imageServerURI)
+
+    def _recv_array(self, copy=False, track=True):
+        """recv a numpy array"""
+        md = self._reqToServer.recv_pyobj(flags=flags)
+        msg = self._reqToServer.recv(flags=flags, copy=copy, track=track)
+        buf = memoryview(msg)
+        A = numpy.frombuffer(buf, dtype=md['dtype'])
+        return A.reshape(md['shape'])
+
+    def _getImage(self, imageFPath):
+        self._reqToServer.send_pyobj({'command' : 'send image array',
+                                      'imageFPath' : imageFPath})
+        md = self._reqToServer.recv_pyobj()
+        if md['status'] != 'ok':
+            print('Failed to retrieve "{}" from image server.'.format(str(imageFPath)))
+        else:
+            image = self._recv_array()
+            return image
+
+    def sendImageServerQuitRequest(self):
+        self._reqToServer.send_pyobj({'command' : 'quit'})
+        if self._reqToServer.recv_pyobj()['status'] == 'ok':
+            print('server accepted quit command')
+        else:
+            print('server did NOT accept quit command')
+
+class ImageServer:
+    def __init__(self, zmqContext, imageServerURIs):
+        self._zc = zmqContext
+        self._repToClient = self._zc.socket(zmq.REP)
+        if type(imageServerURIs) is str:
+            self._repToClient.bind(imageServerURIs)
+        else:
+            for imageServerURI in imageServerURIs:
+                self._repToClient.bind(imageServerURI)
+
+    def _send_array(self, A, copy=False, track=True):
+        """send a numpy array with metadata"""
+        md = dict(
+            dtype = str(A.dtype),
+            shape = A.shape,
+        )
+        self._repToClient.send_pyobj(md, flags|zmq.SNDMORE)
+        self._repToClient.send(A, flags, copy=copy, track=track)
+
+    def run(self):
+        while True:
+            md = self._repToClient.recv_pyobj()
+            if md['command'] == 'quit':
+                self._repToClient.send_pyobj('ok')
+                print('received quit request...')
+                break
+            elif md['command'] == 'send image array':
+                image = skio.imread(str(md['imageFPath']))
+                self._send_array(image)
 
 class ManualImageGroupScorer(ManualScorer):
     '''groupDict format: {'group name' : [ScoreableImage, ScoreableImage, ...]}'''
