@@ -22,6 +22,7 @@
 #
 # Authors: Erik Hvatum
 
+import concurrent.futures
 import csv
 import enum
 import pandas
@@ -188,6 +189,10 @@ class ManualImageScorer(ManualScorer):
         self._curImageFPath = None
         self._inRefreshScoreButtons = False
 
+        self._readAheadImageFPath = None
+        self._readAheadExecutor = concurrent.futures.ThreadPoolExecutor(2)
+        self._readAheadFuture = None
+
         self._ui.tableWidget.currentItemChanged.connect(self._listWidgetSelectionChange)
         self._scoreRadioGroup.buttonClicked[int].connect(self._scoreButtonClicked)
         self._ui.prevButton.clicked.connect(lambda: self._stepImage(self._Backward))
@@ -199,7 +204,10 @@ class ManualImageScorer(ManualScorer):
         imageItem = self._ui.tableWidget.item(curItem.row(), 0)
         self._curImageFPath = imageItem.data(self._ImageFPathRole)
         self._refreshScoreButtons()
-        image = self._getImage(self._curImageFPath)
+        if self._readAheadFuture is not None and self._curImageFPath == self._readAheadImageFPath:
+            image = self._readAheadFuture.result()
+        else:
+            image = self._getImage(self._curImageFPath)
         if image is not None:
             if image.dtype == numpy.float32:
                 image = (image * 65535).astype(numpy.uint16)
@@ -235,16 +243,27 @@ class ManualImageScorer(ManualScorer):
     def _stepImage(self, direction):
         curRow = self._ui.tableWidget.currentRow()
         newRow = None
+        oneAfter = None
         
         if direction == self._Forward:
             if curRow + 1 < self._ui.tableWidget.rowCount():
                 newRow = curRow + 1
+            if curRow + 2 < self._ui.tableWidget.rowCount():
+                oneAfter = curRow + 2
         elif direction == self._Backward:
             if curRow > 0:
                 newRow = curRow - 1
+            if curRow - 1 > 0:
+                oneAfter = curRow - 2
         
         if newRow is not None:
             self._ui.tableWidget.setCurrentItem(self._ui.tableWidget.item(newRow, 0))
+
+        if oneAfter is not None:
+            if self._readAheadFuture is not None and self._readAheadFuture.running():
+                concurrent.futures.wait((self._readAheadFuture, ))
+            self._readAheadImageFPath = self._ui.tableWidget.item(oneAfter, 0).data(self._ImageFPathRole)
+            self._readAheadFuture = self._readAheadExecutor.submit(self._getImage, self._readAheadImageFPath)
 
     def _getImage(self, imageFPath):
         return skio.imread(str(imageFPath))

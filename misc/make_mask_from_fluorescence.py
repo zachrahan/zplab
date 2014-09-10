@@ -79,7 +79,7 @@ class AutomaskedManualImageScorer(ManualImageScorer):
     def _getImage(self, imageFPath):
         image = skio.imread(str(imageFPath))
         mask = skio.imread(str(imageFPath.parent / 'fluo_worm_mask.png')).astype(numpy.bool)
-#       image[~mask] = 0
+        image[~mask] = 0
         labels = skimage.measure.label(mask)
         regions = skimage.measure.regionprops(labels)
         if len(regions) == 0:
