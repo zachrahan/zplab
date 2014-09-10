@@ -73,13 +73,20 @@ def makeExperiment00FluoMasks(rw, tryDivisors=None):
                 skio.imsave(str(maskFPath), immm.astype(numpy.uint8)*255)
                 break
 
-def showMasked(rw, image, mask):
-    image = numpy.copy(image)
-    mask = mask.astype(numpy.bool)
-    image[~mask] = 0
-    labels = skimage.measure.label(mask)
-    regions = skimage.measure.regionprops(labels)
-    if len(regions) != 1:
-        print('warning: mask contains multiple regions')
-    bb = regions[0].bbox
-    rw.showImage(image[bb[0]:bb[2]+1, bb[1]:bb[3]+1])
+from misc.manually_score_images import ManualImageScorer
+
+class AutomaskedManualImageScorer(ManualImageScorer):
+    def _getImage(self, imageFPath):
+        image = skio.imread(str(imageFPath))
+        mask = skio.imread(str(imageFPath.parent / 'fluo_worm_mask.png')).astype(numpy.bool)
+#       image[~mask] = 0
+        labels = skimage.measure.label(mask)
+        regions = skimage.measure.regionprops(labels)
+        if len(regions) == 0:
+            print('warning: mask is empty')
+        else:
+            if len(regions) > 1:
+                print('warning: mask contains multiple regions')
+            else:
+                bb = regions[0].bbox
+                return numpy.copy(image[bb[0]:bb[2]+1, bb[1]:bb[3]+1])

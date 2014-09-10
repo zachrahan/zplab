@@ -203,7 +203,7 @@ class ManualImageScorer(ManualScorer):
         if image is not None:
             if image.dtype == numpy.float32:
                 image = (image * 65535).astype(numpy.uint16)
-        self._rw.showImage(image)
+            self._rw.showImage(image)
 
     def _refreshScoreButtons(self):
         self._inRefreshScoreButtons = True
