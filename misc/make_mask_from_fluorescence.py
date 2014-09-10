@@ -153,7 +153,7 @@ def computeMaskedFocusMeasures(imageFPaths, focusMeasureResultDb):
                     if measureImage is None:
                         measureResults.append(numpy.nan)
                     else:
-                        measureResults.append((numpy.ma.array(measureImage, mask=~mask)**2).sum())
+                        measureResults.append(((numpy.ma.array(measureImage, mask=~mask)**2).sum(), mask.sum()))
                     print(measureName, measureResults[-1])
 
             elif imageIdx > len(measureResults):
