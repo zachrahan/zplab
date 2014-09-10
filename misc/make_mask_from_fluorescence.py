@@ -90,3 +90,72 @@ class AutomaskedManualImageScorer(ManualImageScorer):
             else:
                 bb = regions[0].bbox
                 return numpy.copy(image[bb[0]:bb[2]+1, bb[1]:bb[3]+1])
+
+import acquisition_scripts.autofocus
+
+def computeMaskedFocusMeasures(imageFPaths, focusMeasureResultDb):
+    focusMeasures = ('brennerFocusMeasure',
+                     'cannyFocusMeasure',
+                     'bottomhatFocusMeasure',
+                     ('bottomhatGaussian_0_5_FocusMeasure', 'bottomhatGaussianFocusMeasure', None, 0.5),
+                     ('bottomhatGaussian_1_0_FocusMeasure', 'bottomhatGaussianFocusMeasure', None, 1.0),
+                     ('bottomhatGaussian_1_5_FocusMeasure', 'bottomhatGaussianFocusMeasure', None, 1.5),
+                     'tophatFocusMeasure',
+                     ('tophatGaussian_0_5_FocusMeasure', 'tophatGaussianFocusMeasure', None, 0.5),
+                     ('tophatGaussian_1_0_FocusMeasure', 'tophatGaussianFocusMeasure', None, 1.0),
+                     ('tophatGaussian_1_5_FocusMeasure', 'tophatGaussianFocusMeasure', None, 1.5))
+
+    focusMeasureFuncs = {}
+    for focusMeasure in focusMeasures:
+        if type(focusMeasure) is tuple:
+            measureName = focusMeasure[0]
+            measureFunc = focusMeasure[1]
+        else:
+            measureName = focusMeasure
+            measureFunc = focusMeasure
+
+        focusMeasureFuncs[measureName] = acquisition_scripts.autofocus.__getattribute__(measureFunc)
+        if measureName not in focusMeasureResultDb:
+            focusMeasureResultDb[measureName] = []
+
+    for imageIdx, imageFPath in enumerate(imageFPaths):
+        print(str(imageFPath))
+        image = None
+        mask = None
+        badImage = False
+        for focusMeasure in focusMeasures:
+            measureName = focusMeasure[0] if type(focusMeasure) is tuple else focusMeasure
+            measureResults = focusMeasureResultDb[measureName]
+            if imageIdx == len(measureResults):
+                if not badImage and image is None:
+                    image = skio.imread(str(imageFPath))
+                    mask = skio.imread(str(imageFPath.parent / 'fluo_worm_mask.png')).astype(numpy.bool)
+                    labels = skimage.measure.label(mask)
+                    regions = skimage.measure.regionprops(labels)
+                    if len(regions) == 0:
+                        print('mask for "{}" is empty'.str(imageFPath))
+                        badImage = True
+                    else:
+                        if len(regions) > 1:
+                            print('mask for "{}" contains multiple regions'.str(imageFPath))
+                        bb = regions[0].bbox
+                        image = image[bb[0]:bb[2], bb[1]:bb[3]]
+                        mask = regions[0].image
+
+                if badImage:
+                    measureResults.append(numpy.nan)
+                else:
+                    if type(focusMeasure) is tuple:
+                        measureImage = focusMeasureFuncs[measureName](image, *focusMeasure[2:])
+                    else:
+                        measureImage = focusMeasureFuncs[measureName](image)
+
+                    if measureImage is None:
+                        measureResults.append(numpy.nan)
+                    else:
+                        measureResults.append((numpy.ma.array(measureImage, mask=~mask)**2).sum())
+                    print(measureName, measureResults[-1])
+
+            elif imageIdx > len(measureResults):
+                raise RuntimeError('focus measure result for previous image is missing')
+

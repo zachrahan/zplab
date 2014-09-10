@@ -50,13 +50,14 @@ def _brenner(im, direction):
     return iml - imr
 
 def brennerFocusMeasure(im):
+    im = im.astype(numpy.float32) / 65535
     imh = _brenner(im, 'h')
     imv = _brenner(im, 'v')
     return numpy.sqrt(imh**2 + imv**2)
 
 def cannyFocusMeasure(im):
     try:
-        return skimage.filter.canny(im).astype(int) * 100
+        return skimage.filter.canny(im).astype(numpy.float32)
     except ValueError as e:
         return None
 
@@ -64,37 +65,34 @@ def bottomhatFocusMeasure(im, structureElement=None):
     if structureElement is None:
         structureElement = skimage.morphology.disk(5)
     try:
-        return skif.rank.bottomhat(im, skimage.morphology.disk)
+        return skimage.filter.rank.bottomhat((im / 256).astype(numpy.uint8), structureElement).astype(numpy.float32) / 255
     except ValueError as e:
-        r = numpy.NaN
-    return r, "bottomhat"
+        return None
 
 def bottomhatGaussianFocusMeasure(im, structureElement=None, sigma=0.5):
     if structureElement is None:
         structureElement = skimage.morphology.disk(5)
     try:
-        r = FMs.ss(skif.rank.bottomhat(skif.gaussian_filter(im, 0.5), FMs.structureElement), mask)
+        return skimage.filter.rank.bottomhat((skimage.filter.gaussian_filter(im.astype(numpy.float32) / 65535, sigma) * 255).astype(numpy.uint8), structureElement).astype(numpy.float32) / 255
     except ValueError as e:
-        r = numpy.NaN
-    return r, "bottomhat + gaussian 0.5"
+        print('errored')
+        return None
 
 def tophatFocusMeasure(im, structureElement=None):
     if structureElement is None:
         structureElement = skimage.morphology.disk(5)
     try:
-        r = FMs.ss(skif.rank.tophat(im, FMs.structureElement), mask)
+        return skimage.filter.rank.tophat((im / 256).astype(numpy.uint8), structureElement).astype(numpy.float32) / 255
     except ValueError as e:
-        r = numpy.NaN
-    return r, "tophat"
+        return None
 
 def tophatGaussianFocusMeasure(im, structureElement=None, sigma=0.5):
     if structureElement is None:
         structureElement = skimage.morphology.disk(5)
     try:
-        r = FMs.ss(skif.rank.tophat(skif.gaussian_filter(im, 0.5), FMs.structureElement), mask)
+        return skimage.filter.rank.tophat((skimage.filter.gaussian_filter(im.astype(numpy.float32) / 65535, sigma) * 255).astype(numpy.uint8), structureElement).astype(numpy.float32) / 255
     except ValueError as e:
-        r = numpy.NaN
-    return r, "tophat + gaussian 0.5"
+        return None
 
 
 
@@ -200,8 +198,7 @@ class LinearSearchAutofocuser:
                 buffer = buffers[bufferIdx]
                 if self._rw is not None:
                     self._rw.showImage(buffer)
-                im = buffer.astype(numpy.float32) / 65535
-                fmv = (self._focusMeasure(im)**2).sum()
+                fmv = (self._focusMeasure(buffer)**2).sum()
                 print('round={:02}, z={:<10}, focus_measure={}'.format(roundIdx, steps[stepIdx], fmv))
                 fmvs.append((steps[stepIdx], fmv))
 
