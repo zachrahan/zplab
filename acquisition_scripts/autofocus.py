@@ -25,6 +25,8 @@
 import greenlet
 import numpy
 from PyQt5 import Qt
+import skimage.filter
+import skimage.morphology
 import sys
 import time
 
@@ -51,6 +53,48 @@ def brennerFocusMeasure(im):
     imh = _brenner(im, 'h')
     imv = _brenner(im, 'v')
     return numpy.sqrt(imh**2 + imv**2)
+
+def cannyFocusMeasure(im):
+    try:
+        return skimage.filter.canny(im).astype(int) * 100
+    except ValueError as e:
+        return None
+
+def bottomhatFocusMeasure(im, structureElement=None):
+    if structureElement is None:
+        structureElement = skimage.morphology.disk(5)
+    try:
+        return skif.rank.bottomhat(im, skimage.morphology.disk)
+    except ValueError as e:
+        r = numpy.NaN
+    return r, "bottomhat"
+
+def bottomhatGaussianFocusMeasure(im, structureElement=None, sigma=0.5):
+    if structureElement is None:
+        structureElement = skimage.morphology.disk(5)
+    try:
+        r = FMs.ss(skif.rank.bottomhat(skif.gaussian_filter(im, 0.5), FMs.structureElement), mask)
+    except ValueError as e:
+        r = numpy.NaN
+    return r, "bottomhat + gaussian 0.5"
+
+def tophatFocusMeasure(im, structureElement=None):
+    if structureElement is None:
+        structureElement = skimage.morphology.disk(5)
+    try:
+        r = FMs.ss(skif.rank.tophat(im, FMs.structureElement), mask)
+    except ValueError as e:
+        r = numpy.NaN
+    return r, "tophat"
+
+def tophatGaussianFocusMeasure(im, structureElement=None, sigma=0.5):
+    if structureElement is None:
+        structureElement = skimage.morphology.disk(5)
+    try:
+        r = FMs.ss(skif.rank.tophat(skif.gaussian_filter(im, 0.5), FMs.structureElement), mask)
+    except ValueError as e:
+        r = numpy.NaN
+    return r, "tophat + gaussian 0.5"
 
 
 

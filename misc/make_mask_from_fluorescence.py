@@ -72,3 +72,14 @@ def makeExperiment00FluoMasks(rw, tryDivisors=None):
                 print(str(maskFPath))
                 skio.imsave(str(maskFPath), immm.astype(numpy.uint8)*255)
                 break
+
+def showMasked(rw, image, mask):
+    image = numpy.copy(image)
+    mask = mask.astype(numpy.bool)
+    image[~mask] = 0
+    labels = skimage.measure.label(mask)
+    regions = skimage.measure.regionprops(labels)
+    if len(regions) != 1:
+        print('warning: mask contains multiple regions')
+    bb = regions[0].bbox
+    rw.showImage(image[bb[0]:bb[2]+1, bb[1]:bb[3]+1])
