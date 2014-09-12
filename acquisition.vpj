@@ -98,6 +98,7 @@
 		<F N="acquisition/focus_range_stack.py"/>
 		<F N="misc/make_mask_from_fluorescence.py"/>
 		<F N="misc/manually_score_images.py"/>
+		<F N="misc/skeletonize_fluorescence_masks.py"/>
 	</Files>
 	<Config
 		Name="Debug"

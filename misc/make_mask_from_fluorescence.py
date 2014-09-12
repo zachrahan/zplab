@@ -143,7 +143,7 @@ def computeMaskedFocusMeasures(imageFPaths, focusMeasureResultDb):
                         mask = regions[0].image
 
                 if badImage:
-                    measureResults.append(numpy.nan)
+                    measureResults.append((numpy.nan, numpy.nan))
                 else:
                     if type(focusMeasure) is tuple:
                         measureImage = focusMeasureFuncs[measureName](image, *focusMeasure[2:])
@@ -158,4 +158,3 @@ def computeMaskedFocusMeasures(imageFPaths, focusMeasureResultDb):
 
             elif imageIdx > len(measureResults):
                 raise RuntimeError('focus measure result for previous image is missing')
-
