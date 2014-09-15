@@ -95,6 +95,7 @@
 		<F N="acquisition/acquisition_exception.py"/>
 		<F N="acquisition_scripts/autofocus.py"/>
 		<F N="acquisition/device.py"/>
+		<F N="misc/fluorescence_trained_brightfield_worm_finder.py"/>
 		<F N="acquisition/focus_range_stack.py"/>
 		<F N="misc/make_mask_from_fluorescence.py"/>
 		<F N="misc/manually_score_images.py"/>
