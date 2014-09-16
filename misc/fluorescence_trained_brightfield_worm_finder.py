@@ -59,6 +59,25 @@ def cropToFluorescenceMask(image, imageFPath):
             bb = regions[0].bbox
             return numpy.copy(image[bb[0]:bb[2]+1, bb[1]:bb[3]+1])
 
+def selectRandomCenterlinePoints(imageFPath, pointCount):
+    imageFPath = Path(imageFPath)
+    im_centerline = skio.imread(str(imageFPath.parent / 'fluo_worm_mask_skeleton.png')) > 0
+    labels = skimage.measure.label(im_centerline)
+    regions = skimage.measure.regionprops(labels)
+    if len(regions) == 0:
+        raise RuntimeError('Mask skeleton image contains no regions.')
+    else:
+        if len(regions) > 1:
+            raise RuntimeError('Mask skeleton image contains multiple regions.')
+        else:
+            coords = regions[0].coords
+            if pointCount > len(coords):
+                print('warning: pointCount exceeds number of pixels in skeleton... ' + \
+                      'All skeleton points will be returned without duplication, which is still ' + \
+                      'fewer points than requested.')
+                pointCount = len(coords)
+            return coords[numpy.random.choice(range(len(coords)), size=pointCount, replace=False)]
+
 def showWormWithCenterLine(risWidget, imageFPath):
     risWidget.showImage(overlayCenterLineOnWorm(imageFPath))
 
@@ -77,13 +96,18 @@ def makeMedianImage(images):
             imageStack = numpy.concatenate((imageStack, image[:,:,numpy.newaxis]), axis=2)
     return numpy.median(imageStack, axis=2)
 
-def findWormAgainstBackground(images, lowpassSigma=3, erosionThresholdPercentile=99.9, propagationThresholdPercentile=99.7):
+def findWormAgainstBackground(rw, images, lowpassSigma=3, erosionThresholdPercentile=99.9, propagationThresholdPercentile=99.7):
     if len(images) < 3:
         raise ValueError('At least 3 images are required.')
     im = numpy.abs(makeMedianImage(images[:-1]).astype(numpy.float32) - images[-1])
-    lowpass = scipy.ndimage.gaussian_filter(im, lowpassSigma)
-    highpass = numpy.abs(im - lowpass)
-    im = numpy.abs(im - highpass)
+    rw.showImage(im.astype(numpy.uint16))
+#   input()
+#   lowpass = scipy.ndimage.gaussian_filter(im, lowpassSigma)
+#   highpass = numpy.abs(im - lowpass)
+#   im = numpy.abs(im - highpass)
+    im = scipy.ndimage.median_filter(im, size=5)
+    rw.showImage(im.astype(numpy.uint16))
+#   input()
 
     for i in range(10):
         eroded = scipy.ndimage.morphology.binary_erosion(im > numpy.percentile(im, erosionThresholdPercentile), iterations=5)
