@@ -23,6 +23,7 @@
 # Authors: Erik Hvatum
 
 import collections
+import math
 import numpy
 from pathlib import Path
 import scipy.ndimage
@@ -59,8 +60,13 @@ def cropToFluorescenceMask(image, imageFPath):
             bb = regions[0].bbox
             return numpy.copy(image[bb[0]:bb[2]+1, bb[1]:bb[3]+1])
 
-def selectRandomCenterlinePoints(imageFPath, pointCount):
+def selectRandomPoints(imageFPath, centerLinePointCount, nonWormPointCount):
+    centerLinePoints = []
+    nonWormPoints = []
     imageFPath = Path(imageFPath)
+    im_mask = skio.imread(str(imageFPath.parent / 'fluo_worm_mask.png')) > 0
+    # Dilate mask out substantially so that non-worm pixels we select are not adjacent to the worm
+    im_mask = scipy.ndimage.morphology.binary_dilation(im_mask, iterations=100)
     im_centerline = skio.imread(str(imageFPath.parent / 'fluo_worm_mask_skeleton.png')) > 0
     labels = skimage.measure.label(im_centerline)
     regions = skimage.measure.regionprops(labels)
@@ -71,12 +77,43 @@ def selectRandomCenterlinePoints(imageFPath, pointCount):
             raise RuntimeError('Mask skeleton image contains multiple regions.')
         else:
             coords = regions[0].coords
-            if pointCount > len(coords):
-                print('warning: pointCount exceeds number of pixels in skeleton... ' + \
+            if centerLinePointCount > len(coords):
+                print('warning: centerLinePointCount exceeds number of pixels in skeleton... ' + \
                       'All skeleton points will be returned without duplication, which is still ' + \
                       'fewer points than requested.')
-                pointCount = len(coords)
-            return coords[numpy.random.choice(range(len(coords)), size=pointCount, replace=False)]
+                centerLinePointCount = len(coords)
+            centerLinePoints = coords[numpy.random.choice(range(len(coords)), size=centerLinePointCount, replace=False)]
+            while len(nonWormPoints) < nonWormPointCount:
+                y = numpy.random.randint(im_mask.shape[0])
+                x = numpy.random.randint(im_mask.shape[1])
+                if im_mask[y, x] or math.sqrt((y - 1079.5)**2 + (x - 1279.5)**2) > 1000 or (y, x) in nonWormPoints:
+                    continue
+                nonWormPoints.append((y, x))
+    return numpy.array(centerLinePoints, dtype=numpy.uint32), numpy.array(nonWormPoints, dtype=numpy.uint32)
+
+def makeFeatureVector(imf, patchWidth, point):
+    def gabor(theta):
+        g = skimage.filter.gabor_filter(imf[point[0]-filterBoxOffset:point[0]+filterBoxOffset,
+                                            point[1]-filterBoxOffset:point[1]+filterBoxOffset],
+                                        frequency=0.1, theta=theta)
+        return (g[0][responseBoxOffset:responseBoxOffset+patchWidth,
+                     responseBoxOffset:responseBoxOffset+patchWidth],
+                g[1][responseBoxOffset:responseBoxOffset+patchWidth,
+                     responseBoxOffset:responseBoxOffset+patchWidth])
+    filterBoxOffset = patchWidth / 2 + 10
+    responseBoxOffset = patchWidth / 2
+    return numpy.array((gabor(0), gabor(math.pi/4))).ravel()
+
+def makeTrainingTestingFeatureVectors(imageFPath, patchWidth, centerLineCount, nonWormCount):
+    imf = skio.imread(str(imageFPath)).astype(numpy.float32) / 65535
+    centerLinePoints, nonWormPoints = selectRandomPoints(imageFPath, centerLineCount, nonWormCount)
+    centerLineVectors = []
+    for p in centerLinePoints:
+        centerLineVectors.append(makeFeatureVector(imf, patchWidth, p))
+    nonWormVectors = []
+    for p in nonWormPoints:
+        nonWormVectors.append(makeFeatureVector(imf, patchWidth, p))
+    return (centerLineVectors, nonWormVectors)
 
 def showWormWithCenterLine(risWidget, imageFPath):
     risWidget.showImage(overlayCenterLineOnWorm(imageFPath))
