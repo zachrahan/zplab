@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # The MIT License (MIT)
 #
 # Copyright (c) 2014 WUSTL ZPLAB
@@ -169,6 +167,24 @@ def findWormAgainstBackground(rw, images, lowpassSigma=3, erosionThresholdPercen
 
         erosionThresholdPercentile -= 1
         propagationThresholdPercentile -= 1
+
+def findWormInImage(imf, classifier, patchWidth):
+    filterBoxWidth = patchWidth + 10
+    halfFilterBoxWidth = filterBoxWidth / 2
+    ycount = int(imf.shape[0] / filterBoxWidth)
+    xcount = int(imf.shape[1] / filterBoxWidth)
+    mask = numpy.zeros((ycount, xcount), dtype=numpy.bool)
+    xycount = ycount * xcount
+    xyindex = 0
+    for yindex in range(ycount):
+        y = halfFilterBoxWidth + yindex * filterBoxWidth
+        for xindex in range(xcount):
+            x = halfFilterBoxWidth + xindex * filterBoxWidth
+            vector = makeFeatureVector(imf, patchWidth, (y, x))
+            mask[yindex, xindex] = False if len(vector) == 0 else classifier.predict(vector)
+            xyindex += 1
+            print('{}%'.format(100 * xyindex / xycount))
+    return mask
 
 def _processFunction(imageIndex, imageFPath, centerLineSampleCount, nonWormSampleCount, patchWidth):
     try:
