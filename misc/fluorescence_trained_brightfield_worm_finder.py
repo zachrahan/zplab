@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # The MIT License (MIT)
 #
 # Copyright (c) 2014 WUSTL ZPLAB
@@ -104,16 +106,18 @@ def makeFeatureVector(imf, patchWidth, point):
     responseBoxOffset = patchWidth / 2
     return numpy.array((gabor(0), gabor(math.pi/4))).ravel()
 
-def makeTrainingTestingFeatureVectors(imageFPath, patchWidth, centerLineCount, nonWormCount):
+def makeTrainingTestingFeatureVectorsForImage(imageFPath, patchWidth, centerLineCount, nonWormCount):
     imf = skio.imread(str(imageFPath)).astype(numpy.float32) / 65535
     centerLinePoints, nonWormPoints = selectRandomPoints(imageFPath, centerLineCount, nonWormCount)
-    centerLineVectors = []
+    data = []
+    targets = []
     for p in centerLinePoints:
-        centerLineVectors.append(makeFeatureVector(imf, patchWidth, p))
-    nonWormVectors = []
+        data.append(makeFeatureVector(imf, patchWidth, p))
+        targets.append(True)
     for p in nonWormPoints:
-        nonWormVectors.append(makeFeatureVector(imf, patchWidth, p))
-    return (centerLineVectors, nonWormVectors)
+        data.append(makeFeatureVector(imf, patchWidth, p))
+        targets.append(False)
+    return (data, targets)
 
 def showWormWithCenterLine(risWidget, imageFPath):
     risWidget.showImage(overlayCenterLineOnWorm(imageFPath))
@@ -165,3 +169,73 @@ def findWormAgainstBackground(rw, images, lowpassSigma=3, erosionThresholdPercen
 
         erosionThresholdPercentile -= 1
         propagationThresholdPercentile -= 1
+
+def _processFunction(imageIndex, imageFPath, centerLineSampleCount, nonWormSampleCount, patchWidth):
+    try:
+        data, targets = makeTrainingTestingFeatureVectorsForImage(imageFPath, patchWidth, centerLineSampleCount, nonWormSampleCount)
+        return imageIndex, imageFPath, data, targets
+    except Exception as processException:
+        processException.imageFPath = imageFPath
+        raise processException
+
+if __name__ == '__main__':
+    import argparse
+    argparser = argparse.ArgumentParser(description='Brightfield worm finder fluorescence generator of data & target dataset for training & testing.')
+    argparser.add_argument('--imageCenterLineDb', required=True)
+    argparser.add_argument('--dataAndTargetScratchDb', required=True)
+    argparser.add_argument('--dataAndTargetDb', required=True)
+    argparser.add_argument('--centerLineSampleCount', default=5, type=int)
+    argparser.add_argument('--nonWormSampleCount', default=20, type=int)
+    argparser.add_argument('--patchWidth', default=8, type=int)
+    args = argparser.parse_args()
+    with open(args.imageCenterLineDb, 'rb') as f:
+        imageCenterLineDb = pickle.load(f)
+        # Use only image sets (bf, fluo, mask, skeleton) whose skeleton passed manual examination (skeleton properly overlays the worm center
+        # line without branching)
+        imageFPaths = sorted([imageFPath for imageFPath, score in imageCenterLineDb.items() if score == 1])
+        del imageCenterLineDb
+    dataAndTargetDb = dict()
+    # Attempt to load data in order to resume previously interrupted or failed run
+    try:
+        with open(args.dataAndTargetScratchDb, 'rb') as f:
+            while True:
+                imageFPath, data, targets = pickle.load(f)
+                if imageFPath in dataAndTargetDb:
+                    raise RuntimeError('"{}" appears multiple times in dataAndTargetScratchDb file ("{}").'.format(str(imageFPath), args.dataAndTargetScratchDb))
+                dataAndTargetDb[imageFPath] = (data, targets)
+    except (FileNotFoundError, EOFError):
+        pass
+
+    def processCompletionCallback(processReturn):
+        imageIndex, imageFPath, data, targets = processReturn
+        if imageFPath in dataAndTargetDb:
+            raise RuntimeError('Multiple data & target datasets generated for "{}".'.format(str(imageFPath)))
+        dataAndTargetDb[imageFPath] = [data, targets]
+        pickle.dump((imageFPath, data, targets), dataAndTargetScratchDbFile)
+        dataAndTargetScratchDbFile.flush()
+        print('{}%'.format(100 * (imageIndex + 1) / len(imageFPaths)))
+
+    def processExceptionCallback(processException):
+        try:
+            imageFPath = processException.imageFPath
+            del processException.imageFPath
+            print('warning: processing failed for "{}" with exception:'.format(str(imageFPath)), processException)
+        except AttributeError:
+            print('warning: processing failed for "UNKOWN FILE" with exception:', processException)
+
+    with open(args.dataAndTargetScratchDb, 'ab') as dataAndTargetScratchDbFile:
+        with multiprocessing.Pool(multiprocessing.cpu_count() + 1) as pool:
+            asyncResults = []
+            for imageIndex, imageFPath in enumerate(imageFPaths):
+                if imageFPath not in dataAndTargetDb:
+                    asyncResults.append(pool.apply_async(_processFunction,
+                                                         (imageIndex, imageFPath, args.centerLineSampleCount, args.nonWormSampleCount, args.patchWidth),
+                                                         callback=processCompletionCallback,
+                                                         error_callback=processExceptionCallback))
+            pool.close()
+            pool.join()
+
+    print('Done!  Writing data & target db ("{}")...'.format(args.dataAndTargetDb))
+    with open(args.dataAndTargetDb, 'wb') as f:
+        pickle.dump(dataAndTargetDb, f)
+    print('Data & target db written.  Exiting...')
