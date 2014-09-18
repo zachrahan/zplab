@@ -2,13 +2,15 @@
 // Erik Hvatum (ice.rikh@gmail.com)
 
 const int analogOutPin = 10;
-const int indicatorOutPin = 0;
+const int enablePin = 0;
 
 void setup()
 {
     pinMode(analogOutPin, OUTPUT);
-    pinMode(indicatorOutPin, OUTPUT);
+    pinMode(enablePin, OUTPUT);
+    TCCR1B = _BV(CS00); // set the timer that controls pin 10 to use 32khz PWM frequency
     analogWrite(analogOutPin, 0);
+    digitalWrite(enablePin, HIGH); // pin is inverted: HIGH disables, LOW enables
     Serial.begin(9600);
 }
 
@@ -83,15 +85,13 @@ void loop()
                     if(sarg == arg_true)
                     {
                         ledOn = true;
-                        analogWrite(analogOutPin, power);
-                        digitalWrite(indicatorOutPin, HIGH);
+                        digitalWrite(enablePin, LOW); // LOW enables 
                         Serial.println("on<-true");
                     }
                     else if(sarg == arg_false)
                     {
                         ledOn = false;
-                        analogWrite(analogOutPin, 0);
-                        digitalWrite(indicatorOutPin, LOW);
+                        digitalWrite(enablePin, HIGH); // HIGH or tri-state disables 
                         Serial.println("on<-false");
                     }
                     else
@@ -142,10 +142,7 @@ void loop()
                         else
                         {
                             power = v;
-                            if(ledOn)
-                            {
-                                analogWrite(analogOutPin, power);
-                            }
+                            analogWrite(analogOutPin, power);
                             Serial.println(String("power<-") + String(power));
                         }
                     }
