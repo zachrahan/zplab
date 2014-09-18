@@ -28,6 +28,7 @@ import numpy
 from pathlib import Path
 import scipy.ndimage
 import scipy.ndimage.morphology
+import skimage.exposure
 import skimage.measure
 import skimage.morphology
 import skimage.io as skio
@@ -105,7 +106,7 @@ def makeFeatureVector(imf, patchWidth, point):
     return numpy.array((gabor(0), gabor(math.pi/4))).ravel()
 
 def makeTrainingTestingFeatureVectorsForImage(imageFPath, patchWidth, centerLineCount, nonWormCount):
-    imf = skio.imread(str(imageFPath)).astype(numpy.float32) / 65535
+    imf = skimage.exposure.equalize_adapthist(skio.imread(str(imageFPath))).astype(numpy.float32)
     centerLinePoints, nonWormPoints = selectRandomPoints(imageFPath, centerLineCount, nonWormCount)
     data = []
     targets = []
@@ -168,7 +169,8 @@ def findWormAgainstBackground(rw, images, lowpassSigma=3, erosionThresholdPercen
         erosionThresholdPercentile -= 1
         propagationThresholdPercentile -= 1
 
-def findWormInImage(imf, classifier, patchWidth):
+def findWormInImage(im, classifier, patchWidth):
+    imf = skimage.exposure.equalize_adapthist(im).astype(numpy.float32)
     filterBoxWidth = patchWidth + 10
     halfFilterBoxWidth = filterBoxWidth / 2
     ycount = int(imf.shape[0] / filterBoxWidth)
@@ -254,4 +256,6 @@ if __name__ == '__main__':
     print('Done!  Writing data & target db ("{}")...'.format(args.dataAndTargetDb))
     with open(args.dataAndTargetDb, 'wb') as f:
         pickle.dump(dataAndTargetDb, f)
-    print('Data & target db written.  Exiting...')
+    print('Data & target db written.  Deleting scratch db ("{}")...'.format(args.dataAndTargetScratchDb))
+    Path(args.dataAndTargetScratchDb).unlink()
+    print('Scratch db deleted.  Exiting...')
