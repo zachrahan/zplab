@@ -93,6 +93,7 @@
 		<F N="acquisition/__init__.py"/>
 		<F N="acquisition_direct_manip.py"/>
 		<F N="acquisition/acquisition_exception.py"/>
+		<F N="acquisition_scripts/aging_fluorescence.py"/>
 		<F N="acquisition_scripts/autofocus.py"/>
 		<F N="acquisition/device.py"/>
 		<F N="misc/fluorescence_trained_brightfield_worm_finder.py"/>
