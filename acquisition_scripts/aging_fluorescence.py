@@ -74,6 +74,7 @@ class AgingFluorescence(Qt.QObject):
                 self.root.dm6000b.waitForReady()
                 self.root.brightfieldLed.enabled = True
                 self.root.brightfieldLed.power = 200
+                self.root.dm6000b.lamp.tlShutterOpened = True
                 self.root.camera._camera.AT_Flush()
                 buffers = [self.root.camera.makeAcquisitionBuffer() for i in range(imageCount)]
                 self.root.camera.shutter = self.root.camera.Shutter.Rolling
@@ -85,50 +86,51 @@ class AgingFluorescence(Qt.QObject):
                 for buffer in buffers:
                     self.root.camera._camera.AT_QueueBuffer(buffer)
                 self.root.camera._camera.AT_Command(self.root.camera.Feature.AcquisitionStart)
-                time.sleep(0.08)
+                time.sleep(1)
                 self.root.camera.commandSoftwareTrigger()
                 time.sleep(0.040)
                 self.root.brightfieldLed.enabled = False
-                # 150ms fluorescence exposure time
-                self.root.camera.exposureTime = 0.150
+                self.root.dm6000b.lamp.tlShutterOpened = False
+                # 300ms fluorescence exposure time
+                self.root.camera.exposureTime = 0.300
                 if filterSetNumber == 0:
                     self.root.lumencor.UVEnabled = True
                     self.root.lumencor.UVPower = 255
-                    time.sleep(0.08)
+                    time.sleep(1)
                     self.root.camera.commandSoftwareTrigger()
-                    time.sleep(0.170)
+                    time.sleep(0.320)
                     self.root.lumencor.UVEnabled = False
                     self.root.lumencor.cyanEnabled = True
                     self.root.lumencor.cyanPower = 255
                     time.sleep(0.08)
                     self.root.camera.commandSoftwareTrigger()
-                    time.sleep(0.170)
+                    time.sleep(0.320)
                     self.root.lumencor.cyanEnabled = False
                     self.root.lumencor.greenEnabled = True
                     self.root.lumencor.greenPower = 255
                     time.sleep(0.08)
                     self.root.camera.commandSoftwareTrigger()
-                    time.sleep(0.170)
+                    time.sleep(0.320)
                     self.root.lumencor.disable()
                     names = ['bf-DFTr', 'DAPI', 'FITC', 'TRITC']
                 elif filterSetNumber == 1:
                     self.root.lumencor.blueEnabled = True
                     self.root.lumencor.bluePower = 255
-                    time.sleep(0.08)
+                    time.sleep(1)
                     self.root.camera.commandSoftwareTrigger()
-                    time.sleep(0.170)
+                    time.sleep(0.320)
                     self.root.lumencor.blueEnabled = False
                     self.root.lumencor.tealEnabled = True
                     self.root.lumencor.tealPower = 255
                     time.sleep(0.08)
                     self.root.camera.commandSoftwareTrigger()
-                    time.sleep(0.170)
+                    time.sleep(0.320)
                     self.root.lumencor.tealEnabled = False
                     self.root.lumencor.greenEnabled = True
                     self.root.lumencor.greenPower = 255
                     time.sleep(0.08)
                     self.root.camera.commandSoftwareTrigger()
-                    time.sleep(0.170)
+                    time.sleep(0.320)
                     self.root.lumencor.disable()
                     names = ['bf-CYmC', 'CFP', 'YFP', 'mCherry']
                 for i in range(imageCount):
