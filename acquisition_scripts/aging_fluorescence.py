@@ -11,8 +11,8 @@ class AgingFluorescence(Qt.QObject):
     def __init__(self, root, out_dir, prefix):
         super().__init__()
         self.root = root
-        self.positions_a = []
-        self.positions_b = []
+        self.positions_control = []
+        self.positions_exp = []
         self.get_more_positions_gt = None
         self.out_dir = Path(out_dir)
         self.prefix = prefix
@@ -21,7 +21,7 @@ class AgingFluorescence(Qt.QObject):
         self.positions_fpath = self.out_dir / (prefix + '_positions.json')
         if self.positions_fpath.exists():
             with open(str(self.positions_fpath), 'r') as f:
-                self.positions_a, self.positions_b = json.load(f)
+                self.positions_control, self.positions_exp = json.load(f)
 
     def get_more_positions(self):
         self.stop_button = Qt.QPushButton('stop getting positions')
@@ -32,7 +32,7 @@ class AgingFluorescence(Qt.QObject):
     def on_pedal_up(self, pedal, isUp):
         if not isUp:
             pos = (self.root.dm6000b.stageX.pos, self.root.dm6000b.stageY.pos, self.root.dm6000b.stageZ.pos)
-            pl = self.positions_a if pedal == 0 else self.positions_b
+            pl = self.positions_control if pedal == 0 else self.positions_exp
             pl.append(pos)
 
     def stop_getting_positions(self):
@@ -42,7 +42,7 @@ class AgingFluorescence(Qt.QObject):
 
     def save_positions(self):
         with open(str(self.positions_fpath), 'w') as f:
-            json.dump((self.positions_a, self.positions_b), f)
+            json.dump((self.positions_control, self.positions_exp), f)
 
     def acquireForFilterSet(self, filterSetNumber, rw=None):
         imageCount = 4
@@ -55,8 +55,9 @@ class AgingFluorescence(Qt.QObject):
         else:
             raise ValueError('filterSetNumber must be 0 or 1')
         time.sleep(1)
-        for positionSet in ('a', 'b'):
-            positions = eval('self.positions_{}'.format(positionSet))
+        ## NEED TO EXPLICITLY SET EXPOSURE TIMES -- 20 ms for brightfield and 150 ms for fluorescence
+        for positionSet in ('control', 'exp'):
+            positions = self.positions_control if positionSet is 'control' else self.positions_exp
             for positionIndex, position in enumerate(positions):
                 self.root.dm6000b.stageX.pos, self.root.dm6000b.stageY.pos, self.root.dm6000b.stageZ.pos = position
                 self.root.brightfieldLed.enabled = True
@@ -93,7 +94,7 @@ class AgingFluorescence(Qt.QObject):
                     self.root.camera.commandSoftwareTrigger()
                     time.sleep(0.020)
                     self.root.lumencor.disable()
-                    names = ['bf', 'uv', 'cyan', 'green']
+                    names = ['bf-DFTr', 'DAPI', 'FITC', 'TRITC']
                 elif filterSetNumber == 1:
                     self.root.camera.commandSoftwareTrigger()
                     time.sleep(0.020)
@@ -116,12 +117,12 @@ class AgingFluorescence(Qt.QObject):
                     self.root.camera.commandSoftwareTrigger()
                     time.sleep(0.020)
                     self.root.lumencor.disable()
-                    names = ['bf', 'blue', 'teal', 'green']
+                    names = ['bf-CYmC', 'CFP', 'YFP', 'mCherry']
                 for i in range(imageCount):
                     self.root.camera._camera.AT_WaitBuffer(1000)
                 self.root.camera._camera.AT_Command(self.root.camera.Feature.AcquisitionStop)
                 for i in range(imageCount):
-                    imFP = self.out_dir / '{}_position_set_{}_position_{:04}_filterset_{}_color_{}.png'.format(self.prefix, positionSet, positionIndex, filterSetNumber, names[i])
+                    imFP = self.out_dir / '{}_{}_{:04}_{}.png'.format(self.prefix, positionSet, positionIndex, names[i])
                     if rw is not None:
                         rw.showImage(buffers[i])
                     skio.imsave(str(imFP), buffers[i])
