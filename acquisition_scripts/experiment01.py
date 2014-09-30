@@ -132,7 +132,10 @@ class Experiment01(Qt.QObject):
             self.root.dm6000b.stageY.pos = pos[1]
             self.root.dm6000b.waitForReady()
             self.autofocuser.start()
-            yield
+            autofocus_successfull = yield
+            if not autofocus_successfull or self.autofocuser.bestZ is None:
+                print('warning: autofocus failed, skipping position {} for run {}.'.format(pos_idx, self.run_idx))
+                continue
             self.root.dm6000b.stageZ.pos = self.autofocuser.bestZ
             self.root.dm6000b.waitForReady()
             self.root.camera._camera.AT_Flush()
@@ -142,13 +145,12 @@ class Experiment01(Qt.QObject):
             self.root.camera.commandSoftwareTrigger()
             self.root.camera._camera.AT_WaitBuffer(1000)
             self.root.camera._camera.AT_Command(self.root.camera._camera.Feature.AcquisitionStop)
-            print('6')
             im_fpath = self.out_dir / '{:04}'.format(pos_idx)
             if not im_fpath.exists():
                 im_fpath.mkdir()
             im_fpath /= '{}__{:04}_{:04}.png'.format(self.prefix, pos_idx, self.run_idx)
             skio.imsave(str(im_fpath), im)
         self.root.brightfieldLed.enabled = False
-        self._execute_run_gen = None
+        self._execute_run_completed.emit()
         time_to_next = max(0, self.interval - (time.time() - self.run_ts))
         self.run_timer.start(time_to_next * 1000)
