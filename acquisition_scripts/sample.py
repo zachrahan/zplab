@@ -104,11 +104,11 @@ class Experiment(Qt.QObject):
         if len(self.wells) == 0:
             raise RuntimeError('Please add some wells before starting the experiment.')
         delta = time.time() - self.runTime
-        if delta > self.interval:
+        if delta >= self.interval:
             self._executeRun()
         else:
             self.runTimer.setSingleShot(True)
-            self.runTimer.start(delta * 1000)
+            self.runTimer.start((self.interval - delta) * 1000)
 
     def _executeRun(self):
         if self.runTimer.isSingleShot():
