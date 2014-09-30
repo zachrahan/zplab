@@ -149,6 +149,6 @@ class Experiment01(Qt.QObject):
             im_fpath /= '{}__{:04}_{:04}.png'.format(self.prefix, pos_idx, self.run_idx)
             skio.imsave(str(im_fpath), im)
         self.root.brightfieldLed.enabled = False
-        self._execute_run_gt = None
+        self._execute_run_gen = None
         time_to_next = max(0, self.interval - (time.time() - self.run_ts))
         self.run_timer.start(time_to_next * 1000)
