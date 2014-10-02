@@ -22,7 +22,6 @@
 #
 # Authors: Erik Hvatum
 
-import greenlet
 import numpy
 from PyQt5 import Qt
 import skimage.filter
@@ -94,11 +93,21 @@ def tophatGaussianFocusMeasure(im, structureElement=None, sigma=0.5):
     except ValueError as e:
         return None
 
+def coroutine(func):
+    def start(*args,**kwargs):
+        cr = func(*args,**kwargs)
+        next(cr)
+        return cr
+    return start
 
+class LinearSearchAutofocuser(Qt.QObject):
+    # Autofocus completed successfully if signal parameter is True
+    autoFocusDone = Qt.pyqtSignal(bool)
+    # Used internally to emit done signal after generator has exited, preventing call stack from getting totally out of control
+    _relayAutoFocusDone = Qt.pyqtSignal(bool)
 
-class LinearSearchAutofocuser:
     def __init__(self, camera, zDrive, minZ, maxZ, stepsPerRound, numberOfRounds, focusMeasure=brennerFocusMeasure, rw=None):
-        self._running = False
+        super().__init__()
         self._camera = camera
         self._zDrive = zDrive
         self._zRange = (minZ, maxZ)
@@ -106,14 +115,28 @@ class LinearSearchAutofocuser:
         self._numberOfRounds = numberOfRounds
         self._focusMeasure = focusMeasure
         self._rw = rw
-        self.idleGt = greenlet.getcurrent()
-        self.runGt = greenlet.greenlet(self._run)
         self.bestZ = None
+        self._runGen = None
+        self._relayAutoFocusDone.connect(self._relayAutoFocusDoneSlot, Qt.Qt.QueuedConnection)
 
     def abort(self):
-        if self._running:
-            self.runGt.switch(False)
+        if self._runGen is not None:
+            try:
+                self._runGen.send(False)
+            except StopIteration:
+                pass
 
+    def start(self):
+        if self._runGen is not None:
+            raise RuntimeError('LinearSearchAutofocuser is already running.')
+        self._runGen = self._run()
+
+    def _relayAutoFocusDoneSlot(self, succeeded):
+        self._zDrive.posChanged.disconnect(self._zDrivePosChanged)
+        self._runGen = None
+        self.autoFocusDone.emit(succeeded)
+
+    @coroutine
     def _run(self):
         t0 = time.time()
         self.bestZ = None
@@ -160,7 +183,6 @@ class LinearSearchAutofocuser:
             self._camera.triggerMode = self._camera.TriggerMode.Software
             self._camera.cycleMode = self._camera.CycleMode.Fixed
             self._camera.frameCount = self._stepsPerRound
-            print(self._camera.frameCount)
 
             for buffer in buffers:
                 self._camera._camera.AT_QueueBuffer(buffer)
@@ -170,13 +192,13 @@ class LinearSearchAutofocuser:
                 self._zDrive.pos = z
                 # Return to main event loop (or whatever was the enclosing greenlet when this class was instantiated) until
                 # the stage stops moving, aborting and cleaning up if resumed with switch(False)
-                if not self.idleGt.switch():
+                keepGoing = yield
+                if not keepGoing:
                     print('Autofocus aborted.')
                     self._camera._camera.AT_Command(self._camera._camera.Feature.AcquisitionStop)
                     self._camera._camera.AT_Flush()
-                    self._running = False
-                    self._zDrive.posChanged.disconnect(self._zDrivePosChanged)
-                    raise greenlet.GreenletExit()
+                    self._relayAutoFocusDone.emit(False)
+                    return
                 # Resuming after stage has moved
                 actualZ = self._zDrive.pos
                 if abs(actualZ - z) > self._zDrive._factor - sys.float_info.epsilon:
@@ -206,15 +228,13 @@ class LinearSearchAutofocuser:
 
             if len(fmvs) == 0:
                 print('Failed to move to any of the Z step positions.')
-                self._running = False
-                self._zDrive.posChanged.disconnect(self._zDrivePosChanged)
-                raise greenlet.GreenletExit()
+                self._relayAutoFocusDone.emit(False)
+                return
             if len(fmvs) == 1:
                 print('Successfully moved to only one of the Z step positions, making that position the best found.')
                 self.bestZ = fmvs[0][0]
-                self._running = False
-                self._zDrive.posChanged.disconnect(self._zDrivePosChanged)
-                raise greenlet.GreenletExit()
+                self._relayAutoFocusDone.emit(True)
+                return
 
             bestZIdx = numpy.array([fmv[1] for fmv in fmvs], dtype=numpy.float64).argmax()
 
@@ -227,15 +247,11 @@ class LinearSearchAutofocuser:
                 self.bestZ = steps[bestZIdx]
 
         print('Autofocus completed ({}s).'.format(time.time() - t0))
-        self._running = False
-        self._zDrive.posChanged.disconnect(self._zDrivePosChanged)
+        self._relayAutoFocusDone.emit(True)
 
     def _zDrivePosChanged(self, _):
-        if self._running and not self._zDrive.moving:
-            self.runGt.switch(True)
-
-def linearSearchAutofocus(camera, zDrive, minZ, maxZ, stepsPerRound, numberOfRounds, focusMeasure=brennerFocusMeasure, rw=None):
-    autofocuser = _Autofocuser(camera, zDrive, minZ, maxZ, stepsPerRound, numberOfRounds, rw)
-    # greenlet.run(..) blocks until the greenlet is dead and is the correct call to use when blocking behavior is desired
-    autofocuser.runGt.run()
-    return autofocuser.bestZ
+        if self._runGen is not None and not self._zDrive.moving:
+            try:
+                self._runGen.send(True)
+            except StopIteration:
+                pass
