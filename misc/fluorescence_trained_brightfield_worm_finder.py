@@ -93,17 +93,20 @@ def selectRandomPoints(imageFPath, centerLinePointCount, nonWormPointCount):
     return numpy.array(centerLinePoints, dtype=numpy.uint32), numpy.array(nonWormPoints, dtype=numpy.uint32)
 
 def makeFeatureVector(imf, patchWidth, point):
-    def gabor(theta):
-        g = skimage.filter.gabor_filter(imf[point[0]-filterBoxOffset:point[0]+filterBoxOffset,
-                                            point[1]-filterBoxOffset:point[1]+filterBoxOffset],
-                                        frequency=0.1, theta=theta)
-        return (g[0][responseBoxOffset:responseBoxOffset+patchWidth,
-                     responseBoxOffset:responseBoxOffset+patchWidth],
-                g[1][responseBoxOffset:responseBoxOffset+patchWidth,
-                     responseBoxOffset:responseBoxOffset+patchWidth])
-    filterBoxOffset = patchWidth / 2 + 10
-    responseBoxOffset = patchWidth / 2
-    return numpy.array((gabor(0), gabor(math.pi/4))).ravel()
+#   def gabor(theta):
+#       g = skimage.filter.gabor_filter(imf[point[0]-filterBoxOffset:point[0]+filterBoxOffset,
+#                                           point[1]-filterBoxOffset:point[1]+filterBoxOffset],
+#                                       frequency=0.1, theta=theta)
+#       return (g[0][responseBoxOffset:responseBoxOffset+patchWidth,
+#                    responseBoxOffset:responseBoxOffset+patchWidth],
+#               g[1][responseBoxOffset:responseBoxOffset+patchWidth,
+#                    responseBoxOffset:responseBoxOffset+patchWidth])
+#   filterBoxOffset = patchWidth / 2 + 10
+#   responseBoxOffset = patchWidth / 2
+#   return numpy.array((gabor(0), gabor(math.pi/4))).ravel()
+    boxOffset = int(patchWidth / 2)
+    return imf[point[0]-boxOffset : point[0]+boxOffset,
+               point[1]-boxOffset : point[1]+boxOffset].ravel()
 
 def makeTrainingTestingFeatureVectorsForImage(imageFPath, patchWidth, centerLineCount, nonWormCount):
     imf = skimage.exposure.equalize_adapthist(skio.imread(str(imageFPath))).astype(numpy.float32)
@@ -120,6 +123,20 @@ def makeTrainingTestingFeatureVectorsForImage(imageFPath, patchWidth, centerLine
 
 def showWormWithCenterLine(risWidget, imageFPath):
     risWidget.showImage(overlayCenterLineOnWorm(imageFPath))
+
+def loadTrainingAndTestingDataAndTargets(dataAndTargetDbFPath):
+    with open(str(dataAndTargetDbFPath), 'rb') as f:
+        dataAndTargetDb = pickle.load(f)
+    learnImageFPaths = set(dataAndTargetDb.keys())
+    testImageFPaths = {i for i in numpy.random.choice(list(learnImageFPaths), size=91, replace=False)}
+    learnImageFPaths -= testImageFPaths
+    learnImageFPaths = list(learnImageFPaths)
+    testImageFPaths = list(testImageFPaths)
+    testTargets = [target for targetList in [dataAndTargetDb[fpath][1] for fpath in testImageFPaths] for target in targetList]
+    learnTargets = [target for targetList in [dataAndTargetDb[fpath][1] for fpath in learnImageFPaths] for target in targetList]
+    testData = [vector for vectorList in [dataAndTargetDb[fpath][0] for fpath in testImageFPaths] for vector in vectorList]
+    learnData = [vector for vectorList in [dataAndTargetDb[fpath][0] for fpath in learnImageFPaths] for vector in vectorList]
+    return (learnData, learnTargets, testData, testTargets)
 
 from misc.manually_score_images import ManualImageScorer
 
