@@ -96,6 +96,8 @@
 		<F N="acquisition_scripts/aging_fluorescence.py"/>
 		<F N="acquisition_scripts/autofocus.py"/>
 		<F N="acquisition/device.py"/>
+		<F N="acquisition_scripts/experiment01.py"/>
+		<F N="acquisition_scripts/experiment01_a.py"/>
 		<F N="misc/fluorescence_trained_brightfield_worm_finder.py"/>
 		<F N="acquisition/focus_range_stack.py"/>
 		<F N="misc/make_mask_from_fluorescence.py"/>

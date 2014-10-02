@@ -230,13 +230,21 @@ class LinearSearchAutofocuser(Qt.QObject):
                 print('Failed to move to any of the Z step positions.')
                 self._relayAutoFocusDone.emit(False)
                 return
-            if len(fmvs) == 1:
-                print('Successfully moved to only one of the Z step positions, making that position the best found.')
-                self.bestZ = fmvs[0][0]
-                self._relayAutoFocusDone.emit(True)
-                return
+#           if len(fmvs) == 1:
+#               print('Successfully moved to only one of the Z step positions, making that position the best found.')
+#               self.bestZ = fmvs[0][0]
+#               self._relayAutoFocusDone.emit(True)
+#               return
 
             bestZIdx = numpy.array([fmv[1] for fmv in fmvs], dtype=numpy.float64).argmax()
+
+            ##!! for experiment01_a only
+            self.finalRoundImages = buffers[:len(fmvs)]
+            self.bestZIdx = bestZIdx
+            self.steps = []
+            for z, fmv in fmvs:
+                self.steps.append(z)
+            ##!!
 
             if roundIdx + 1 < self._numberOfRounds:
                 # Next round, search the range between the steps adjacent to the best step
