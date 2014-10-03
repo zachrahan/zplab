@@ -138,6 +138,22 @@ def loadTrainingAndTestingDataAndTargets(dataAndTargetDbFPath):
     learnData = [vector for vectorList in [dataAndTargetDb[fpath][0] for fpath in learnImageFPaths] for vector in vectorList]
     return (learnData, learnTargets, testData, testTargets)
 
+def writeLibSvmDataAndTargetsFile(data, targets, libSvmDataAndTargetsFileFPath):
+    '''Note: If file at path libSvmDataAndTargetsFileFPath exists, this function will attempt to overwrite it.'''
+    if len(data) != len(targets):
+        raise ValueError("len(data) != len(targets)")
+    with open(str(libSvmDataAndTargetsFileFPath), 'w') as libSvmDataAndTargetsFile:
+        for vector, target in zip(data, targets):
+            if target:
+                l = '1 '
+            else:
+                l = '0 '
+            for elementIdx, element in enumerate(vector, 1):
+                l += '{}:{} '.format(elementIdx, element)
+            l += '\n'
+            libSvmDataAndTargetsFile.write(l)
+
+
 from misc.manually_score_images import ManualImageScorer
 
 class ManualCenterLineScorer(ManualImageScorer):
