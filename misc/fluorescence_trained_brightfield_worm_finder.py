@@ -41,6 +41,8 @@ import multiprocessing
 import pickle
 import sys
 
+import misc._texture_analysis._texture_analysis as texan
+
 def overlayCenterLineOnWorm(imageFPath):
     imageFPath = Path(imageFPath)
     im_bf = skio.imread(str(imageFPath))
@@ -220,6 +222,9 @@ def findWormInImage(im, classifier, patchWidth):
             xyindex += 1
             print('{}%'.format(100 * xyindex / xycount))
     return mask
+
+def findWormInImage_z(im, classifier):
+    pass
 
 def _processFunction(imageIndex, imageFPath, centerLineSampleCount, nonWormSampleCount, patchWidth):
     try:
