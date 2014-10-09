@@ -162,26 +162,26 @@ class ManualCenterLineScorer(ManualImageScorer):
     def _getImage(self, imageFPath):
         return cropToFluorescenceMask(overlayCenterLineOnWorm(imageFPath), imageFPath)
 
-def makeMedianImage(images):
-    imageStack = None
-    for image in images:
-        if imageStack is None:
-            imageStack = image[:,:,numpy.newaxis]
-        else:
-            imageStack = numpy.concatenate((imageStack, image[:,:,numpy.newaxis]), axis=2)
-    return numpy.median(imageStack, axis=2)
+def averageImages(images):
+    imageCount = len(images)
+    if imageCount == 0:
+        return None
+    average32 = images[0].astype(numpy.uint32)
+    for image in images[1:]:
+        average32 += image
+    return average32 / imageCount
 
 def findWormAgainstBackground(rw, images, lowpassSigma=3, erosionThresholdPercentile=99.9, propagationThresholdPercentile=99.7):
     if len(images) < 3:
         raise ValueError('At least 3 images are required.')
-    im = numpy.abs(makeMedianImage(images[:-1]).astype(numpy.float32) - images[-1])
-    rw.showImage(im.astype(numpy.uint16))
+    im = numpy.abs(averageImages(images[:-1]).astype(numpy.float32) - images[-1])
+#   rw.showImage(im.astype(numpy.uint16))
 #   input()
 #   lowpass = scipy.ndimage.gaussian_filter(im, lowpassSigma)
 #   highpass = numpy.abs(im - lowpass)
 #   im = numpy.abs(im - highpass)
     im = scipy.ndimage.median_filter(im, size=5)
-    rw.showImage(im.astype(numpy.uint16))
+#   rw.showImage(im.astype(numpy.uint16))
 #   input()
 
     for i in range(10):
@@ -199,7 +199,7 @@ def findWormAgainstBackground(rw, images, lowpassSigma=3, erosionThresholdPercen
             a, b = r.bbox[0], r.bbox[1]
             aw, bw = r.bbox[2] - r.bbox[0], r.bbox[3] - r.bbox[1]
             mask[a:a+aw, b:b+bw] = r.image
-            return mask
+            return im.astype(numpy.uint16), mask
 
         erosionThresholdPercentile -= 1
         propagationThresholdPercentile -= 1
