@@ -23,8 +23,12 @@ def averageImages(imageFileNames):
     return average32 / imageCount
 
 def _get(imageFileName):
+    if type(imageFileName) is not str:
+        imageFileName = str(imageFileName)
     print(imageFileName)
-    im = skio.imread(imageFileName)
-    im = skit.downscale_local_mean(im, (4, 4))
-    im = skif.gaussian_filter(im, 2)
+    im = skio.imread(imageFileName)[:2160,:2560].astype(numpy.float32) / 65535
+#   im = skit.downscale_local_mean(im, (4, 4))
+    im = skif.gaussian_filter(im, 8)
+    im *= 65535
+    im = im.astype(numpy.uint16)
     return im

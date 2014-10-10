@@ -103,6 +103,7 @@
 		<F N="misc/make_mask_from_fluorescence.py"/>
 		<F N="misc/manually_score_images.py"/>
 		<F N="misc/skeletonize_fluorescence_masks.py"/>
+		<F N="acquisition_scripts/snap_andor_sensor_debugging_images.py"/>
 	</Files>
 	<Config
 		Name="Debug"

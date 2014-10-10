@@ -23,7 +23,9 @@
 # Authors: Erik Hvatum
 
 import numpy
+import os
 from pathlib import Path
+import pickle
 import skimage.measure
 import skimage.io as skio
 import scipy.ndimage.morphology as ndmo
@@ -72,6 +74,100 @@ def makeExperiment00FluoMasks(rw, tryDivisors=None):
                 print(str(maskFPath))
                 skio.imsave(str(maskFPath), immm.astype(numpy.uint8)*255)
                 break
+
+def makeExperiment01aFluoMasks(rw, tryDivisors=None, ageLitFracCoef = 7.4347826086956524e-05 / 274.010989010989):
+    '''Note that image file creation timestamps are assumed to be accurate and are used to scale search heuristic values with worm development stage.'''
+    experimentStartTs = 1412195956.5902498
+    if tryDivisors is None:
+        tryDivisors = ((3, 5),
+                       (3, 4),
+                       (2.5, 3),
+                       (2, 3),
+                       (2, 2.5),
+                       (1.5, 1.8))
+    experiment01aDPath = Path(os.path.expanduser('~')) / 'Data' / 'experiment01_a'
+    with (experiment01aDPath / 'wellDevelopmentalSuccessDb.pickle').open('rb') as f:
+        wellDevelopmentalProgressDb = pickle.load(f)
+    for wellDPath in sorted([wellDPath for wellDPath, developmentalProgress in wellDevelopmentalProgressDb.items() if developmentalProgress == 'Normal']):
+        for imFPath in sorted(list(wellDPath.glob('**/experiment01_a__fluo_*.png')), reverse=True):
+            age = imFPath.stat().st_ctime - experimentStartTs
+            if age < 0:
+                raise ValueError('{} was created before experiment started...'.format(str(imFPath)))
+            print(imFPath, age)
+            maskFPath = wellDPath / '{}_mask.png'.format(imFPath.stem)
+            im = skio.imread(str(imFPath))
+            rw.showImage(im)
+            ok = False
+            for erosionDivisor, propagationDivisor in tryDivisors:
+                imm = makeMaskFromFluorescence(im, erosionDivisor, propagationDivisor)
+                rw.showImage(imm)
+                litCount = imm.sum()
+                pixelCount = len(im.flat)
+                litFrac = litCount / pixelCount
+                print(str(imFPath), litFrac, age, 0.002 + age * ageLitFracCoef)
+                if litFrac > 0 and litFrac < 0.002 + age * ageLitFracCoef:
+                    # Throw away all but the biggest labeled region under the assumption that it is the worm
+                    immlabels = skimage.measure.label(imm)
+                    immregions = skimage.measure.regionprops(immlabels)
+                    immregions.sort(key=lambda region: region.area, reverse=True)
+                    r = immregions[0]
+                    immm = numpy.zeros(imm.shape).astype(numpy.bool)
+                    a, b = r.bbox[0], r.bbox[1]
+                    aw, bw = r.bbox[2] - r.bbox[0], r.bbox[3] - r.bbox[1]
+                    immm[a:a+aw, b:b+bw] = r.image
+                    rw.showImage(immm)
+                    print(str(maskFPath))
+#                   skio.imsave(str(maskFPath), immm.astype(numpy.uint8)*255)
+                    break
+
+def makeExperiment01aFluoMeans():
+    from misc.average_images import averageImages
+
+    experiment01aDPath = Path(os.path.expanduser('~')) / 'Data' / 'experiment01_a'
+    # Count images to process...
+    imageCount = 0
+    for wellIdx in range(27 + 1):
+        wellDPath = experiment01aDPath / '{:04}'.format(wellIdx)
+        imageCount += len(list(wellDPath.glob('experiment01_a__fluo_*.png')))
+    # Process...
+    processedImageCount = 0
+    for wellIdx in range(27 + 1):
+        wellDPath = experiment01aDPath / '{:04}'.format(wellIdx)
+        imFPaths = sorted(list(wellDPath.glob('experiment01_a__fluo_*.png')))
+        im = averageImages(imFPaths).astype(numpy.uint16)
+        skio.imsave(str(wellDPath / 'experiment01_a__fluomean.png'), im)
+        processedImageCount += len(imFPaths)
+        print('{:.2%}'.format(processedImageCount / imageCount))
+
+#   imFPaths = sorted(list(Path('/Volumes/coalsack/experiment00').glob('**/*oxIs*/**/fluo_image.png')), key=lambda p:str(p), reverse=False)
+#
+#   for imFPath in imFPaths:
+#       maskFPath = imFPath.parent / 'fluo_worm_mask.png'
+#       runNumber = 1 + int(imFPath.parts[-2].split('_')[1])
+#       im = skio.imread(str(imFPath))
+#       rw.showImage(im)
+#       ok = False
+#       for erosionDivisor, propagationDivisor in tryDivisors:
+#           imm = makeMaskFromFluorescence(im, erosionDivisor, propagationDivisor)
+#           rw.showImage(imm)
+#           litCount = imm.sum()
+#           pixelCount = len(im.flat)
+#           litFrac = litCount / pixelCount
+#           print(str(imFPath), litFrac, runNumber, 0.002 + runNumber * 7.4347826086956524e-05)
+#           if litFrac > 0 and litFrac < 0.002 + runNumber * 7.4347826086956524e-05:
+#               # Throw away all but the biggest labeled region under the assumption that it is the worm
+#               immlabels = skimage.measure.label(imm)
+#               immregions = skimage.measure.regionprops(immlabels)
+#               immregions.sort(key=lambda region: region.area, reverse=True)
+#               r = immregions[0]
+#               immm = numpy.zeros(imm.shape).astype(numpy.bool)
+#               a, b = r.bbox[0], r.bbox[1]
+#               aw, bw = r.bbox[2] - r.bbox[0], r.bbox[3] - r.bbox[1]
+#               immm[a:a+aw, b:b+bw] = r.image
+#               rw.showImage(immm)
+#               print(str(maskFPath))
+#               skio.imsave(str(maskFPath), immm.astype(numpy.uint8)*255)
+#               break
 
 from misc.manually_score_images import ManualImageScorer
 
