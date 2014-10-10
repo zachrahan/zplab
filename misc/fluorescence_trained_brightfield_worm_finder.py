@@ -41,7 +41,7 @@ import multiprocessing
 import pickle
 import sys
 
-import misc._texture_analysis._texture_analysis as texan
+#import misc._texture_analysis._texture_analysis as texan
 
 def overlayCenterLineOnWorm(imageFPath):
     imageFPath = Path(imageFPath)
@@ -171,7 +171,7 @@ def averageImages(images):
         average32 += image
     return average32 / imageCount
 
-def findWormAgainstBackground(rw, images, lowpassSigma=3, erosionThresholdPercentile=99.9, propagationThresholdPercentile=99.7):
+def findWormAgainstBackground(rw, images, lowpassSigma=3, erosionThresholdPercentile=97.9, propagationThresholdPercentile=97.7):
     if len(images) < 3:
         raise ValueError('At least 3 images are required.')
     im = numpy.abs(averageImages(images[:-1]).astype(numpy.float32) - images[-1])
@@ -183,12 +183,14 @@ def findWormAgainstBackground(rw, images, lowpassSigma=3, erosionThresholdPercen
     im = scipy.ndimage.median_filter(im, size=5)
 #   rw.showImage(im.astype(numpy.uint16))
 #   input()
+#   foos = []
 
     for i in range(10):
         eroded = scipy.ndimage.morphology.binary_erosion(im > numpy.percentile(im, erosionThresholdPercentile), iterations=5)
         propagated = scipy.ndimage.morphology.binary_propagation(eroded, mask = im > numpy.percentile(im, propagationThresholdPercentile))
         dilated = scipy.ndimage.morphology.binary_dilation(propagated, iterations=5)
         imm = scipy.ndimage.morphology.binary_fill_holes(dilated)
+        rw.showImage(imm)
 
         immlabels = skimage.measure.label(imm)
         immregions = skimage.measure.regionprops(immlabels)
@@ -200,9 +202,12 @@ def findWormAgainstBackground(rw, images, lowpassSigma=3, erosionThresholdPercen
             aw, bw = r.bbox[2] - r.bbox[0], r.bbox[3] - r.bbox[1]
             mask[a:a+aw, b:b+bw] = r.image
             return im.astype(numpy.uint16), mask
+#       foos.append(imm)
+        print(erosionThresholdPercentile, propagationThresholdPercentile)
 
-        erosionThresholdPercentile -= 1
-        propagationThresholdPercentile -= 1
+        erosionThresholdPercentile -= 0.5
+        propagationThresholdPercentile -= 0.5
+#   return foos
 
 def findWormInImage(im, classifier, patchWidth):
     imf = skimage.exposure.equalize_adapthist(im).astype(numpy.float32)
