@@ -59,12 +59,14 @@ class AgingFluorescence(Qt.QObject):
         imageCount = 4
         self.root.dm6000b.lamp.ilShutterOpened = True
         self.root.dm6000b.lamp.tlShutterOpened = True
+        self.root.dm6000b.lamp.intensity = 255
         if filterSetNumber == 0:
             self.root.dm6000b.cubeTurret.cube = 'DFTr0'
         elif filterSetNumber == 1:
             self.root.dm6000b.cubeTurret.cube = 'CYmC0'
         else:
             raise ValueError('filterSetNumber must be 0 or 1')
+        self.root.dm6000b.lamp.intensity = 255
         time.sleep(1)
         for positionSet in ('control', 'exp'):
             positions = self.positions_control if positionSet == 'control' else self.positions_exp
@@ -73,13 +75,14 @@ class AgingFluorescence(Qt.QObject):
                 self.root.dm6000b.stageX.pos, self.root.dm6000b.stageY.pos, self.root.dm6000b.stageZ.pos = position
                 self.root.dm6000b.waitForReady()
                 self.root.dm6000b.lamp.tlShutterOpened = True
+                self.root.dm6000b.lamp.intensity = 255
                 self.root.camera._camera.AT_Flush()
                 buffers = [self.root.camera.makeAcquisitionBuffer() for i in range(imageCount)]
                 self.root.camera.shutter = self.root.camera.Shutter.Rolling
                 self.root.camera.triggerMode = self.root.camera.TriggerMode.Software
                 self.root.camera.cycleMode = self.root.camera.CycleMode.Fixed
-                # 20ms brightfield exposure time
-                self.root.camera.exposureTime = 0.020
+                # 10ms brightfield exposure time
+                self.root.camera.exposureTime = 0.010
                 bfAcquisitionTime = self.root.camera.exposureTime + 0.02
                 self.root.camera.frameCount = imageCount
                 for buffer in buffers:
@@ -88,20 +91,22 @@ class AgingFluorescence(Qt.QObject):
                 # Wait for TL shutter to open
                 time.sleep(1)
                 self.root.brightfieldLed.enabled = True
-                self.root.brightfieldLed.power = 200
+                self.root.brightfieldLed.power = 108
                 time.sleep(0.2)
                 self.root.camera.commandSoftwareTrigger()
                 time.sleep(bfAcquisitionTime)
                 self.root.brightfieldLed.enabled = False
                 self.root.dm6000b.lamp.tlShutterOpened = False
+                self.root.dm6000b.lamp.intensity = 255
                 # Wait for TL shutter to close
                 time.sleep(1)
-                # 100ms fluorescence exposure time
-                self.root.camera.exposureTime = 0.100
-                fluoAcquisitionTime = self.root.camera.exposureTime + 0.02
+                # 50ms fluorescence exposure time
+                self.root.camera.exposureTime = 0.050
+                fluoAcquisitionTime = self.root.camera.exposureTime + 0.03
                 if filterSetNumber == 0:
                     self.root.lumencor.UVEnabled = True
-                    self.root.lumencor.UVPower = 255
+                    self.root.lumencor.UVPower = 4
+                    time.sleep(0.08)
                     self.root.camera.commandSoftwareTrigger()
                     time.sleep(fluoAcquisitionTime)
                     self.root.lumencor.UVEnabled = False
@@ -116,11 +121,13 @@ class AgingFluorescence(Qt.QObject):
                     time.sleep(0.08)
                     self.root.camera.commandSoftwareTrigger()
                     time.sleep(fluoAcquisitionTime)
+                    self.root.lumencor.greenEnabled = False
                     self.root.lumencor.disable()
                     names = ['bf-DFTr', 'DAPI', 'FITC', 'TRITC']
                 elif filterSetNumber == 1:
                     self.root.lumencor.blueEnabled = True
                     self.root.lumencor.bluePower = 255
+                    time.sleep(0.08)
                     self.root.camera.commandSoftwareTrigger()
                     time.sleep(fluoAcquisitionTime)
                     self.root.lumencor.blueEnabled = False
@@ -135,6 +142,7 @@ class AgingFluorescence(Qt.QObject):
                     time.sleep(0.08)
                     self.root.camera.commandSoftwareTrigger()
                     time.sleep(fluoAcquisitionTime)
+                    self.root.lumencor.greenEnabled = False
                     self.root.lumencor.disable()
                     names = ['bf-CYmC', 'CFP', 'YFP', 'mCherry']
                 for i in range(imageCount):
