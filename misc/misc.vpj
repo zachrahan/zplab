@@ -16,6 +16,7 @@
 			<F N="image_transfer_zmq_benchmark.py"/>
 			<F N="make_mask_from_fluorescence.py"/>
 			<F N="manually_score_images.py"/>
+			<F N="resumable_slot_with_generator_example.py"/>
 			<F N="skeletonize_fluorescence_masks.py"/>
 			<F N="terrible_eval_thread.py"/>
 			<F N="test_skimage_16bit_png.py"/>
