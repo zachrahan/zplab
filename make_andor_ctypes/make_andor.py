@@ -2,6 +2,7 @@ import output_ctypes
 
 code = """import ctypes
 import atexit
+import sys
 
 _at_err_dict = {{
     1: 'NOTINITIALISED',
@@ -60,6 +61,13 @@ _at_camera_handle = None
 _at_core_lib = None
 _at_util_lib = None
 
+if sys.platform == 'win32':
+    _libc = ctypes.libc
+elif sys.platform == 'darwin':
+    _libc = ctypes.CDLL('libc.dylib')
+else:
+    _libc = ctypes.CDLL('libc.so.6')
+
 FeatureCallback = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_int, ctypes.c_wchar_p, ctypes.c_void_p)
 
 _AT_HANDLE_SYSTEM = 1
@@ -77,18 +85,41 @@ def _init_util_lib(utilpath):
     _at_util_lib = ctypes.CDLL(utilpath)
     _setup_util_functions(_at_util_lib)
     _at_util_lib.AT_InitialiseUtilityLibrary()
-    atexit.register(_at_core_lib.AT_FinaliseUtilityLibrary)
+#    atexit.register(_at_core_lib.AT_FinaliseUtilityLibrary)
 
-def initialize():
+def initialize(model_name_of_desired_camera='ZYLA-5.5-CL3'):
+    if sys.platform == 'win32':
+        ldd_ext = '.dll'
+    elif sys.platform == 'darwin':
+        ldd_ext = '.dylib'
+    else:
+        ldd_ext = '.so'
+
     if _at_core_lib is None:
-        _init_core_lib()
+        _init_core_lib('libatcore' + ldd_ext)
     if _at_util_lib is None:
-        _init_util_lib()
-    devices_attached = AT_GetInt(AT_HANDLE_SYSTEM, "DeviceCount")
-    if devices_attached != 1:
-        raise AndorError('Could not communicate with camera. Is it turned on?')
+        _init_util_lib('libatutility' + ldd_ext)
+
+    devices_attached = _at_core_lib.AT_GetInt(_AT_HANDLE_SYSTEM, "DeviceCount")
+    if devices_attached == 0:
+        raise AndorError('No Andor SDK3 devices detected.  Is the camera turned on?')
+    # Even on the scope machine, the default Andor configuration includes two
+    # virtual cameras, for a total of three camera devices.  A hardware camera
+    # will take device index 0, provided you have only one hardware camera, and
+    # we are very clearly working under this assumption.  We might then test
+    # this assumption by querying the camera's name and ensuring that it matches
+    # the name of our hardware camera:
     global _at_camera_handle
     _at_camera_handle = _at_core_lib.AT_Open(0)
+    if model_name_of_desired_camera is not None:
+        camera_model_name = GetString('CameraModel')
+        if camera_model_name != model_name_of_desired_camera:
+            _at_core_lib.AT_Close(_at_camera_handle)
+            _at_camera_handle = None
+            raise AndorError('Model name of Andor device 0, "' + camera_model_name + 
+                             '", does not match the desired camera model name, "' +
+                             model_name_of_desired_camera + '".')
+
     atexit.register(_at_core_lib.AT_Close, _at_camera_handle)
 
 {}
@@ -149,7 +180,6 @@ int [_at_errcheck] AT_Flush(AT_H Hndl);'''.strip().split('\n')
 util_protos = '''
 int [_at_errcheck] AT_ConvertBuffer(AT_U8* inputBuffer, AT_U8* outputBuffer, AT_64 width, AT_64 height, AT_64 stride, const AT_WC* inputPixelEncoding, const AT_WC* outputPixelEncoding);
 int [_at_errcheck] AT_InitialiseUtilityLibrary();
-int [_at_errcheck] AT_FinaliseUtilityLibrary();
 '''.strip().split('\n')
 
 additional_defs = {
@@ -173,7 +203,7 @@ string_wrapper = '''def {}({}):
     {}
     if _at_camera_handle is not None:
         _at_core_lib.{}(_at_camera_handle, {}, _at_wchar_scratch, _at_wchar_scratch._length_)
-        return str(_at_wchar_scratch)
+        return _at_wchar_scratch[:_libc.wcslen(_at_wchar_scratch)]
     else:
         raise RuntimeError('Andor library not initialized')
 '''
