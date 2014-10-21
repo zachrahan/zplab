@@ -41,7 +41,7 @@ import multiprocessing
 import pickle
 import sys
 
-#import misc._texture_analysis._texture_analysis as texan
+import misc._texture_analysis._texture_analysis as texan
 
 def overlayCenterLineOnWorm(imageFPath):
     imageFPath = Path(imageFPath)
@@ -94,6 +94,8 @@ def selectRandomPoints(imageFPath, centerLinePointCount, nonWormPointCount):
                 nonWormPoints.append((y, x))
     return numpy.array(centerLinePoints, dtype=numpy.uint32), numpy.array(nonWormPoints, dtype=numpy.uint32)
 
+arMask = None
+
 def makeFeatureVector(imf, patchWidth, point):
 #   def gabor(theta):
 #       g = skimage.filter.gabor_filter(imf[point[0]-filterBoxOffset:point[0]+filterBoxOffset,
@@ -106,9 +108,16 @@ def makeFeatureVector(imf, patchWidth, point):
 #   filterBoxOffset = patchWidth / 2 + 10
 #   responseBoxOffset = patchWidth / 2
 #   return numpy.array((gabor(0), gabor(math.pi/4))).ravel()
+    global arMask
+    if arMask is None or arMask.shape != (patchWidth, patchWidth):
+        arMask = numpy.diag(numpy.ones((patchWidth, patchWidth), dtype=numpy.uint8))
+        arMask+= arMask[::-1]
+        arMask = ~arMask.astype(numpy.bool)
     boxOffset = int(patchWidth / 2)
-    return imf[point[0]-boxOffset : point[0]+boxOffset,
-               point[1]-boxOffset : point[1]+boxOffset].ravel()
+    masked = numpy.ma.array(imf[point[0]-boxOffset : point[0]+boxOffset,
+                                point[1]-boxOffset : point[1]+boxOffset],
+                            mask=arMask)
+    return masked.compressed()
 
 def makeTrainingTestingFeatureVectorsForImage(imageFPath, patchWidth, centerLineCount, nonWormCount):
     imf = skimage.exposure.equalize_adapthist(skio.imread(str(imageFPath))).astype(numpy.float32)
