@@ -85,7 +85,7 @@ def _init_util_lib(utilpath):
     _at_util_lib = ctypes.CDLL(utilpath)
     _setup_util_functions(_at_util_lib)
     _at_util_lib.AT_InitialiseUtilityLibrary()
-#    atexit.register(_at_core_lib.AT_FinaliseUtilityLibrary)
+    atexit.register(_at_util_lib.AT_FinaliseUtilityLibrary)
 
 def initialize(model_name_of_desired_camera='ZYLA-5.5-CL3'):
     if sys.platform == 'win32':
@@ -180,6 +180,7 @@ int [_at_errcheck] AT_Flush(AT_H Hndl);'''.strip().split('\n')
 util_protos = '''
 int [_at_errcheck] AT_ConvertBuffer(AT_U8* inputBuffer, AT_U8* outputBuffer, AT_64 width, AT_64 height, AT_64 stride, const AT_WC* inputPixelEncoding, const AT_WC* outputPixelEncoding);
 int [_at_errcheck] AT_InitialiseUtilityLibrary();
+int [_at_errcheck] AT_FinaliseUtilityLibrary()
 '''.strip().split('\n')
 
 additional_defs = {
