@@ -110,7 +110,7 @@ def makeFeatureVector(imf, patchWidth, point):
 #   return numpy.array((gabor(0), gabor(math.pi/4))).ravel()
     global arMask
     if arMask is None or arMask.shape != (patchWidth, patchWidth):
-        arMask = numpy.diag(numpy.ones((patchWidth, patchWidth), dtype=numpy.uint8))
+        arMask = numpy.diag(numpy.ones((patchWidth,), dtype=numpy.uint8))
         arMask+= arMask[::-1]
         arMask = ~arMask.astype(numpy.bool)
     boxOffset = int(patchWidth / 2)
