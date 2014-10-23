@@ -314,8 +314,23 @@ def findWormInImage(im, classifier, patchWidth):
             print('{}%'.format(100 * xyindex / xycount))
     return mask
 
-def findWormInImage_z(im, classifier):
-    pass
+import cv2
+
+def makeFlowSequence(ims):
+    flowImages = [None]
+    idx = 1
+    for imp, im in zip(ims, ims[1:]):
+        imp = imp[:2160, :2560]
+        im = im[:2160, :2560]
+        flow = cv2.calcOpticalFlowFarneback(imp, im, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+        flow = numpy.sqrt(flow[:,:,0]**2 + flow[:,:,1]**2)
+        flow += flow.min()
+        flow /= flow.max()
+        flow *= 65535
+        flowImages.append(flow.astype(numpy.uint16))
+        print(idx)
+        idx += 1
+    return flowImages
 
 def _processFunction(imageIndex, imageFPath, centerLineSampleCount, nonWormSampleCount, patchWidth):
     try:
