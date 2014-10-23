@@ -213,6 +213,50 @@ def averageImages(images):
         average32 += image
     return average32 / imageCount
 
+def makeRunningAverageDifferenceSequence(images, runningAverageLength=5):
+    if runningAverageLength < 1:
+        raise ValueError('runningAverageLength must be at least 1.')
+    runningSum = numpy.zeros((2160, 2560), dtype=numpy.uint32)
+    runningImages = []
+    differenceImages = []
+    for image in images:
+        image = image[:2160, :2560]
+        if len(runningImages) < runningAverageLength:
+            # History for running average is still accumulating
+            differenceImages.append(None)
+        elif len(runningImages) == runningAverageLength:
+            # We have enough history to compute a running average and associated difference image
+            runningAverage = runningSum / runningAverageLength
+            differenceImages.append(numpy.abs(runningAverage - image).astype(numpy.uint16))
+            runningSum -= runningImages.pop(0)
+        else:
+            raise RuntimeError('algorithm bug... running average queue overflowed somehow')
+        runningImages.append(image)
+        runningSum += image
+    return differenceImages
+
+def makeRunningMedianDifferenceSequence(images, runningMedianLength=5):
+    if runningMedianLength < 1:
+        raise ValueError('runningMedianLength must be at least 1.')
+    runningImages = numpy.zeros((runningMedianLength, 2160, 2560), dtype=numpy.uint16)
+    nextRunningImageReplaceIdx = 0
+    differenceImages = []
+    for idx, image in enumerate(images):
+        image = image[:2160, :2560]
+        if idx < runningMedianLength:
+            # History for running median is still accumulating
+            differenceImages.append(None)
+        else:
+            # We have enough history to compute a running median and associated difference image
+            runningMedian = numpy.median(runningImages, axis=0)
+            differenceImages.append(numpy.abs(runningMedian.astype(numpy.int32) - image.astype(numpy.int32)).astype(numpy.uint16))
+        runningImages[nextRunningImageReplaceIdx, :, :] = image
+        nextRunningImageReplaceIdx += 1
+        if nextRunningImageReplaceIdx == runningMedianLength:
+            nextRunningImageReplaceIdx = 0
+        print(idx)
+    return differenceImages
+
 def findWormAgainstBackground(rw, images, lowpassSigma=3, erosionThresholdPercentile=97.9, propagationThresholdPercentile=97.7):
     if len(images) < 3:
         raise ValueError('At least 3 images are required.')
