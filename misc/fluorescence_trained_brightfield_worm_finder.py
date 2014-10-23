@@ -43,6 +43,34 @@ import sys
 
 import misc._texture_analysis._texture_analysis as texan
 
+def overlayClassifierMask(mask, patchWidth, imageFPath=None, image=None, maskAlpha=0.3):
+    if image is None and imageFPath is None or \
+       image is not None and imageFPath is not None:
+        raise ValueError('Either the imageFPath or the image argument must be supplied (but not both).')
+    if image is None:
+        image = skio.imread(imageFPath)
+
+    imageCoef = 1 - maskAlpha
+    maskVal = maskAlpha * 65535
+
+    filterBoxWidth = patchWidth + 10
+    halfFilterBoxWidth = filterBoxWidth / 2
+    patchOffset = int(patchWidth / 2)
+    ycount = int(image.shape[0] / filterBoxWidth)
+    xcount = int(image.shape[1] / filterBoxWidth)
+    rmask = numpy.zeros(image.shape, dtype=numpy.float128)
+    xycount = ycount * xcount
+    for yindex in range(ycount):
+        y = halfFilterBoxWidth + yindex * filterBoxWidth
+        for xindex in range(xcount):
+            if mask[yindex, xindex]:
+                x = halfFilterBoxWidth + xindex * filterBoxWidth
+                rmask[y-patchOffset : y+patchOffset,
+                      x-patchOffset : x+patchOffset] = maskVal
+
+    composite = rmask + image.astype(numpy.float128) * imageCoef
+    return composite.astype(numpy.uint16)
+
 def overlayCenterLineOnWorm(imageFPath):
     imageFPath = Path(imageFPath)
     im_bf = skio.imread(str(imageFPath))
@@ -117,6 +145,11 @@ def makeFeatureVector(imf, patchWidth, point):
     masked = numpy.ma.array(imf[point[0]-boxOffset : point[0]+boxOffset,
                                 point[1]-boxOffset : point[1]+boxOffset],
                             mask=arMask)
+    if len(masked.compressed()) > 0:
+        print('{}:{}, {}:{}'.format(int(point[0]-boxOffset),
+                                    int(point[0]+boxOffset),
+                                    int(point[1]-boxOffset),
+                                    int(point[1]+boxOffset)))
     return masked.compressed()
 
 def makeTrainingTestingFeatureVectorsForImage(imageFPath, patchWidth, centerLineCount, nonWormCount):
