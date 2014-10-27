@@ -47,7 +47,7 @@ class Root(Device):
 
 #       self._peltier = Peltier(self)
         self._incubator = Incubator('/dev/ttyPeltier')
-        self._brightfieldLed = BrightfieldLed(self, serialPortDescriptor='/dev/ttyACM0')
+        self._brightfieldLed = BrightfieldLed(self, serialPortDescriptor='/dev/ttyACM3')
         self._dm6000b = Dm6000b(self)
         self._lumencor = Lumencor(self)
         self._camera = Camera(self, andorDeviceIndex=0)
