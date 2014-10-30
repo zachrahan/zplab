@@ -39,5 +39,5 @@ class BrightfieldLed(Device):
     def power(self, power):
         assert 0 <= power <= 255
         self._power = int(power)
-        self._serialPort.write(bytes('pm D7 {:d}'.format(power), encoding='ascii'))
+        self._serialPort.write(bytes('pm D7 {:d}\n'.format(power), encoding='ascii'))
         self.powerChanged.emit(self._power)
