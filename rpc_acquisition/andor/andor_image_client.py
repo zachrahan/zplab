@@ -22,25 +22,8 @@
 #
 # Authors: Erik Hvatum, Zach Pincus
 
-#ipython -i -c 'import zmq;context=zmq.Context();from rpc_acquisition import scope_server;client, scope = scope_server.rpc_client_main(context=context);prop_client = scope_server.property_client_main(context=context)'
-
-#from ris_widget._ris_widget import RisWidget;rw=RisWidget();rw.show()
-#from rpc_acquisition.andor.client import ZMQAndorImageClient
-#zaic = ZMQAndorImageClient(context)
-#newest_andor_image = None
-#def new_andor_image_received(andor_image):
-#    global newest_andor_image
-#    newest_andor_image = andor_image
-#    rw.showImage(andor_image.im)
-#    zaic.listen_for_new_image()
-#zaic.new_andor_image_received.connect(new_andor_image_received)
-#zaic.listen_for_new_image()
-#scope.camera.live_mode_enabled = True
-
-
-import codecs
 from ism_blob import ISMBlob
-import pickle
+import numpy
 import platform
 from PyQt5 import Qt
 import sys
@@ -95,32 +78,24 @@ class ZMQAndorImageClient_worker(Qt.QObject):
 
     def _listen_for_new_image(self):
         while True:
-#           print('_listen_for_new_image')
             if self._exit_requested.is_set():
                 break
             if self._sub.poll(1000):
                 s = self._sub.recv_string(zmq.NOBLOCK)
-#               print(s)
                 if s == 'new image':
                     self._req.send_json({'req' : 'get newest', 'node' : platform.node()})
-#                   print('sent get newest req')
                     image_msg = self._req.recv_json()
-#                   print('received get newest req rep')
                     rep = image_msg.pop('rep')
-#                   print(rep)
                     if rep == 'ismb image':
-#                       print('ismb image')
-                        print(image_msg['ismb_name'])
                         andor_image = AndorImage.from_ismb(**image_msg)
                         self._req.send_json({'req' : 'got', 'ismb_name' : image_msg['ismb_name']})
-#                       print('sent got req')
                         self._req.recv_json()
-#                       print('received got req rep')
                         self.new_andor_image_received.emit(andor_image)
-#                       print('emitted')
-                    elif rep == 'pickled image':
-#                       print('pickled image')
-                        im = pickle.loads(codecs.decode(image_msg['pickled image'].encode('ascii'), 'base64'))
+                    elif rep == 'raw image':
+                        imr = self._req.recv(copy=False, track=False)
+                        imb = memoryview(imr)
+                        im_shape = image_msg.pop('shape')
+                        im = numpy.frombuffer(imb, dtype=numpy.uint16).reshape(im_shape)
                         andor_image = AndorImage(im, **image_msg)
                         self.new_andor_image_received.emit(andor_image)
                     else:
