@@ -71,6 +71,30 @@ def overlayClassifierMask(mask, patchWidth, imageFPath=None, image=None, maskAlp
     composite = rmask + image.astype(numpy.float128) * imageCoef
     return composite.astype(numpy.uint16)
 
+def overlayLibSvmPredsFromFile(patchWidth, coordList, libSvmPredFPath, imageFPath=None, image=None, maskAlpha=0.3):
+    if image is None and imageFPath is None or \
+       image is not None and imageFPath is not None:
+        raise ValueError('Either the imageFPath or the image argument must be supplied (but not both).')
+    if image is None:
+        image = skio.imread(imageFPath)
+
+    with open(str(libSvmPredFPath), 'r') as f:
+        preds = [bool(int(l[0])) for l in f.readlines()]
+
+    imageCoef = 1 - maskAlpha
+    maskVal = maskAlpha * 65535
+    rmask = numpy.zeros(image.shape, dtype=numpy.float128)
+    patchOffset = int(patchWidth / 2)
+
+    for coord, pred in zip(coordList, preds):
+        y, x = coord
+        if pred:
+            rmask[y-patchOffset : y+patchOffset,
+                  x-patchOffset : x+patchOffset] = maskVal
+
+    composite = rmask + image.astype(numpy.float128) * imageCoef
+    return composite.astype(numpy.uint16)
+
 def overlayCenterLineOnWorm(imageFPath):
     imageFPath = Path(imageFPath)
     im_bf = skio.imread(str(imageFPath))
@@ -122,20 +146,14 @@ def selectRandomPoints(imageFPath, centerLinePointCount, nonWormPointCount):
                 nonWormPoints.append((y, x))
     return numpy.array(centerLinePoints, dtype=numpy.uint32), numpy.array(nonWormPoints, dtype=numpy.uint32)
 
-arMask = None
 
-def makeFeatureVector(imf, patchWidth, point):
-#   def gabor(theta):
-#       g = skimage.filter.gabor_filter(imf[point[0]-filterBoxOffset:point[0]+filterBoxOffset,
-#                                           point[1]-filterBoxOffset:point[1]+filterBoxOffset],
-#                                       frequency=0.1, theta=theta)
-#       return (g[0][responseBoxOffset:responseBoxOffset+patchWidth,
-#                    responseBoxOffset:responseBoxOffset+patchWidth],
-#               g[1][responseBoxOffset:responseBoxOffset+patchWidth,
-#                    responseBoxOffset:responseBoxOffset+patchWidth])
-#   filterBoxOffset = patchWidth / 2 + 10
-#   responseBoxOffset = patchWidth / 2
-#   return numpy.array((gabor(0), gabor(math.pi/4))).ravel()
+def makePatchFeatureVector(imf, patchWidth, point):
+    boxOffset = int(patchWidth / 2)
+    return imf[point[0]-boxOffset : point[0]+boxOffset,
+               point[1]-boxOffset : point[1]+boxOffset].ravel()
+
+arMask = None
+def makeArFeatureVector(imf, maskDiagLen, point):
     global arMask
     if arMask is None or arMask.shape != (patchWidth, patchWidth):
         arMask = numpy.diag(numpy.ones((patchWidth,), dtype=numpy.uint8))
@@ -152,16 +170,16 @@ def makeFeatureVector(imf, patchWidth, point):
                                     int(point[1]+boxOffset)))
     return masked.compressed()
 
-def makeTrainingTestingFeatureVectorsForImage(imageFPath, patchWidth, centerLineCount, nonWormCount):
+def makeTrainingTestingFeatureVectorsForImage(imageFPath, sizeParam, centerLineCount, nonWormCount, featureMaker=makeArFeatureVector):
     imf = skimage.exposure.equalize_adapthist(skio.imread(str(imageFPath))).astype(numpy.float32)
     centerLinePoints, nonWormPoints = selectRandomPoints(imageFPath, centerLineCount, nonWormCount)
     data = []
     targets = []
     for p in centerLinePoints:
-        data.append(makeFeatureVector(imf, patchWidth, p))
+        data.append(makeArFeatureVector(imf, sizeParam, p))
         targets.append(True)
     for p in nonWormPoints:
-        data.append(makeFeatureVector(imf, patchWidth, p))
+        data.append(makeArFeatureVector(imf, sizeParam, p))
         targets.append(False)
     return (data, targets)
 
@@ -295,9 +313,9 @@ def findWormAgainstBackground(rw, images, lowpassSigma=3, erosionThresholdPercen
         propagationThresholdPercentile -= 0.5
 #   return foos
 
-def findWormInImage(im, classifier, patchWidth):
+def findWormInImage(im, classifier, featureVectorSizeParam, featureMaker=makeArFeatureVector):
     imf = skimage.exposure.equalize_adapthist(im).astype(numpy.float32)
-    filterBoxWidth = patchWidth + 10
+    filterBoxWidth = featureVectorSizeParam + 10
     halfFilterBoxWidth = filterBoxWidth / 2
     ycount = int(imf.shape[0] / filterBoxWidth)
     xcount = int(imf.shape[1] / filterBoxWidth)
@@ -308,29 +326,62 @@ def findWormInImage(im, classifier, patchWidth):
         y = halfFilterBoxWidth + yindex * filterBoxWidth
         for xindex in range(xcount):
             x = halfFilterBoxWidth + xindex * filterBoxWidth
-            vector = makeFeatureVector(imf, patchWidth, (y, x))
+            vector = featureMaker(imf, featureVectorSizeParam, (y, x))
             mask[yindex, xindex] = False if len(vector) == 0 else classifier.predict(vector)
             xyindex += 1
             print('{}%'.format(100 * xyindex / xycount))
     return mask
 
-import cv2
+def makeLibSvmDataFileForImage(libsvmDataFileFPath, im, featureVectorSizeParam, featureMaker=makeArFeatureVector):
+    coords = []
+    with open(str(libsvmDataFileFPath), 'w') as libSvmDataFile:
+        imf = skimage.exposure.equalize_adapthist(im).astype(numpy.float32)
+        if imf.max() > 1:
+            # For some reason, skimage.exposure.equalize_adapthist rescales to [0, 1] on OS X but not on Linux.
+            # [0, 1] scaling is desired.
+            imf -= imf.min()
+            imf /= imf.max()
+        filterBoxWidth = featureVectorSizeParam + 2
+        halfFilterBoxWidth = filterBoxWidth / 2
+        ycount = int(imf.shape[0] / filterBoxWidth)
+        xcount = int(imf.shape[1] / filterBoxWidth)
+        mask = numpy.zeros((ycount, xcount), dtype=numpy.bool)
+        xycount = ycount * xcount
+        xyindex = 0
+        for yindex in range(ycount):
+            y = halfFilterBoxWidth + yindex * filterBoxWidth
+            for xindex in range(xcount):
+                x = halfFilterBoxWidth + xindex * filterBoxWidth
+                vector = featureMaker(imf, featureVectorSizeParam, (y, x))
+                if len(vector) > 0:
+                    libSvmDataFile.write('-1 ')
+                    libSvmDataFile.write(' '.join(('{}:{}'.format(elementIdx, element) for elementIdx, element in enumerate(vector, 1))))
+                    libSvmDataFile.write('\n')
+                    coords.append((y, x))
+                xyindex += 1
+                print('{}%'.format(100 * xyindex / xycount))
+    return coords
 
-def makeFlowSequence(ims):
-    flowImages = [None]
-    idx = 1
-    for imp, im in zip(ims, ims[1:]):
-        imp = imp[:2160, :2560]
-        im = im[:2160, :2560]
-        flow = cv2.calcOpticalFlowFarneback(imp, im, None, 0.5, 3, 15, 3, 5, 1.2, 0)
-        flow = numpy.sqrt(flow[:,:,0]**2 + flow[:,:,1]**2)
-        flow += flow.min()
-        flow /= flow.max()
-        flow *= 65535
-        flowImages.append(flow.astype(numpy.uint16))
-        print(idx)
-        idx += 1
-    return flowImages
+try:
+    import cv2
+
+    def makeFlowSequence(ims):
+        flowImages = [None]
+        idx = 1
+        for imp, im in zip(ims, ims[1:]):
+            imp = imp[:2160, :2560]
+            im = im[:2160, :2560]
+            flow = cv2.calcOpticalFlowFarneback(imp, im, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+            flow = numpy.sqrt(flow[:,:,0]**2 + flow[:,:,1]**2)
+            flow += flow.min()
+            flow /= flow.max()
+            flow *= 65535
+            flowImages.append(flow.astype(numpy.uint16))
+            print(idx)
+            idx += 1
+        return flowImages
+except ImportError:
+    pass
 
 def _processFunction(imageIndex, imageFPath, centerLineSampleCount, nonWormSampleCount, patchWidth):
     try:
