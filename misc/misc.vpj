@@ -14,6 +14,15 @@
 				<F N="_texture_analysis/_texture_analysis.pyx"/>
 				<F N="_texture_analysis/setup.py"/>
 			</Folder>
+			<Folder
+				Name="yapy_libsvm"
+				Filters="">
+				<F N="yapy_libsvm/__init__.py"/>
+				<F N="yapy_libsvm/_fast_svm_classify.pyx"/>
+				<F N="yapy_libsvm/_svm.py"/>
+				<F N="yapy_libsvm/setup.py"/>
+				<F N="yapy_libsvm/svm.py"/>
+			</Folder>
 			<F N="__init__.py"/>
 			<F N="average_images.py"/>
 			<F N="fluorescence_trained_brightfield_worm_finder.py"/>
@@ -22,10 +31,12 @@
 			<F N="image_transfer_zmq_benchmark.py"/>
 			<F N="make_mask_from_fluorescence.py"/>
 			<F N="manually_score_images.py"/>
+			<F N="pca.py"/>
 			<F N="resumable_slot_with_generator_example.py"/>
 			<F N="skeletonize_fluorescence_masks.py"/>
 			<F N="terrible_eval_thread.py"/>
 			<F N="test_skimage_16bit_png.py"/>
+			<F N="worm_border_and_interior_classifier.py"/>
 		</Folder>
 		<Folder
 			Name="Other Files"
