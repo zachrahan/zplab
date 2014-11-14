@@ -275,6 +275,28 @@ def makeRunningMedianDifferenceSequence(images, runningMedianLength=5):
         print(idx)
     return differenceImages
 
+def makeRunningPercentileDifferenceSequence(images, percentile=20, runLength=10):
+    if runLength < 1:
+        raise ValueError('runLength must be at least 1.')
+    runningImages = numpy.zeros((runLength, 2160, 2560), dtype=numpy.uint16)
+    nextRunningImageReplaceIdx = 0
+    differenceImages = []
+    for idx, image in enumerate(images):
+        image = image[:2160, :2560]
+        if idx < runLength:
+            # History for running median is still accumulating
+            differenceImages.append(None)
+        else:
+            # We have enough history to compute a running median and associated difference image
+            runningMedian = numpy.percentile(runningImages, percentile, axis=0)
+            differenceImages.append(numpy.abs(runningMedian.astype(numpy.int32) - image.astype(numpy.int32)).astype(numpy.uint16))
+        runningImages[nextRunningImageReplaceIdx, :, :] = image
+        nextRunningImageReplaceIdx += 1
+        if nextRunningImageReplaceIdx == runLength:
+            nextRunningImageReplaceIdx = 0
+        print(idx)
+    return differenceImages
+
 def findWormAgainstBackground(rw, images, lowpassSigma=3, erosionThresholdPercentile=97.9, propagationThresholdPercentile=97.7):
     if len(images) < 3:
         raise ValueError('At least 3 images are required.')

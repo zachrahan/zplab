@@ -38,6 +38,13 @@ def makeMaskFromFluorescence(fluoImage, erosionDivisor=2, propagationDivisor=3):
     filled = ndmo.binary_fill_holes(dilated)
     return filled
 
+def fillMaskHoles(fluoImage, erosionDivisor=2, propagationDivisor=3):
+    eroded = ndmo.binary_erosion(fluoImage > fluoImage.max()/erosionDivisor, iterations=5)
+    propagated = ndmo.binary_propagation(eroded, mask= fluoImage > fluoImage.max()/propagationDivisor)
+    dilated = ndmo.binary_dilation(propagated, iterations=5)
+    filled = ndmo.binary_fill_holes(dilated)
+    return filled
+
 def makeExperiment00FluoMasks(rw, tryDivisors=None):
     imFPaths = sorted(list(Path('/Volumes/coalsack/experiment00').glob('**/*oxIs*/**/fluo_image.png')), key=lambda p:str(p), reverse=False)
     if tryDivisors is None:
