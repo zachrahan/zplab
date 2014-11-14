@@ -41,6 +41,8 @@ import multiprocessing
 import pickle
 import sys
 
+from misc.pca import pca_decompose
+
 def select_random_coords_in_mask(mask_fpath, coord_count):
     im_mask = skio.imread(str(mask_fpath)) > 0
     labels = skimage.measure.label(im_mask)
@@ -68,7 +70,8 @@ def make_patch_feature_vector(imf, patch_width, coord):
     return imf[coord[0]-low_edge_offset : coord[0]+high_edge_offset,
                coord[1]-low_edge_offset : coord[1]+high_edge_offset].ravel()
 
-def make_data_and_targets(im_fpath, mask_set_fpath, patch_width=9, background_sample_count=2000, worm_interior_sample_count=400, worm_wall_sample_count=100):
+def make_data_and_targets(im_fpath, mask_set_fpath, patch_width=9, background_sample_count=2000, worm_interior_sample_count=400, worm_wall_sample_count=100,
+                          pca_pcs=None, pca_means=None):
     mask_set_fpath_str = str(mask_set_fpath)
     imf = skimage.exposure.equalize_adapthist(skio.imread(str(im_fpath))).astype(numpy.float32)
     if imf.max() > 1:
@@ -80,24 +83,32 @@ def make_data_and_targets(im_fpath, mask_set_fpath, patch_width=9, background_sa
         ('_worm_interior.png', worm_interior_sample_count, 1),
         ('_worm_wall.png', worm_wall_sample_count, 2),
         ('_valid_exterior.png', background_sample_count, 0)]
-    dats = []
+    labels = []
+    vectors = []
     for mask_fpath_suffix, sample_count, label in masks:
         coords = select_random_coords_in_mask(mask_set_fpath_str + mask_fpath_suffix, sample_count)
         for coord in coords:
-            dats.append((make_patch_feature_vector(imf, patch_width, coord), label))
-    return dats
+            vector = make_patch_feature_vector(imf, patch_width, coord)
+            labels.append(label)
+            vectors.append(vector)
+    if pca_pcs is not None:
+        vectors = pca_decompose(vectors, pca_pcs, pca_means)
+    else:
+        vectors = numpy.array(vectors)
+    return vectors, numpy.array(labels)
 
-def write_libsvm_data_and_targets_file(data_and_targets, libsvm_data_and_targets_fpath):
+def write_libsvm_data_and_targets_file(data, targets, libsvm_data_and_targets_fpath):
     '''Note: If file at path lib_svm_data_and_targets_fpath exists, this function will attempt to overwrite it.'''
     with open(str(libsvm_data_and_targets_fpath), 'w') as libsvm_data_and_targets_file:
-        for vector, target in data_and_targets:
+        for vector, target in zip(data, targets):
             l = '{} '.format(target)
             for elementIdx, element in enumerate(vector, 1):
                 l += '{}:{} '.format(elementIdx, element)
             l += '\n'
             libsvm_data_and_targets_file.write(l)
 
-def make_libsvm_data_file_for_image(im_fpath, patch_width, libsvm_data_fpath):
+def make_grid_libsvm_data_file_for_image(im_fpath, patch_width, libsvm_data_fpath,
+                                         pca_pcs=None, pca_means=None):
     coords = []
     with open(str(libsvm_data_fpath), 'w') as libsvm_data_file:
         imf = skimage.exposure.equalize_adapthist(skio.imread(str(im_fpath))).astype(numpy.float32)
@@ -109,7 +120,6 @@ def make_libsvm_data_file_for_image(im_fpath, patch_width, libsvm_data_fpath):
         center_offset = patch_width / 2
         ycount = int(imf.shape[0] / patch_width)
         xcount = int(imf.shape[1] / patch_width)
-        mask = numpy.zeros((ycount, xcount), dtype=numpy.bool)
         xycount = ycount * xcount
         xyindex = 0
         for yindex in range(ycount):
@@ -119,6 +129,8 @@ def make_libsvm_data_file_for_image(im_fpath, patch_width, libsvm_data_fpath):
                 x = center_offset + xindex * patch_width
                 xi = int(x)
                 vector = make_patch_feature_vector(imf, patch_width, (yi, xi))
+                if pca_pcs is not None:
+                    vector = pca_decompose([vector], pca_pcs, pca_means)[0]
                 if len(vector) > 0:
                     libsvm_data_file.write('-1 ')
                     libsvm_data_file.write(' '.join(('{}:{}'.format(elementIdx, element) for elementIdx, element in enumerate(vector, 1))))
@@ -127,6 +139,34 @@ def make_libsvm_data_file_for_image(im_fpath, patch_width, libsvm_data_fpath):
                 xyindex += 1
                 print('{}%'.format(100 * xyindex / xycount))
     return coords
+
+def make_dense_libsvm_data_file_for_image(im_fpath, patch_width, libsvm_data_fpath,
+                                          pca_pcs=None, pca_means=None):
+    coords = []
+    with open(str(libsvm_data_fpath), 'w') as libsvm_data_file:
+        imf = skimage.exposure.equalize_adapthist(skio.imread(str(im_fpath))).astype(numpy.float32)
+        if imf.max() > 1:
+            # For some reason, skimage.exposure.equalize_adapthist rescales to [0, 1] on OS X but not on Linux.
+            # [0, 1] scaling is desired.
+            imf -= imf.min()
+            imf /= imf.max()
+        low_edge_offset = int(patch_width / 2)
+        high_edge_offset = patch_width - low_edge_offset
+        center_offset = patch_width / 2
+        ycount = imf.shape[0] - patch_width
+        xcount = imf.shape[1] - patch_width
+        xycount = ycount * xcount
+        xyindex = 0
+        for y in range(low_edge_offset, imf.shape[0] - high_edge_offset):
+            for x in range(low_edge_offset, imf.shape[1] - high_edge_offset):
+                vector = make_patch_feature_vector(imf, patch_width, (y, x))
+                if pca_pcs is not None:
+                    vector = pca_decompose([vector], pca_pcs, pca_means)[0]
+                libsvm_data_file.write('-1 ')
+                libsvm_data_file.write(' '.join(('{}:{}'.format(elementIdx, element) for elementIdx, element in enumerate(vector, 1))))
+                libsvm_data_file.write('\n')
+                xyindex += 1
+                print('{}%'.format(100 * xyindex / xycount))
 
 def overlay_libsvm_preds_from_file(patch_width, coordList, libSvmPredFPath, imageFPath=None, image=None, maskAlpha=0.3):
     if image is None and imageFPath is None or \
@@ -152,4 +192,29 @@ def overlay_libsvm_preds_from_file(patch_width, coordList, libSvmPredFPath, imag
                   x-low_edge_offset : x+high_edge_offset] = maskVal * pred
 
     composite = rmask + image.astype(numpy.float128) * imageCoef
+    return composite.astype(numpy.uint16)
+
+def overlay_dense_libsvm_preds_from_file(patch_width, libSvmPredFPath, imageFPath=None, image=None, maskAlpha=0.3):
+    if image is None and imageFPath is None or \
+       image is not None and imageFPath is not None:
+        raise ValueError('Either the imageFPath or the image argument must be supplied (but not both).')
+    if image is None:
+        image = skio.imread(imageFPath)
+
+    with open(str(libSvmPredFPath), 'r') as f:
+        preds = [bool(int(l[0])) for l in f.readlines()]
+
+    low_edge_offset = int(patch_width / 2)
+    high_edge_offset = patch_width - low_edge_offset
+    imageCoef = 1 - maskAlpha
+    maskVal = maskAlpha * 32767
+    mask = numpy.zeros(image.shape, dtype=numpy.float128)
+
+    i = 0
+    for y in range(low_edge_offset, image.shape[0] - high_edge_offset):
+        for x in range(low_edge_offset, image.shape[1] - high_edge_offset):
+            mask[y, x] = maskVal * preds[i]
+            i += 1
+
+    composite = mask + image.astype(numpy.float128) * imageCoef
     return composite.astype(numpy.uint16)
