@@ -1,7 +1,7 @@
-import _linear
+from . import _linear
 import numpy
 import ctypes
-import elegans.utility.gzip_array as gzip_array
+#import elegans.utility.gzip_array as gzip_array
 
 def cv_predict(xs, y, solver_type, xv_fold=5, scale=True, **linear_params):
   xs = numpy.array(xs, dtype=float)
@@ -77,7 +77,7 @@ class LinearClassifier(object):
 
   def save(self, filename):
     _linear.liblinear.save_model(filename, self.model)
-    gzip_array.write([self.means, self.stds], filename+'.mean_std')
+#   gzip_array.write([self.means, self.stds], filename+'.mean_std')
 
 
 class CV_LinearClassifier(LinearClassifier):
@@ -93,7 +93,7 @@ class CV_LinearClassifier(LinearClassifier):
       C = _refined_steps(C, self.best_index, refine_grid, 0, numpy.inf)
       self.search_C(C, y, xv_fold)
     self._train({'C':self.best_C})
-    print self.best_C, self.best_err
+    print(self.best_C, self.best_err)
   
   def search_C(self, C, y, xv_fold):
     predictions = numpy.empty(y.shape, dtype=numpy.int32)
@@ -102,7 +102,7 @@ class CV_LinearClassifier(LinearClassifier):
     for i, Cval in enumerate(C):
       pct = float(i)/l
       if pct >= next:
-        print i, l, int(100*pct)
+        print(i, l, int(100*pct))
         next += 0.1
       self.params.C = Cval
       _linear.liblinear.check_parameter(self.problem, self.params)
@@ -118,7 +118,7 @@ class CV_LinearClassifier(LinearClassifier):
 class SavedLinearClassifier(LinearClassifier):
   def __init__(self, filename):
     self.model = _linear.liblinear.load_model(filename)
-    self.means, self.stds = gzip_array.read(filename+'.mean_std')    
+#   self.means, self.stds = gzip_array.read(filename+'.mean_std')
 
 def _refined_steps(old, i, new_steps, vmin, vmax):
   if new_steps == 0 or len(old) == 1:

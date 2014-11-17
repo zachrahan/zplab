@@ -1,7 +1,7 @@
 import ctypes
-import elegans.utility.ctypes_util as ctypes_util
+from . import ctypes_util
 import os
-import _fast_linear_classify
+from . import _fast_linear_classify
 import numpy
 
 POLY2 = False
@@ -64,8 +64,11 @@ _API = {
 }
 
 _lib = 'liblinear-poly2' if POLY2 else 'liblinear'
-liblinear = ctypes_util.load_library((os.path.dirname(__file__),), _lib)
-ctypes_util.register_api(liblinear, _API)
+liblinear = ctypes.CDLL('liblinear.so')
+for f, (restype, argtypes) in _API.items():
+    func = getattr(liblinear, f)
+    func.restype = restype
+    func.argtypes = argtypes
 _quiet = print_func_type(lambda x:None)
 liblinear.set_print_string_function(_quiet)
 
@@ -82,15 +85,15 @@ def gen_problem(features, values):
   linear_problem._x = (feature_node * (n+1) * l)()
   linear_problem.n = n
   linear_problem.bias = 1
-  print "filling"
-  for i in xrange(l):
+  print("filling")
+  for i in range(l):
     xi = linear_problem._x[i]
     linear_problem.x[i] = xi
     xi[-1].index = -1
-    for j in xrange(n):
+    for j in range(n):
       xi[j].index = j
       xi[j].value = features[i,j]
-  print "full"
+  print("full")
   return linear_problem
 
 
