@@ -41,7 +41,24 @@ public:
     Py::Object getattro(const Py::String &name_);
     int setattro(const Py::String &name_, const Py::Object &value);
 
+    Py::Object save(const Py::Tuple& args) const;
+    PYCXX_VARARGS_METHOD_DECL(LinearClassifier, save)
+    Py::Object load(const Py::Tuple& args);
+    PYCXX_VARARGS_METHOD_DECL(LinearClassifier, load)
+
+    Py::Long feature_count() const;
+    PYCXX_NOARGS_METHOD_DECL(LinearClassifier, feature_count)
+    Py::Long label_count() const;
+    PYCXX_NOARGS_METHOD_DECL(LinearClassifier, label_count)
+    Py::Object get_labels(const Py::Tuple& args) const;
+    PYCXX_VARARGS_METHOD_DECL(LinearClassifier, get_labels)
+
+    Py::Object train(const Py::Tuple& args);
+    PYCXX_VARARGS_METHOD_DECL(LinearClassifier, train)
+
 protected:
     model* m_model;
+
+    void check_model(const char* func_name, const char* message=nullptr) const;
 };
 

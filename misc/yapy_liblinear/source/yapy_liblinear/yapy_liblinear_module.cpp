@@ -22,6 +22,11 @@
 // 
 // Authors: Erik Hvatum <ice.rikh@gmail.com>
 
+#include <Python.h>
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#define PY_ARRAY_UNIQUE_SYMBOL yapy_liblinear_ARRAY_API
+#include <numpy/arrayobject.h>
+
 #include "CXX/Objects.hxx"
 #include "CXX/Extensions.hxx"
 
@@ -59,6 +64,7 @@ extern "C" EXPORT_SYMBOL PyObject *PyInit_yapy_liblinear()
     Py::InitialisePythonIndirectPy::Interface();
 #endif
 
+    import_array();
     static yapy_liblinear_module* m{new yapy_liblinear_module()};
     return m->module().ptr();
 }

@@ -23,6 +23,7 @@
 # Authors: Erik Hvatum <ice.rikh@gmail.com>
 
 add_library(liblinear STATIC liblinear_git/linear.cpp
+                             liblinear_git/tron.cpp
                              liblinear_git/blas/daxpy.c
                              liblinear_git/blas/ddot.c
                              liblinear_git/blas/dnrm2.c
