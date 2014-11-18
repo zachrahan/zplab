@@ -195,8 +195,8 @@
 			Name="liblinear"
 			Filters="">
 			<F N="source/liblinear/CMakeLists.txt"/>
-			<F N="source/liblinear/linear.cpp"/>
-			<F N="source/liblinear/linear.h"/>
+			<F N="source/liblinear/liblinear_git/linear.cpp"/>
+			<F N="source/liblinear/liblinear_git/linear.h"/>
 		</Folder>
 		<Folder
 			Name="yapy_liblinear"

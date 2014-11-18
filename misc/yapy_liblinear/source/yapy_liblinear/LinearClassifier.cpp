@@ -25,7 +25,8 @@
 #include "LinearClassifier.h"
 
 LinearClassifier::LinearClassifier(Py::PythonClassInstance *self, Py::Tuple &args, Py::Dict &kwds)
-  : Py::PythonClass<LinearClassifier>::PythonClass(self, args, kwds)
+  : Py::PythonClass<LinearClassifier>::PythonClass(self, args, kwds),
+    m_model(nullptr)
 {
     std::cout << "LinearClassifier c'tor Called with " << args.length() << " normal arguments." << std::endl;
     Py::List names( kwds.keys() );

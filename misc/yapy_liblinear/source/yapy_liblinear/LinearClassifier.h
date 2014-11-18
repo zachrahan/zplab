@@ -40,5 +40,8 @@ public:
 
     Py::Object getattro(const Py::String &name_);
     int setattro(const Py::String &name_, const Py::Object &value);
+
+protected:
+    model* m_model;
 };
 
