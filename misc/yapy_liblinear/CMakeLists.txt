@@ -39,7 +39,6 @@ if(NOT WIN32)
 endif()
 
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake_modules")
 set(Python_ADDITIONAL_VERSIONS ${Python_ADDITIONAL_VERSIONS} "3.4")
 find_package(PythonInterp 3.4 REQUIRED)
 if(NOT APPLE)
@@ -79,7 +78,6 @@ else()
     message(STATUS "Found PythonLibs: ${PYTHON_LIBRARY} (do not be alarmed if the filename ends in .a; dynamic linking will be used nonetheless, if possible)")
     include_directories(SYSTEM ${PYTHON_INCLUDE_DIRS})
 endif()
-find_package(PyCXX REQUIRED)
 
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import numpy;print(numpy.get_include())"
                 RESULT_VARIABLE _NUMPY_INCLUDE_DIR_FOUND
@@ -93,6 +91,10 @@ endif()
 unset(_NUMPY_INCLUDE_DIR_FOUND)
 unset(_NUMPY_INCLUDE_DIR_ERROR)
 include_directories(SYSTEM ${NUMPY_INCLUDE_DIR})
+set(PYCXX_SOURCE_DIR ${PROJECT_SOURCE_DIR}/source/pycxx/Src)
+mark_as_advanced(PYCXX_SOURCE_DIR)
+set(PYCXX_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/source/pycxx)
+mark_as_advanced(PYCXX_INCLUDE_DIR)
 include_directories(SYSTEM ${PYCXX_INCLUDE_DIR})
 
 add_subdirectory(source/liblinear)

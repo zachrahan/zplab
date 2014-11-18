@@ -29,7 +29,8 @@ add_library(yapy_liblinear SHARED LinearClassifier.cpp
                                   ${PYCXX_SOURCE_DIR}/cxxextensions.c
                                   ${PYCXX_SOURCE_DIR}/cxxsupport.cxx)
 
-target_link_libraries(yapy_liblinear liblinear)
+target_link_libraries(yapy_liblinear liblinear
+                                     ${PYTHON_LIBRARIES})
 
 get_target_property(_PYTHON_MODULE_LOCATION yapy_liblinear LOCATION)
 if(WIN32)
