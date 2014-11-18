@@ -90,12 +90,13 @@ if(NOT _NUMPY_INCLUDE_DIR_FOUND MATCHES 0)
 endif()
 unset(_NUMPY_INCLUDE_DIR_FOUND)
 unset(_NUMPY_INCLUDE_DIR_ERROR)
-include_directories(SYSTEM ${NUMPY_INCLUDE_DIR})
 set(PYCXX_SOURCE_DIR ${PROJECT_SOURCE_DIR}/source/pycxx/Src)
 mark_as_advanced(PYCXX_SOURCE_DIR)
 set(PYCXX_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/source/pycxx)
 mark_as_advanced(PYCXX_INCLUDE_DIR)
-include_directories(SYSTEM ${PYCXX_INCLUDE_DIR})
+include_directories(SYSTEM ${PYCXX_INCLUDE_DIR}
+                           ${PYTHON_INCLUDE_DIRS}
+                           ${NUMPY_INCLUDE_DIR})
 
 add_subdirectory(source/liblinear)
 add_subdirectory(source/yapy_liblinear)
