@@ -335,7 +335,7 @@ def findWormAgainstBackground(rw, images, lowpassSigma=3, erosionThresholdPercen
         propagationThresholdPercentile -= 0.5
 #   return foos
 
-def findWormInImage(im, classifier, featureVectorSizeParam, featureMaker=makeArFeatureVector):
+def findWormInImage(im, classify, featureVectorSizeParam, featureMaker=makeArFeatureVector):
     imf = skimage.exposure.equalize_adapthist(im).astype(numpy.float32)
     filterBoxWidth = featureVectorSizeParam + 10
     halfFilterBoxWidth = filterBoxWidth / 2
@@ -349,9 +349,9 @@ def findWormInImage(im, classifier, featureVectorSizeParam, featureMaker=makeArF
         for xindex in range(xcount):
             x = halfFilterBoxWidth + xindex * filterBoxWidth
             vector = featureMaker(imf, featureVectorSizeParam, (y, x))
-            mask[yindex, xindex] = False if len(vector) == 0 else classifier.predict(vector)
+            mask[yindex, xindex] = False if len(vector) == 0 else classify(vector)
             xyindex += 1
-            print('{}%'.format(100 * xyindex / xycount))
+#           print('{}%'.format(100 * xyindex / xycount))
     return mask
 
 def makeLibSvmDataFileForImage(libsvmDataFileFPath, im, featureVectorSizeParam, featureMaker=makeArFeatureVector):

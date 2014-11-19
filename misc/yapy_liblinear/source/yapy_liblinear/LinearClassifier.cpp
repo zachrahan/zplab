@@ -24,6 +24,7 @@
 
 #include <memory>
 #include <string>
+#include <sstream>
 #include <Python.h>
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #define PY_ARRAY_UNIQUE_SYMBOL yapy_liblinear_ARRAY_API
@@ -72,6 +73,8 @@ void LinearClassifier::init_type()
                                                      "instance or its model is destroyed, that view becomes invalid, and\n"
                                                      "attempting to access it will result in a segfault.");
     PYCXX_ADD_VARARGS_METHOD(train, train, "train(vectors, labels) -> None");
+    PYCXX_ADD_VARARGS_METHOD(classify_one_vector, classify_one_vector, "classify_one_vector(vector) -> int\n"
+                                                                       "Computes and returns classification for a single feature vector.");
 
     behaviors().readyType();
 }
@@ -169,8 +172,7 @@ Py::Object LinearClassifier::get_labels(const Py::Tuple& args) const
     }
     else
     {
-        Py::Object ndarray(PyArray_EMPTY(1, &shape, NPY_INT, false));
-        ndarray.decrement_reference_count();
+        Py::Object ndarray(PyArray_EMPTY(1, &shape, NPY_INT, false), true);
         memcpy(PyArray_GETPTR1(reinterpret_cast<PyArrayObject*>(*ndarray), 0),
                m_model->label,
                sizeof(int) * m_model->nr_class);
@@ -195,7 +197,7 @@ Py::Object LinearClassifier::train(const Py::Tuple& args)
     PyObject* labels_{PyArray_FromAny(*args[1], PyArray_DescrFromType(NPY_INT), 1, 1, NPY_ARRAY_CARRAY_RO, nullptr)};
     if(!labels_)
     {
-        throw Py::ValueError("Failed to convert labels argument into numpy int array.");
+        throw Py::ValueError("Failed to convert labels argument into numpy cint array.");
     }
     Py::Object labels(labels_, true);
 
@@ -261,3 +263,44 @@ Py::Object LinearClassifier::train(const Py::Tuple& args)
 
     return Py::None();
 }
+
+Py::Object LinearClassifier::classify_one_vector(const Py::Tuple& args) const
+{
+    if(args.length() != 1)
+    {
+        throw Py::RuntimeError("Incorrect number of arguments (1 required).");
+    }
+    check_model("classify_one_vector(..)");
+
+    PyObject* vector_{PyArray_FromAny(*args[0], PyArray_DescrFromType(NPY_DOUBLE), 1, 1, NPY_ARRAY_CARRAY_RO, nullptr)};
+    if(!vector_)
+    {
+        throw Py::ValueError("Failed to convert vectors argument into 1d numpy double (64-bit float) array.");
+    }
+    Py::Object vector(vector_, true);
+
+    npy_intp vector_size{PyArray_SIZE(reinterpret_cast<PyArrayObject*>(*vector))};
+    if(vector_size != m_model->nr_feature)
+    {
+        std::ostringstream o;
+        o << "vector argument has wrong cardinality (has " << vector_size << " elements, but exactly ";
+        o << m_model->nr_feature << " are required.";
+        std::string s(o.str());
+        throw Py::ValueError(s.c_str());
+    }
+
+    std::unique_ptr<feature_node[]> feature_nodes(new feature_node[vector_size + 1]);
+    int idx{1};
+    double* vector_element(reinterpret_cast<double*>(PyArray_DATA(reinterpret_cast<PyArrayObject*>(*vector))));
+    feature_node *f_node{feature_nodes.get()};
+    feature_node *feature_nodes_end{feature_nodes.get() + vector_size};
+    for(; f_node != feature_nodes_end; ++f_node, ++idx, ++vector_element)
+    {
+        f_node->index = idx;
+        f_node->value = *vector_element;
+    }
+    f_node->index = -1;
+
+    return Py::Long((int)::predict(m_model, feature_nodes.get()));
+}
+

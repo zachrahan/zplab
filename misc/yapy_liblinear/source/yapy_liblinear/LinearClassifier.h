@@ -56,6 +56,9 @@ public:
     Py::Object train(const Py::Tuple& args);
     PYCXX_VARARGS_METHOD_DECL(LinearClassifier, train)
 
+    Py::Object classify_one_vector(const Py::Tuple& args) const;
+    PYCXX_VARARGS_METHOD_DECL(LinearClassifier, classify_one_vector)
+
 protected:
     model* m_model;
 
