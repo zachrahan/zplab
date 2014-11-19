@@ -24,6 +24,9 @@
 
 #pragma once
 
+#include <string>
+#include <map>
+
 #include "CXX/Objects.hxx"
 #include "CXX/Extensions.hxx"
 
@@ -38,9 +41,6 @@ public:
 
     static void init_type();
 
-    Py::Object getattro(const Py::String &name_);
-    int setattro(const Py::String &name_, const Py::Object &value);
-
     Py::Object save(const Py::Tuple& args) const;
     PYCXX_VARARGS_METHOD_DECL(LinearClassifier, save)
     Py::Object load(const Py::Tuple& args);
@@ -52,6 +52,12 @@ public:
     PYCXX_NOARGS_METHOD_DECL(LinearClassifier, label_count)
     Py::Object get_labels(const Py::Tuple& args) const;
     PYCXX_VARARGS_METHOD_DECL(LinearClassifier, get_labels)
+    Py::Object get_parameters() const;
+    PYCXX_NOARGS_METHOD_DECL(LinearClassifier, get_parameters)
+    Py::Object set_parameters(const Py::Tuple& args);
+    PYCXX_VARARGS_METHOD_DECL(LinearClassifier, set_parameters)
+    Py::Object get_solvers() const;
+    PYCXX_NOARGS_METHOD_DECL(LinearClassifier, get_solvers)
 
     Py::Object train(const Py::Tuple& args);
     PYCXX_VARARGS_METHOD_DECL(LinearClassifier, train)
@@ -61,7 +67,13 @@ public:
 
 protected:
     model* m_model;
+    // Used for holding parameters when there is no model (in order that the user may set parameters and then call train 
+    // to generate a model). 
+    parameter* m_staged_param;
+
+    static const std::map<std::string, int> sm_solver_names_to_idxs;
 
     void check_model(const char* func_name, const char* message=nullptr) const;
+    void make_default_staged_param();
 };
 

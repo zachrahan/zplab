@@ -22,9 +22,11 @@
 // 
 // Authors: Erik Hvatum <ice.rikh@gmail.com>
 
+#include <algorithm>
+#include <iostream>
 #include <memory>
-#include <string>
 #include <sstream>
+#include <vector>
 #include <Python.h>
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #define PY_ARRAY_UNIQUE_SYMBOL yapy_liblinear_ARRAY_API
@@ -33,9 +35,12 @@
 
 #include "LinearClassifier.h"
 
+const std::map<std::string, int> LinearClassifier::sm_solver_names_to_idxs;
+
 LinearClassifier::LinearClassifier(Py::PythonClassInstance *self, Py::Tuple &args, Py::Dict &kwds)
   : Py::PythonClass<LinearClassifier>::PythonClass(self, args, kwds),
-    m_model(nullptr)
+    m_model(nullptr),
+    m_staged_param(nullptr)
 {
     std::cout << "LinearClassifier c'tor Called with " << args.length() << " normal arguments." << std::endl;
     Py::List names( kwds.keys() );
@@ -51,18 +56,45 @@ LinearClassifier::~LinearClassifier()
 {
     if(m_model)
     {
+        destroy_param(&m_model->param);
         free_and_destroy_model(&m_model);
         m_model = nullptr;
+    }
+    if(m_staged_param)
+    {
+        destroy_param(m_staged_param);
+        delete m_staged_param;
+        m_staged_param = nullptr;
     }
     std::cout << "~LinearClassifier" << std::endl;
 }
 
 void LinearClassifier::init_type()
 {
+    std::map<std::string, int>& sntis(const_cast<std::map<std::string, int>&>(sm_solver_names_to_idxs));
+    std::map<std::string, int>::iterator sntis_it;
+    std::string sn;
+    int si{0};
+    for(const char** snp{solver_type_table}; *snp; ++snp, ++si)
+    {
+        sn = *snp;
+        if(!sn.empty())
+        {
+            sntis_it = sntis.find(sn);
+            if(sntis_it != sntis.end())
+            {
+                std::string e("liblinear solver name \"");
+                e += sn;
+                e += "\" appears more than once in liblinear's solver_type_table.";
+                std::cerr << e << std::endl;
+                throw e;
+            }
+            sntis[sn] = si;
+        }
+    }
+
     behaviors().name("LinearClassifier");
-    behaviors().doc("Python wrapper class around C++ wrapper class around liblinear.");
-    behaviors().supportGetattro();
-    behaviors().supportSetattro();
+    behaviors().doc("Python wrapper class around C++ wrapper class around liblinear C wrapper around liblinear C++ implementation.");
     PYCXX_ADD_VARARGS_METHOD(save, save, "save(model_fn) -> None");
     PYCXX_ADD_VARARGS_METHOD(load, load, "load(model_fn) -> None");
     PYCXX_ADD_NOARGS_METHOD(feature_count, feature_count, "feature_count() -> int");
@@ -75,18 +107,14 @@ void LinearClassifier::init_type()
     PYCXX_ADD_VARARGS_METHOD(train, train, "train(vectors, labels) -> None");
     PYCXX_ADD_VARARGS_METHOD(classify_one_vector, classify_one_vector, "classify_one_vector(vector) -> int\n"
                                                                        "Computes and returns classification for a single feature vector.");
+    PYCXX_ADD_NOARGS_METHOD(get_parameters, get_parameters, "get_parameters() -> dict");
+    PYCXX_ADD_VARARGS_METHOD(set_parameters, set_parameters, "set_parameters(dict) -> None\n"
+                                                             "Supply a dict of label : weight values for weights, or None, or an empty\n"
+                                                             "dict for weights if no weights are desired.");
+    PYCXX_ADD_NOARGS_METHOD(get_solvers, get_solvers, "get_solvers() -> list\n"
+                                                      "Returns a list containing the names of the available solvers.");
 
     behaviors().readyType();
-}
-
-Py::Object LinearClassifier::getattro(const Py::String &name_)
-{
-    return genericGetAttro(name_);
-}
-
-int LinearClassifier::setattro(const Py::String &name_, const Py::Object &value)
-{
-    return genericSetAttro(name_, value);
 }
 
 void LinearClassifier::check_model(const char* func_name, const char* message) const
@@ -105,6 +133,26 @@ void LinearClassifier::check_model(const char* func_name, const char* message) c
             throw Py::RuntimeError(e.c_str());
         }
     }
+}
+
+void LinearClassifier::make_default_staged_param()
+{
+    if(m_staged_param)
+    {
+        // Delete weights
+        destroy_param(m_staged_param);
+    }
+    else
+    {
+        m_staged_param = new parameter;
+    }
+    m_staged_param->solver_type = L2R_L2LOSS_SVC_DUAL;
+    m_staged_param->C = 1;
+    m_staged_param->eps = 0.1;
+    m_staged_param->p = 0.1;
+    m_staged_param->nr_weight = 0;
+    m_staged_param->weight_label = nullptr;
+    m_staged_param->weight = nullptr;
 }
 
 Py::Object LinearClassifier::save(const Py::Tuple& args) const
@@ -127,8 +175,15 @@ Py::Object LinearClassifier::load(const Py::Tuple& args)
 {
     if(m_model)
     {
+        destroy_param(&m_model->param);
         free_and_destroy_model(&m_model);
         m_model = nullptr;
+    }
+    if(m_staged_param)
+    {
+        destroy_param(m_staged_param);
+        delete m_staged_param;
+        m_staged_param = nullptr;
     }
     Py::String model_fn(args[0]);
     std::string model_fn_stdstr(model_fn);
@@ -178,6 +233,157 @@ Py::Object LinearClassifier::get_labels(const Py::Tuple& args) const
                sizeof(int) * m_model->nr_class);
         return ndarray;
     }
+}
+
+Py::Object LinearClassifier::get_parameters() const
+{
+    const parameter* param;
+    if(m_model)
+    {
+        param = &m_model->param;
+    }
+    else
+    {
+        if(!m_staged_param)
+        {
+            const_cast<LinearClassifier*>(this)->make_default_staged_param();
+        }
+        param = m_staged_param;
+    }
+
+    Py::Dict ret;
+    ret["solver"] = Py::String(solver_type_table[param->solver_type]);
+    ret["eps"] = Py::Float(param->eps);
+    ret["C"] = Py::Float(param->C);
+    ret["p"] = Py::Float(param->p);
+    Py::Dict weights;
+    ret["weights"] = weights;
+    if(param->nr_weight > 0)
+    {
+        int* wl{param->weight_label};
+        int*const wl_end{wl + param->nr_weight};
+        double* w{param->weight};
+        for(; wl != wl_end; ++wl, ++w)
+        {
+            weights[Py::Long(*wl)] = Py::Float(*w);
+        }
+    }
+    return ret;
+}
+
+Py::Object LinearClassifier::set_parameters(const Py::Tuple& args)
+{
+    if(args.length() != 1)
+    {
+        throw Py::RuntimeError("Incorrect number of arguments (1 required).");
+    }
+    parameter* param;
+    if(m_model)
+    {
+        param = &m_model->param;
+    }
+    else
+    {
+        if(!m_staged_param)
+        {
+            make_default_staged_param();
+        }
+        param = m_staged_param;
+    }
+    Py::Dict param_dict(args[0]);
+    Py::List param_items(param_dict.items());
+    std::string pname;
+    Py::Tuple param_item;
+    Py::String pname_;
+    for(auto param_item_it = param_items.begin(); param_item_it != param_items.end(); ++param_item_it)
+    {
+        param_item = *param_item_it;
+        pname_ = param_item[0];
+        pname = pname_.as_std_string("utf-8");
+        if(pname == "solver")
+        {
+            Py::String solver_(param_item[1]);
+            std::string solver(solver_.as_std_string("utf-8"));
+            std::map<std::string, int>::const_iterator sntis_it(sm_solver_names_to_idxs.find(solver));
+            if(sntis_it == sm_solver_names_to_idxs.end())
+            {
+                std::string e("Unknown solver name \"");
+                e += solver;
+                e += "\" specified.  Call .get_solvers() to get the list of supported solver names.";
+                throw Py::KeyError(e.c_str());
+            }
+            param->solver_type = sntis_it->second;
+        }
+        else if(pname == "weights")
+        {
+            if(param_item[1].isTrue())
+            {
+                Py::Dict weights(param_item[1]);
+                Py::List weights_items(weights.items());
+                Py::Tuple weights_item;
+                std::vector<std::pair<int, double>> putative_weights;
+                for(auto weights_item_it = weights_items.begin(); weights_item_it != weights_items.end(); ++weights_item_it)
+                {
+                    weights_item = *weights_item_it;
+                    Py::Long label(weights_item[0]);
+                    Py::Float weight(weights_item[1]);
+                    putative_weights.emplace_back(static_cast<int>(label), static_cast<double>(weight));
+                }
+                destroy_param(param);
+                param->nr_weight = static_cast<int>(putative_weights.size());
+                param->weight_label = reinterpret_cast<int*>(calloc(putative_weights.size(), sizeof(int)));
+                param->weight = reinterpret_cast<double*>(calloc(putative_weights.size(), sizeof(double)));
+                int* weight_label_it{param->weight_label};
+                int* weight_label_end{weight_label_it + putative_weights.size()};
+                double* weight_it{param->weight};
+                auto putative_weights_it = putative_weights.begin();
+                for(; weight_label_it != weight_label_end; ++weight_label_it, ++weight_it, ++putative_weights_it)
+                {
+                    *weight_label_it = putative_weights_it->first;
+                    *weight_it = putative_weights_it->second;
+                }
+            }
+            else
+            {
+                destroy_param(param);
+            }
+        }
+        else if(pname == "eps")
+        {
+            param->eps = Py::Float(param_item[1]);
+        }
+        else if(pname == "C")
+        {
+            param->C = Py::Float(param_item[1]);
+        }
+        else if(pname == "p")
+        {
+            param->p = Py::Float(param_item[1]);
+        }
+        else
+        {
+            std::string e("Unkown parameter name \"");
+            e += pname;
+            e += "\" specified.  Refer to output of .get_solvers() for a list of supported parameter names.";
+            throw Py::KeyError(e.c_str());
+        }
+    }
+    return Py::None();
+}
+
+Py::Object LinearClassifier::get_solvers() const
+{
+    Py::List ret;
+    std::string sn;
+    for(const char** snp{solver_type_table}; *snp; ++snp)
+    {
+        sn = *snp;
+        if(!sn.empty())
+        {
+            ret.append(Py::String(sn));
+        }
+    }
+    return ret;
 }
 
 Py::Object LinearClassifier::train(const Py::Tuple& args)
@@ -231,15 +437,6 @@ Py::Object LinearClassifier::train(const Py::Tuple& args)
         *label_d = *label;
     }
 
-    parameter param;
-    param.solver_type = L2R_L2LOSS_SVC_DUAL;
-    param.C = 1;
-    param.eps = 0.1;
-    param.p = 0.1;
-    param.nr_weight = 0;
-    param.weight_label = nullptr;
-    param.weight = nullptr;
-
     problem prob;
     prob.n = vector_cardinality;
     prob.l = vectors_size;
@@ -247,19 +444,20 @@ Py::Object LinearClassifier::train(const Py::Tuple& args)
     prob.y = labels_d.get();
     prob.x = feature_nodes_ptrs.get();
 
-    model* model_(::train(&prob, &param));
-    if(!model_)
-    {
-        throw Py::RuntimeError("Failed to make model.");
-    }
-
-    if(m_model)
-    {
-        free_and_destroy_model(&m_model);
-        m_model = nullptr;
-    }
-
-    m_model = model_;
+//  model* model_(::train(&prob, &param));
+//  if(!model_)
+//  {
+//      throw Py::RuntimeError("Failed to make model.");
+//  }
+// 
+//  if(m_model)
+//  {
+//      destroy_param(&m_model->param);
+//      free_and_destroy_model(&m_model);
+//      m_model = nullptr;
+//  }
+// 
+//  m_model = model_;
 
     return Py::None();
 }
