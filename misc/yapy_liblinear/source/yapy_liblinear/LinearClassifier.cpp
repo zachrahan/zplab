@@ -329,6 +329,9 @@ Py::Object LinearClassifier::set_parameters(const Py::Tuple& args)
                     Py::Float weight(weights_item[1]);
                     putative_weights.emplace_back(static_cast<int>(label), static_cast<double>(weight));
                 }
+                std::sort(putative_weights.begin(),
+                          putative_weights.end(),
+                          [](const std::pair<int, double>& lhs, const std::pair<int, double>& rhs){return lhs.first < rhs.first;});
                 destroy_param(param);
                 param->nr_weight = static_cast<int>(putative_weights.size());
                 param->weight_label = reinterpret_cast<int*>(calloc(putative_weights.size(), sizeof(int)));
@@ -419,12 +422,12 @@ Py::Object LinearClassifier::train(const Py::Tuple& args)
     std::unique_ptr<feature_node[]> feature_nodes(new feature_node[vectors_size * vector_cardinality + vectors_size]);
     std::unique_ptr<double[]> labels_d(new double[vectors_size]);
     int idx;
-    feature_node** feature_node_ptr(feature_nodes_ptrs.get());
-    feature_node** feature_nodes_ptrs_end(feature_nodes_ptrs.get() + vectors_size);
-    feature_node* feature_node(feature_nodes.get());
-    double* vector_element(reinterpret_cast<double*>(PyArray_DATA(reinterpret_cast<PyArrayObject*>(*vectors))));
-    double* label_d(labels_d.get());
-    int* label(reinterpret_cast<int*>(PyArray_DATA(reinterpret_cast<PyArrayObject*>(*labels))));
+    feature_node** feature_node_ptr{feature_nodes_ptrs.get()};
+    feature_node** feature_nodes_ptrs_end{feature_nodes_ptrs.get() + vectors_size};
+    feature_node* feature_node{feature_nodes.get()};
+    double* vector_element{reinterpret_cast<double*>(PyArray_DATA(reinterpret_cast<PyArrayObject*>(*vectors)))};
+    double* label_d{labels_d.get()};
+    int* label{reinterpret_cast<int*>(PyArray_DATA(reinterpret_cast<PyArrayObject*>(*labels)))};
     for(; feature_node_ptr != feature_nodes_ptrs_end; ++feature_node_ptr, ++label, ++label_d)
     {
         *feature_node_ptr = feature_node;
