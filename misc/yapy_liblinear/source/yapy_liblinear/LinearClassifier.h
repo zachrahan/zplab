@@ -70,10 +70,11 @@ protected:
     // Used for holding parameters when there is no model (in order that the user may set parameters and then call train 
     // to generate a model). 
     parameter* m_staged_param;
+    double* m_staged_bias;
 
     static const std::map<std::string, int> sm_solver_names_to_idxs;
 
     void check_model(const char* func_name, const char* message=nullptr) const;
-    void make_default_staged_param();
+    void make_default_staged_param_and_bias();
 };
 

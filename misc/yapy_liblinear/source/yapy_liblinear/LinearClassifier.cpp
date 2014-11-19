@@ -40,16 +40,9 @@ const std::map<std::string, int> LinearClassifier::sm_solver_names_to_idxs;
 LinearClassifier::LinearClassifier(Py::PythonClassInstance *self, Py::Tuple &args, Py::Dict &kwds)
   : Py::PythonClass<LinearClassifier>::PythonClass(self, args, kwds),
     m_model(nullptr),
-    m_staged_param(nullptr)
+    m_staged_param(nullptr),
+    m_staged_bias(nullptr)
 {
-    std::cout << "LinearClassifier c'tor Called with " << args.length() << " normal arguments." << std::endl;
-    Py::List names( kwds.keys() );
-    std::cout << "and with " << names.length() << " keyword arguments:" << std::endl;
-    for( Py::List::size_type i=0; i< names.length(); i++ )
-    {
-        Py::String name( names[i] );
-        std::cout << "    " << name << std::endl;
-    }
 }
 
 LinearClassifier::~LinearClassifier()
@@ -66,7 +59,11 @@ LinearClassifier::~LinearClassifier()
         delete m_staged_param;
         m_staged_param = nullptr;
     }
-    std::cout << "~LinearClassifier" << std::endl;
+    if(m_staged_bias)
+    {
+        delete m_staged_bias;
+        m_staged_bias = nullptr;
+    }
 }
 
 void LinearClassifier::init_type()
@@ -135,7 +132,7 @@ void LinearClassifier::check_model(const char* func_name, const char* message) c
     }
 }
 
-void LinearClassifier::make_default_staged_param()
+void LinearClassifier::make_default_staged_param_and_bias()
 {
     if(m_staged_param)
     {
@@ -146,6 +143,10 @@ void LinearClassifier::make_default_staged_param()
     {
         m_staged_param = new parameter;
     }
+    if(!m_staged_bias)
+    {
+        m_staged_bias = new double;
+    }
     m_staged_param->solver_type = L2R_L2LOSS_SVC_DUAL;
     m_staged_param->C = 1;
     m_staged_param->eps = 0.1;
@@ -153,6 +154,7 @@ void LinearClassifier::make_default_staged_param()
     m_staged_param->nr_weight = 0;
     m_staged_param->weight_label = nullptr;
     m_staged_param->weight = nullptr;
+    *m_staged_bias = -1;
 }
 
 Py::Object LinearClassifier::save(const Py::Tuple& args) const
@@ -173,6 +175,41 @@ Py::Object LinearClassifier::save(const Py::Tuple& args) const
 
 Py::Object LinearClassifier::load(const Py::Tuple& args)
 {
+    Py::String model_fn(args[0]);
+    std::string model_fn_stdstr(model_fn);
+    model* model_ = load_model(model_fn_stdstr.c_str());
+    if(!model_)
+    {
+        std::string e("Failed to load model from \"");
+        e += model_fn_stdstr;
+        e += "\".";
+        throw Py::RuntimeError(e.c_str());
+    }
+    parameter* curr_param{&model_->param};
+    parameter* prev_param;
+    if(m_model)
+    {
+        prev_param = &m_model->param;
+    }
+    else
+    {
+        if(!m_staged_param)
+        {
+            make_default_staged_param_and_bias();
+        }
+        prev_param = m_staged_param;
+    }
+    // liblinear does not store these params in its data file, nor does load_model set them to defaults or anything 
+    // else, which is problematic, particularly for the weights pointers.  So, we carry over these values from the last
+    // time they were set by the user.
+    curr_param->eps = prev_param->eps;
+    curr_param->C = prev_param->C;
+    curr_param->nr_weight = prev_param->nr_weight;
+    curr_param->weight = prev_param->weight;
+    prev_param->weight = nullptr;
+    curr_param->weight_label = prev_param->weight_label;
+    prev_param->weight_label = nullptr;
+    curr_param->p = prev_param->p;
     if(m_model)
     {
         destroy_param(&m_model->param);
@@ -185,16 +222,12 @@ Py::Object LinearClassifier::load(const Py::Tuple& args)
         delete m_staged_param;
         m_staged_param = nullptr;
     }
-    Py::String model_fn(args[0]);
-    std::string model_fn_stdstr(model_fn);
-    m_model = load_model(model_fn_stdstr.c_str());
-    if(!m_model)
+    if(m_staged_bias)
     {
-        std::string e("Failed to load model from \"");
-        e += model_fn_stdstr;
-        e += "\".";
-        throw Py::RuntimeError(e.c_str());
+        delete m_staged_bias;
+        m_staged_bias = nullptr;
     }
+    m_model = model_;
     return Py::None();
 }
 
@@ -238,17 +271,20 @@ Py::Object LinearClassifier::get_labels(const Py::Tuple& args) const
 Py::Object LinearClassifier::get_parameters() const
 {
     const parameter* param;
+    const double* bias;
     if(m_model)
     {
         param = &m_model->param;
+        bias = &m_model->bias;
     }
     else
     {
-        if(!m_staged_param)
+        if(!m_staged_param || !m_staged_bias)
         {
-            const_cast<LinearClassifier*>(this)->make_default_staged_param();
+            const_cast<LinearClassifier*>(this)->make_default_staged_param_and_bias();
         }
         param = m_staged_param;
+        bias = m_staged_bias;
     }
 
     Py::Dict ret;
@@ -258,6 +294,7 @@ Py::Object LinearClassifier::get_parameters() const
     ret["p"] = Py::Float(param->p);
     Py::Dict weights;
     ret["weights"] = weights;
+    ret["bias"] = Py::Float(*bias);
     if(param->nr_weight > 0)
     {
         int* wl{param->weight_label};
@@ -278,17 +315,20 @@ Py::Object LinearClassifier::set_parameters(const Py::Tuple& args)
         throw Py::RuntimeError("Incorrect number of arguments (1 required).");
     }
     parameter* param;
+    double* bias;
     if(m_model)
     {
         param = &m_model->param;
+        bias = &m_model->bias;
     }
     else
     {
-        if(!m_staged_param)
+        if(!m_staged_param || !m_staged_bias)
         {
-            make_default_staged_param();
+            make_default_staged_param_and_bias();
         }
         param = m_staged_param;
+        bias = m_staged_bias;
     }
     Py::Dict param_dict(args[0]);
     Py::List param_items(param_dict.items());
@@ -362,6 +402,10 @@ Py::Object LinearClassifier::set_parameters(const Py::Tuple& args)
         else if(pname == "p")
         {
             param->p = Py::Float(param_item[1]);
+        }
+        else if(pname == "bias")
+        {
+            *bias = Py::Float(param_item[1]);
         }
         else
         {
@@ -440,27 +484,55 @@ Py::Object LinearClassifier::train(const Py::Tuple& args)
         *label_d = *label;
     }
 
+    parameter* param;
+    double* bias;
+    if(m_model)
+    {
+        param = &m_model->param;
+        bias = &m_model->bias;
+    }
+    else
+    {
+        if(!m_staged_param || !m_staged_bias)
+        {
+            make_default_staged_param_and_bias();
+        }
+        param = m_staged_param;
+        bias = m_staged_bias;
+    }
+
     problem prob;
     prob.n = vector_cardinality;
     prob.l = vectors_size;
     prob.bias = -1;
     prob.y = labels_d.get();
     prob.x = feature_nodes_ptrs.get();
+    prob.bias = *bias;
 
-//  model* model_(::train(&prob, &param));
-//  if(!model_)
-//  {
-//      throw Py::RuntimeError("Failed to make model.");
-//  }
-// 
-//  if(m_model)
-//  {
-//      destroy_param(&m_model->param);
-//      free_and_destroy_model(&m_model);
-//      m_model = nullptr;
-//  }
-// 
-//  m_model = model_;
+    model* model_{::train(&prob, param)};
+    if(!model_)
+    {
+        throw Py::RuntimeError("Failed to make model.");
+    }
+
+    if(m_model)
+    {
+        destroy_param(&m_model->param);
+        free_and_destroy_model(&m_model);
+        m_model = nullptr;
+    }
+    if(m_staged_param)
+    {
+        delete m_staged_param;
+        m_staged_param = nullptr;
+    }
+    if(m_staged_bias)
+    {
+        delete m_staged_bias;
+        m_staged_bias = nullptr;
+    }
+
+    m_model = model_;
 
     return Py::None();
 }
