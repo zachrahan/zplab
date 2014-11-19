@@ -354,6 +354,25 @@ def findWormInImage(im, classify, featureVectorSizeParam, featureMaker=makeArFea
 #           print('{}%'.format(100 * xyindex / xycount))
     return mask
 
+def makeImageFeatureVectors(im, featureVectorSizeParam, featureMaker=makePatchFeatureVector):
+    vectors = []
+    imf = skimage.exposure.equalize_adapthist(im).astype(numpy.float32)
+    filterBoxWidth = featureVectorSizeParam + 10
+    halfFilterBoxWidth = filterBoxWidth / 2
+    ycount = int(imf.shape[0] / filterBoxWidth)
+    xcount = int(imf.shape[1] / filterBoxWidth)
+    xycount = ycount * xcount
+    xyindex = 0
+    for yindex in range(ycount):
+        y = halfFilterBoxWidth + yindex * filterBoxWidth
+        for xindex in range(xcount):
+            x = halfFilterBoxWidth + xindex * filterBoxWidth
+            vector = featureMaker(imf, featureVectorSizeParam, (y, x))
+            if len(vector):
+                vectors.append(vector)
+            xyindex += 1
+    return vectors
+
 def makeLibSvmDataFileForImage(libsvmDataFileFPath, im, featureVectorSizeParam, featureMaker=makeArFeatureVector):
     coords = []
     with open(str(libsvmDataFileFPath), 'w') as libSvmDataFile:

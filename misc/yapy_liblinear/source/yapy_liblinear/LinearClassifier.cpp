@@ -613,7 +613,7 @@ Py::Object LinearClassifier::classify(const Py::Tuple& args) const
     }
     Py::Object labels(labels_, true);
     int* label{reinterpret_cast<int*>(PyArray_DATA(reinterpret_cast<PyArrayObject*>(*labels)))};
-    const int*const labels_end{label + vector_cardinality};
+    const int*const labels_end{label + vectors_size};
 
     std::unique_ptr<feature_node[]> feature_nodes(new feature_node[vector_cardinality + 1]);
     feature_node* feature_node;
