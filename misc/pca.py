@@ -1,7 +1,7 @@
 import bisect, numpy
 
 def pca(data):
-  """pca(data, axis) -> mean, pcs, norm_pcs, variances, positions, norm_positions"""
+  """pca(data) -> mean, pcs, norm_pcs, variances, positions, norm_positions"""
   data = numpy.asarray(data)
   mean = data.mean(axis = 0)
   centered = data - mean

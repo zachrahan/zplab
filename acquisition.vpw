@@ -6,5 +6,6 @@
 		<Project File="../py_interprocess_shared_memory_blob/py_interprocess_shared_memory_blob.vpj"/>
 		<Project File="ris_widget/ris_widget.vpj"/>
 		<Project File="rpc_acquisition/rpc_acquisition.vpj"/>
+		<Project File="misc/yapy_liblinear/yapy_liblinear.vpj"/>
 	</Projects>
 </Workspace>

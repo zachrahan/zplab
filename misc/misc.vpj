@@ -14,15 +14,6 @@
 				<F N="_texture_analysis/_texture_analysis.pyx"/>
 				<F N="_texture_analysis/setup.py"/>
 			</Folder>
-			<Folder
-				Name="yapy_libsvm"
-				Filters="">
-				<F N="yapy_libsvm/__init__.py"/>
-				<F N="yapy_libsvm/_fast_svm_classify.pyx"/>
-				<F N="yapy_libsvm/_svm.py"/>
-				<F N="yapy_libsvm/setup.py"/>
-				<F N="yapy_libsvm/svm.py"/>
-			</Folder>
 			<F N="__init__.py"/>
 			<F N="average_images.py"/>
 			<F N="fluorescence_trained_brightfield_worm_finder.py"/>
