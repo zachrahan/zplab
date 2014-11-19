@@ -102,14 +102,16 @@ void LinearClassifier::init_type()
                                                      "instance or its model is destroyed, that view becomes invalid, and\n"
                                                      "attempting to access it will result in a segfault.");
     PYCXX_ADD_VARARGS_METHOD(train, train, "train(vectors, labels) -> None");
-    PYCXX_ADD_VARARGS_METHOD(classify_one_vector, classify_one_vector, "classify_one_vector(vector) -> int\n"
-                                                                       "Computes and returns classification for a single feature vector.");
     PYCXX_ADD_NOARGS_METHOD(get_parameters, get_parameters, "get_parameters() -> dict");
     PYCXX_ADD_VARARGS_METHOD(set_parameters, set_parameters, "set_parameters(dict) -> None\n"
                                                              "Supply a dict of label : weight values for weights, or None, or an empty\n"
                                                              "dict for weights if no weights are desired.");
     PYCXX_ADD_NOARGS_METHOD(get_solvers, get_solvers, "get_solvers() -> list\n"
                                                       "Returns a list containing the names of the available solvers.");
+    PYCXX_ADD_VARARGS_METHOD(classify_one_vector, classify_one_vector, "classify_one_vector(vector) -> label\n"
+                                                                       "Computes and returns classification for a single feature vector.");
+    PYCXX_ADD_VARARGS_METHOD(classify, classify, "classify([vectors]) -> [labels]\n"
+                                                 "Computes and returns classifications for an array of vectors.");
 
     behaviors().readyType();
 }
@@ -548,7 +550,7 @@ Py::Object LinearClassifier::classify_one_vector(const Py::Tuple& args) const
     PyObject* vector_{PyArray_FromAny(*args[0], PyArray_DescrFromType(NPY_DOUBLE), 1, 1, NPY_ARRAY_CARRAY_RO, nullptr)};
     if(!vector_)
     {
-        throw Py::ValueError("Failed to convert vectors argument into 1d numpy double (64-bit float) array.");
+        throw Py::ValueError("Failed to convert vector argument into 1d numpy double (64-bit float) array.");
     }
     Py::Object vector(vector_, true);
 
@@ -574,6 +576,62 @@ Py::Object LinearClassifier::classify_one_vector(const Py::Tuple& args) const
     }
     f_node->index = -1;
 
-    return Py::Long((int)::predict(m_model, feature_nodes.get()));
+    return Py::Long(static_cast<int>(::predict(m_model, feature_nodes.get())));
+}
+
+Py::Object LinearClassifier::classify(const Py::Tuple& args) const
+{
+    if(args.length() != 1)
+    {
+        throw Py::RuntimeError("Incorrect number of arguments (1 required).");
+    }
+    check_model("classify(..)");
+
+    PyObject* vectors_{PyArray_FromAny(*args[0], PyArray_DescrFromType(NPY_DOUBLE), 2, 2, NPY_ARRAY_CARRAY_RO, nullptr)};
+    if(!vectors_)
+    {
+        throw Py::ValueError("Failed to convert vectors argument into 2d numpy double (64-bit float) array.");
+    }
+    Py::Object vectors(vectors_, true);
+    
+    npy_intp vectors_size{PyArray_DIM(reinterpret_cast<PyArrayObject*>(*vectors), 0)};
+    npy_intp vector_cardinality{PyArray_DIM(reinterpret_cast<PyArrayObject*>(*vectors), 1)};
+    if(vector_cardinality != m_model->nr_feature)
+    {
+        std::ostringstream o;
+        o << "vectors[0,:] has wrong cardinality (has " << vector_cardinality << " elements, but exactly ";
+        o << m_model->nr_feature << " are required.";
+        std::string s(o.str());
+        throw Py::ValueError(s.c_str());
+    }
+    const double* vector_element{reinterpret_cast<double*>(PyArray_DATA(reinterpret_cast<PyArrayObject*>(*vectors)))};
+
+    PyObject* labels_{PyArray_EMPTY(1, &vectors_size, NPY_INT, false)};
+    if(!labels_)
+    {
+        throw Py::RuntimeError("Failed to create label result numpy array.");
+    }
+    Py::Object labels(labels_, true);
+    int* label{reinterpret_cast<int*>(PyArray_DATA(reinterpret_cast<PyArrayObject*>(*labels)))};
+    const int*const labels_end{label + vector_cardinality};
+
+    std::unique_ptr<feature_node[]> feature_nodes(new feature_node[vector_cardinality + 1]);
+    feature_node* feature_node;
+    int idx;
+    std::unique_ptr<double[]> dec_values(new double[vector_cardinality]);
+
+    for(; label != labels_end; ++label)
+    {
+        feature_node = feature_nodes.get();
+        for(idx = 1; idx <= vector_cardinality; ++idx, ++feature_node, ++vector_element)
+        {
+            feature_node->index = idx;
+            feature_node->value = *vector_element;
+        }
+        feature_node->index = -1;
+        *label = static_cast<int>(::predict_values(m_model, feature_nodes.get(), dec_values.get()));
+    }
+
+    return labels;
 }
 
