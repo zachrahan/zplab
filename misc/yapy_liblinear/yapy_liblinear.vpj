@@ -207,5 +207,6 @@
 			<F N="source/yapy_liblinear/yapy_liblinear_module.cpp"/>
 		</Folder>
 		<F N="CMakeLists.txt"/>
+		<F N="simple.py"/>
 	</Files>
 </Project>

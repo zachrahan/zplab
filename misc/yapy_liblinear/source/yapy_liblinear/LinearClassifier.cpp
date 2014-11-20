@@ -105,9 +105,15 @@ void LinearClassifier::init_type()
     PYCXX_ADD_NOARGS_METHOD(get_parameters, get_parameters, "get_parameters() -> dict");
     PYCXX_ADD_VARARGS_METHOD(set_parameters, set_parameters, "set_parameters(dict) -> None\n"
                                                              "Supply a dict of label : weight values for weights, or None, or an empty\n"
-                                                             "dict for weights if no weights are desired.");
-    PYCXX_ADD_NOARGS_METHOD(get_solvers, get_solvers, "get_solvers() -> list\n"
+                                                             "dict for weights if no input weights are desired.");
+    PYCXX_ADD_NOARGS_METHOD(get_solvers, get_solvers, "get_solvers() -> [solver names]\n"
                                                       "Returns a list containing the names of the available solvers.");
+    PYCXX_ADD_VARARGS_METHOD(get_w, get_w, "get_w(as_view=False) -> [w]\n"
+                                           "Returns the model's weight vector (not to be confused with input weights).\n"
+                                           "If True is supplied for as_view, a numpy view of data\n"
+                                           "associated with this instance's model is returned, and when this\n"
+                                           "instance or its model is destroyed, that view becomes invalid, and\n"
+                                           "attempting to access it will result in a segfault.");
     PYCXX_ADD_VARARGS_METHOD(classify_one_vector, classify_one_vector, "classify_one_vector(vector) -> label\n"
                                                                        "Computes and returns classification for a single feature vector.");
     PYCXX_ADD_VARARGS_METHOD(classify, classify, "classify([vectors]) -> [labels]\n"
@@ -435,6 +441,31 @@ Py::Object LinearClassifier::get_solvers() const
     return ret;
 }
 
+Py::Object LinearClassifier::get_w(const Py::Tuple& args) const
+{
+    check_model("get_w()");
+
+    bool as_view{false};
+    if(args.length())
+    {
+        as_view = args[0].isTrue();
+    }
+
+    npy_intp shape(m_model->nr_feature);
+    if(as_view)
+    {
+        return Py::asObject(PyArray_SimpleNewFromData(1, &shape, NPY_DOUBLE, m_model->w));
+    }
+    else
+    {
+        Py::Object ndarray(PyArray_EMPTY(1, &shape, NPY_DOUBLE, false), true);
+        memcpy(PyArray_GETPTR1(reinterpret_cast<PyArrayObject*>(*ndarray), 0),
+               m_model->w,
+               sizeof(double) * m_model->nr_feature);
+        return ndarray;
+    }
+}
+
 Py::Object LinearClassifier::train(const Py::Tuple& args)
 {
     if(args.length() != 2)
@@ -452,7 +483,7 @@ Py::Object LinearClassifier::train(const Py::Tuple& args)
     PyObject* labels_{PyArray_FromAny(*args[1], PyArray_DescrFromType(NPY_INT), 1, 1, NPY_ARRAY_CARRAY_RO, nullptr)};
     if(!labels_)
     {
-        throw Py::ValueError("Failed to convert labels argument into numpy cint array.");
+        throw Py::ValueError("Failed to convert labels argument into numpy intc array.");
     }
     Py::Object labels(labels_, true);
 

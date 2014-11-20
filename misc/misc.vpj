@@ -14,6 +14,9 @@
 				<F N="_texture_analysis/_texture_analysis.pyx"/>
 				<F N="_texture_analysis/setup.py"/>
 			</Folder>
+			<Folder
+				Name="fast_image_sampler"
+				Filters=""/>
 			<F N="__init__.py"/>
 			<F N="average_images.py"/>
 			<F N="fluorescence_trained_brightfield_worm_finder.py"/>
