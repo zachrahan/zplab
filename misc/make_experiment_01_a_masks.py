@@ -202,3 +202,48 @@ def make_multiclassifier_data_and_targets(im_fpath, mask_set_fpath, patch_width=
     else:
         vectors = numpy.array(vectors)
     return vectors, numpy.array(labels)
+
+if __name__ == '__main__':
+    def _worker_process_function(dpath, percentile, run_length, d_threshold, max_void_fill, crop):
+        mask_dpath = dpath / 'masks'
+        if not mask_dpath.exists():
+            mask_dpath.mkdir()
+        for idx, mask in enumerate(generate_masks(dpath, percentile, run_length, d_threshold, max_void_fill, crop)):
+            if mask is None:
+                continue
+            skio.imsave(str(mask_dpath / '{:04}.png'.format(idx)), mask.astype(numpy.uint8) * 255)
+
+    def _process_exception_callback(process_exception):
+        print('warning: worker failed with exception:', process_exception)
+
+    import argparse
+    import os
+    argparser = argparse.ArgumentParser(description='Experiment01_a data and target set generator.')
+    argparser.add_argument('--wellDevelopmentalSuccessDb',
+                           default=Path(os.path.expanduser('~')) / 'Data' / 'experiment01_a' / 'wellDevelopmentalSuccessDb.pickle',
+                           type=Path)
+    argparser.add_argument('--experiment01_a',
+                           default=Path(os.path.expanduser('~')) / 'Data' / 'experiment01_a',
+                           type=Path)
+    argparser.add_argument('--percentile', default=0, type=float)
+    argparser.add_argument('--run-length', default=10, type=int)
+    argparser.add_argument('--d-threshold', default=3000, type=int)
+    argparser.add_argument('--max-void-fill', default=3000, type=int)
+    argparser.add_argument('--crop', default='None', type=str, help='Specify a 2 element tuple (y, x), or None to disable')
+    args = argparser.parse_args()
+    with open(str(args.wellDevelopmentalSuccessDb), 'rb') as f:
+        well_developmental_success_db = pickle.load(f)
+    with multiprocessing.Pool(multiprocessing.cpu_count() + 1) as pool:
+        async_results = []
+        for p, s in sorted(well_developmental_success_db.items(), key=lambda v: v[0]):
+            if s != 'LittleOrNone':
+                async_results.append(pool.apply_async(_worker_process_function,
+                                                      (args.experiment01_a / p.parts[-1],
+                                                       args.percentile,
+                                                       args.run_length,
+                                                       args.d_threshold,
+                                                       args.max_void_fill,
+                                                       eval(args.crop)),
+                                                      error_callback=_process_exception_callback))
+        pool.close()
+        pool.join()
