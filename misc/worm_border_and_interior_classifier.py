@@ -218,3 +218,104 @@ def overlay_dense_libsvm_preds_from_file(patch_width, libSvmPredFPath, imageFPat
 
     composite = mask + image.astype(numpy.float128) * imageCoef
     return composite.astype(numpy.uint16)
+
+def generate_running_percentile_difference(percentile=20, run_length=10, crop=None):
+    """A specialized generator that outputs None for each image_or_image_fpath sent until sufficient
+    history has accumulated, at which point a running percentile difference image is outputted for
+    each image_or_image_fpath sent."""
+    if run_length < 1:
+        raise ValueError('run_length must be at least 1.')
+    next_running_image_replace_idx = 0
+    idx = 0
+    difference = None
+    while 1:
+        image_or_image_fpath = yield difference
+        if image_or_image_fpath is None:
+            break
+
+        if issubclass(type(image_or_image_fpath), Path) or type(image_or_image_fpath) is str:
+            image = skio.imread(str(image_or_image_fpath))
+        else:
+            image = image_or_image_fpath
+
+        if crop:
+            image = image[:crop[0], :crop[1]]
+
+        if idx == 0:
+            image_shape = image.shape
+            running_images = numpy.zeros((run_length,) + image_shape, dtype=numpy.uint16)
+        else:
+            if image.shape != image_shape:
+                e = 'image_or_image_fpath index {} ({}) has shape {}, '.format(idx, str(image_or_image_fpath), image.shape)
+                e+= 'which differs from image_or_image_fpath index 0\'s shape of {}.'.format(image_shape)
+                raise ValueError(e)
+
+        if idx >= run_length:
+            # We have enough history to compute a running median and associated difference image
+            median = numpy.percentile(running_images, percentile, axis=0, interpolation='nearest')
+            difference = numpy.abs(median.astype(numpy.int32) - image.astype(numpy.int32)).astype(numpy.uint16)
+
+        running_images[next_running_image_replace_idx, :, :] = image
+        next_running_image_replace_idx += 1
+        if next_running_image_replace_idx == run_length:
+            next_running_image_replace_idx = 0
+        idx += 1
+
+def generate_running_percentile_differences(images_or_image_fpaths, percentile=20, run_length=10, crop=None):
+    """A normal generator that outputs None for the first run_length elements of images_or_image_fpaths, and
+    a running percentile difference image for each subsequent element."""
+    running_percentile_difference_generator = generate_running_percentile_difference(percentile, run_length, crop)
+    next(running_percentile_difference_generator)
+    for image_or_image_fpath in images_or_image_fpaths:
+        yield running_percentile_difference_generator.send(image_or_image_fpath)
+
+def generate_experiment01a__bf_bgs_masks__fluo_running_differences__bf__composites(dpath, bgs_mask_alpha=0.3333, running_difference_alpha=0.3333, percentile=20, run_length=10, crop=None):
+    if bgs_mask_alpha > 1 or bgs_mask_alpha < 0 \
+       or running_difference_alpha > 1 or running_difference_alpha < 0 \
+       or bgs_mask_alpha + running_difference_alpha > 1:
+        raise ValueError('bgs_mask_alpha and running_difference_alpha must be in the range [0, 1], as must their sum.')
+    dpath = Path(dpath)
+    imfpaths = list((dpath / 'bestfmvs').glob('*.PNG'))
+    indexes = sorted([int(imfpath.stem) for imfpath in imfpaths])
+    fluo_running_percentile_difference_generator = generate_running_percentile_difference(percentile, run_length, crop)
+    next(fluo_running_percentile_difference_generator)
+    for index in indexes:
+        try:
+            mask = skio.imread(str(dpath / 'MixtureOfGaussianV2BGS' / '{}.png'.format(index)))
+        except ValueError as ve:
+            continue
+        if (mask == 255).all():
+            continue
+        fluo = skio.imread(str(dpath / 'fluos' / '{}.PNG'.format(index)))
+        if crop:
+            mask = mask[:crop[0], :crop[1]]
+            fluo = fluo[:crop[0], :crop[1]]
+        fluo_difference = fluo_running_percentile_difference_generator.send(fluo)
+        if fluo_difference is None:
+            yield
+            continue
+        im = skio.imread(str(dpath / 'bestfmvs' / '{}.PNG'.format(index)))
+        if crop:
+            im = im[:crop[0], :crop[1]]
+        yield ( \
+               ( \
+                ((im.astype(numpy.float32) - im.min()) / im.max()) * (1 - bgs_mask_alpha - running_difference_alpha) + \
+                (mask > 0).astype(numpy.float32) * bgs_mask_alpha + \
+                (fluo_difference > 2500).astype(numpy.float32) * running_difference_alpha \
+               ) * 65535 \
+              ).astype(numpy.uint16)
+
+def overlay_experiment01a_bf_bgs_masks_in_flipbook(dpath, rw, mask_alpha):
+    dpath = Path(dpath)
+    imfpaths = list((dpath / 'bestfmvs').glob('*.PNG'))
+    indexes = sorted([int(imfpath.stem) for imfpath in imfpaths])
+    cs = []
+    for index in indexes:
+        try:
+            mask = skio.imread(str(dpath / 'MixtureOfGaussianV2BGS' / '{}.png'.format(index)))[:2160,:2560]
+        except ValueError as ve:
+            continue
+        if not (mask == 255).all():
+            im = skio.imread(str(dpath / 'bestfmvs' / '{}.PNG'.format(index)))[:2160,:2560]
+            cs.append((((im.astype(numpy.float32) / 65535) * (1 - mask_alpha) + (mask > 0).astype(numpy.float32) * mask_alpha)*65535).astype(numpy.uint16))
+    rw.showImagesInNewFlipper(cs)
