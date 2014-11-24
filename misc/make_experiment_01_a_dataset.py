@@ -121,14 +121,14 @@ def make_image_dataset(dpath, image_idx, sample_count, sample_size, sampler=make
     return (vectors, targets)
 
 if __name__ == '__main__':
-    def _worker_process_function(dpath, sample_size, sample_count):
+    def _worker_process_function(dpath, sample_count, sample_size):
         mask_dpath = dpath / 'masks'
         mask_fpaths = list(mask_dpath.glob('*.png'))
         idxs = sorted([int(mask_fpath.stem) for mask_fpath in mask_fpaths if mask_fpath.stem.isdigit()])
         vectorss = []
         targetss = []
         for idx in idxs:
-            vectors, targets = make_image_dataset(dpath, idx, sample_size, sample_count)
+            vectors, targets = make_image_dataset(dpath, idx, sample_count, sample_size)
             vectorss.append(vectors)
             targetss.append(targets)
         return (numpy.vstack(vectorss), numpy.hstack(targetss))
@@ -158,8 +158,8 @@ if __name__ == '__main__':
                 if s != 'LittleOrNone':
                     async_results.append(pool.apply_async(_worker_process_function,
                                                           (args.experiment01_a / p.parts[-1],
-                                                           args.sample_size,
-                                                           args.sample_count),
+                                                           args.sample_count,
+                                                           args.sample_size),
                                                           error_callback=_process_exception_callback))
             pool.close()
             pool.join()
