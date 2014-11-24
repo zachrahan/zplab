@@ -29,6 +29,8 @@
 			<F N="gogostagegogoacquiregogogonotadrillgogogo.py"/>
 			<F N="image_from_multi_image_statistics.py"/>
 			<F N="image_transfer_zmq_benchmark.py"/>
+			<F N="make_experiment_01_a_dataset.py"/>
+			<F N="make_experiment_01_a_masks.py"/>
 			<F N="make_mask_from_fluorescence.py"/>
 			<F N="manually_score_images.py"/>
 			<F N="manually_score_images.ui"/>
@@ -39,7 +41,6 @@
 			<F N="test_skimage_16bit_png.py"/>
 			<F N="worm_border_and_interior_classifier.py"/>
 		</Folder>
-		<F N="make_experiment_01_a_masks.py"/>
 	</Files>
 	<Config
 		Name="Debug"
