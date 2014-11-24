@@ -58,6 +58,8 @@ public:
     PYCXX_VARARGS_METHOD_DECL(LinearClassifier, set_parameters)
     Py::Object get_solvers() const;
     PYCXX_NOARGS_METHOD_DECL(LinearClassifier, get_solvers)
+    Py::Object get_w(const Py::Tuple& args) const;
+    PYCXX_VARARGS_METHOD_DECL(LinearClassifier, get_w)
 
     Py::Object train(const Py::Tuple& args);
     PYCXX_VARARGS_METHOD_DECL(LinearClassifier, train)
