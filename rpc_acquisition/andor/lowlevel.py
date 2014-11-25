@@ -126,15 +126,13 @@ def _init_camera(desired_camera):
     # this assumption by querying the camera's name and ensuring that it matches
     # the name of our hardware camera:
     wrapper._at_camera_handle = wrapper._at_core_lib.AT_Open(0)
-    if desired_camera:
-        actual_camera = GetString('CameraModel')
-        if actual_camera != desired_camera:
-            wrapper._at_core_lib.AT_Close(wrapper._at_camera_handle)
-            wrapper._at_camera_handle = None
-            raise AndorError('Model name of Andor device 0, "' + actual_camera + 
-                             '", does not match the desired camera model name, "' +
-                             desired_camera + '".')
-
+    actual_camera = GetString('CameraModel')
+    if actual_camera != desired_camera:
+        wrapper._at_core_lib.AT_Close(wrapper._at_camera_handle)
+        wrapper._at_camera_handle = None
+        raise AndorError('Model name of Andor device 0, "' + actual_camera + 
+                         '", does not match the desired camera model name, "' +
+                         desired_camera + '".')
     atexit.register(wrapper._at_core_lib.AT_Close, wrapper._at_camera_handle)
     
 def initialize(desired_camera='ZYLA-5.5-CL3'):
@@ -143,9 +141,9 @@ def initialize(desired_camera='ZYLA-5.5-CL3'):
     _init_camera(desired_camera)
 
 uint8_p = ctypes.POINTER(ctypes.c_uint8)
-def queue_buffer(array):
-    QueueBuffer(array.ctypes.data_as(uint8_p), array.itemsize * array.size)
+def queue_buffer(buf):
+    QueueBuffer(buf, len(buf))
 
 def make_buffer():
-    return numpy.empty(GetInt('ImageSizeBytes'), dtype=numpy.uint8)
+    return ctypes.c_uint8 * GetInt('ImageSizeBytes')
 

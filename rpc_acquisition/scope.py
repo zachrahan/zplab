@@ -7,6 +7,8 @@ from . import andor
 from . import io_tool
 from . import spectra_x
 from . import tl_lamp
+from . import acquisition_sequencer
+from . import autofocus
 
 from . import scope_configuration as config
 
@@ -26,37 +28,46 @@ class Scope(messaging.message_device.AsyncDeviceNamespace):
         
         try:
             message_manager = messaging.message_manager.LeicaMessageManager(config.Stand.SERIAL_PORT, config.Stand.SERIAL_BAUD, verbose=verbose)
-        except SerialException as e:
-            message_manager = None
-            _print_exception('Could not connect to microscope:', e)
-        
-        if message_manager:
             self.nosepiece = dm6000b.objective_turret.ObjectiveTurret(message_manager, property_server, property_prefix='scope.nosepiece.')
             self.stage = dm6000b.stage.Stage(message_manager, property_server, property_prefix='scope.stage.')
             self.stand = dm6000b.stand.Stand(message_manager, property_server, property_prefix='scope.stand.')
             self.il = dm6000b.illumination_axes.IL(message_manager, property_server, property_prefix='scope.il.')
             self.tl = dm6000b.illumination_axes.TL(message_manager, property_server, property_prefix='scope.tl.')
-
+            has_scope = True
+        except SerialException as e:
+            has_scope = False
+            _print_exception('Could not connect to microscope:', e)
+        
         try:
-            print('doing self.iotool = io_tool.IOTool(config.IOTool.SERIAL_PORT)')
             self.iotool = io_tool.IOTool(config.IOTool.SERIAL_PORT)
             has_iotool = True
         except SerialException as e:
             has_iotool = False
             _print_exception('Could not connect to IOTool box:', e)
-        finally:
-            print('did self.iotool = io_tool.IOTool(config.IOTool.SERIAL_PORT)')
         
-        if not message_manager and has_iotool:
+        if not has_scope and has_iotool:
             self.il = Namespace()
             self.tl = Namespace()
+            
         if has_iotool:
-            self.il.spectra_x = spectra_x.SpectraX(config.SpectraX.SERIAL_PORT, config.SpectraX.SERIAL_BAUD, 
-                self.iotool, property_server, property_prefix='scope.il.spectra_x.')
+            try:
+                self.il.spectra_x = spectra_x.SpectraX(config.SpectraX.SERIAL_PORT, config.SpectraX.SERIAL_BAUD, 
+                    self.iotool, property_server, property_prefix='scope.il.spectra_x.')
+                has_spectra_x = True
+            except SerialException as e:
+                has_spectra_x = False
+                _print_exception('Could not connect to Spectra X:', e)
             self.tl.lamp = tl_lamp.TL_Lamp(self.iotool, property_server, property_prefix='scope.tl.lamp.')
         
         try:
             self.camera = andor.camera.Camera(property_server, property_prefix='scope.camera.')
+            has_camera = True
         except andor.lowlevel.AndorError as e:
+            has_camera = False
             _print_exception('Could not connect to camera:', e)
-            
+    
+        if has_camera and has_iotool and has_spectra_x:
+            self.camera.acquisition_sequencer = acquisition_sequencer.AcquisitionSequencer(self.camera, self.io_tool, self.il.spectra_x)
+    
+        if has_scope and has_camera:
+            self.camera.autofocus = autofocus.Autofocus(self.camera, self.stage)
