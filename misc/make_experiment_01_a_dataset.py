@@ -148,28 +148,27 @@ if __name__ == '__main__':
     argparser.add_argument('--sample-count', default=100, type=int)
     argparser.add_argument('--output-file', required=True, type=Path)
     args = argparser.parse_args()
-    # Open output file early to avoid doing a lot of processing only to be unable to save the results
-    with open(str(args.output_file), 'wb') as output_file:
-        with open(str(args.wellDevelopmentalSuccessDb), 'rb') as f:
-            well_developmental_success_db = pickle.load(f)
-        with multiprocessing.Pool(multiprocessing.cpu_count() + 1) as pool:
-            async_results = []
-            for p, s in sorted(well_developmental_success_db.items(), key=lambda v: v[0]):
-                if s != 'LittleOrNone':
-                    async_results.append(pool.apply_async(_worker_process_function,
-                                                          (args.experiment01_a / p.parts[-1],
-                                                           args.sample_count,
-                                                           args.sample_size),
-                                                          error_callback=_process_exception_callback))
-            pool.close()
-            pool.join()
-            vectorss = []
-            targetss = []
-            for async_result in async_results:
-                if async_result.successful():
-                    vectors, targets = async_result.get()
-                    vectorss.append(vectors)
-                    targetss.append(targets)
-            vectors = numpy.vstack(vectorss)
-            targets = numpy.hstack(targetss)
-            pickle.dump((vectors, targets), output_file)
+    with open(str(args.wellDevelopmentalSuccessDb), 'rb') as f:
+        well_developmental_success_db = pickle.load(f)
+    with multiprocessing.Pool(multiprocessing.cpu_count() + 1) as pool:
+        async_results = []
+        for p, s in sorted(well_developmental_success_db.items(), key=lambda v: v[0]):
+            if s != 'LittleOrNone':
+                async_results.append(pool.apply_async(_worker_process_function,
+                                                      (args.experiment01_a / p.parts[-1],
+                                                       args.sample_count,
+                                                       args.sample_size),
+                                                      error_callback=_process_exception_callback))
+        pool.close()
+        pool.join()
+        vectorss = []
+        targetss = []
+        for async_result in async_results:
+            if async_result.successful():
+                vectors, targets = async_result.get()
+                vectorss.append(vectors)
+                targetss.append(targets)
+        vectors = numpy.vstack(vectorss)
+        targets = numpy.hstack(targetss)
+        numpy.savez_compressed(args.output_file, vectors=vectors, targets=targets)
+            
