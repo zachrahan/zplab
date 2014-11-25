@@ -40,6 +40,7 @@
 			<F N="terrible_eval_thread.py"/>
 			<F N="test_skimage_16bit_png.py"/>
 			<F N="worm_border_and_interior_classifier.py"/>
+			<F N="worm_classifier_for_autofocus.py"/>
 		</Folder>
 	</Files>
 	<Config
