@@ -161,16 +161,19 @@ def generate__bf_running_differences__fluo_running_differences__bfs__composites(
                ) * 65535 \
               ).astype(numpy.uint16)
 
-def overlay__bf_bgs_masks__bfs__in_flipbook(dpath, rw, mask_alpha):
+def overlay__masks__bfs__in_flipbook(dpath, rw, mask_alpha, mask_name='masks'):
     dpath = Path(dpath)
     imfpaths = list((dpath / 'bestfmvs').glob('*.PNG'))
     indexes = sorted([int(imfpath.stem) for imfpath in imfpaths])
     cs = []
     for index in indexes:
         try:
-            mask = skio.imread(str(dpath / 'MixtureOfGaussianV2BGS' / '{}.png'.format(index)))[:2160,:2560]
+            mask = skio.imread(str(dpath / mask_name / '{}.png'.format(index)))[:2160,:2560]
         except ValueError as ve:
-            continue
+            try:
+                mask = skio.imread(str(dpath / mask_name / '{:04}.png'.format(index)))[:2160,:2560]
+            except ValueError as ve:
+                continue
         if not (mask == 255).all():
             im = skio.imread(str(dpath / 'bestfmvs' / '{}.PNG'.format(index)))[:2160,:2560]
             cs.append((((im.astype(numpy.float32) / 65535) * (1 - mask_alpha) + (mask > 0).astype(numpy.float32) * mask_alpha)*65535).astype(numpy.uint16))
