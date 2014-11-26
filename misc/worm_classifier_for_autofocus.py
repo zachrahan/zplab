@@ -48,7 +48,7 @@ class Classifier:
                  liblinear_classifier_object_or_model_fpath,
                  sample_box_width,
                  mask_object_or_fpath=Path(os.path.expanduser('~')) / 'Data' / 'experiment01_a' / 'supplementary_out_exclusion_mask.png',
-                 max_accepted_sample_masked_portion=0.25):
+                 max_accepted_sample_box_masked_portion=0.25):
 
         if issubclass(type(liblinear_classifier_object_or_model_fpath), (str, Path)):
             self._linear_classifier = LinearClassifier()
@@ -60,18 +60,17 @@ class Classifier:
         self._vector_len = self._sample_box_width * self._sample_box_width
 
         if issubclass(type(mask_object_or_fpath), (str, Path)):
-            m = skio.imread(str(mask_object_or_fpath)) > 0
+            self._exclusion_mask = skio.imread(str(mask_object_or_fpath)) > 0
         else:
-            m = mask_object_or_fpath > 0
-        self._exclusion_mask = skimage.measure.block_reduce(m, (self._sample_box_width, self._sample_box_width), numpy.sum)
+            self._exclusion_mask = mask_object_or_fpath > 0
+        self._block_exclusion_mask = skimage.measure.block_reduce(self._exclusion_mask, (self._sample_box_width, self._sample_box_width), numpy.sum)
 
         self._max_masked = max_accepted_sample_masked_portion
 
-    def classify(self, im):
+    def classify_blockwise(self, im):
         imf = skimage.exposure.equalize_adapthist(im).astype(numpy.float64)
         ybc = int(imf.shape[0] / self._sample_box_width)
         xbc = int(imf.shape[1] / self._sample_box_width)
-        mask = numpy.zeros((ybc, xbc), dtype=numpy.bool)
         vectors = numpy.empty((ybc * xbc, self._vector_len), dtype=numpy.float64)
         b = 0
         sbw = self._sample_box_width
@@ -81,10 +80,13 @@ class Classifier:
                 b += 1
         return self._linear_classifier.classify(vectors).reshape(ybc, xbc)
 
-    def classify_and_overlay(self, im, mask_alpha=0.333333):
+    def classify_blockwise_and_overlay(self, im, mask_alpha=0.333333):
         mask = self.classify(im) > 0
         mask = numpy.repeat(mask, self._sample_box_width, axis=0)
         mask = numpy.repeat(mask, self._sample_box_width, axis=1)
         mask = numpy.pad(mask, ((0, im.shape[0]-mask.shape[0]), (0, im.shape[1]-mask.shape[1])), 'constant', constant_values=0)
         return (((im.astype(numpy.float32) / im.max()) * (1-mask_alpha) + mask.astype(numpy.float32) * mask_alpha) * 65535).astype(numpy.uint16)
+
+    def classify(self, im):
+        imf = skimage.exposure.equalize_adapthist(im).astype(numpy.float64)
 
