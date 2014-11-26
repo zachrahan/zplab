@@ -170,5 +170,5 @@ if __name__ == '__main__':
                 targetss.append(targets)
         vectors = numpy.vstack(vectorss)
         targets = numpy.hstack(targetss)
-        numpy.savez_compressed(args.output_file, vectors=vectors, targets=targets)
+        numpy.savez_compressed(str(args.output_file), vectors=vectors, targets=targets)
             
