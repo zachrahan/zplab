@@ -29,6 +29,7 @@ from pathlib import Path
 import scipy.ndimage
 import scipy.ndimage.morphology
 import skimage.exposure
+import skimage.filters
 import skimage.measure
 import skimage.morphology
 import skimage.io as skio
@@ -108,7 +109,7 @@ def make_patch_feature_vector(imf, patch_width, coord):
     return imf[coord[0]-low_edge_offset : coord[0]+high_edge_offset,
                coord[1]-low_edge_offset : coord[1]+high_edge_offset].ravel()
 
-def make_image_dataset(dpath, image_idx, sample_count, sample_size, sampler=make_patch_feature_vector):
+def make_image_dataset(dpath, image_idx, sample_count, sample_size, sampler=make_patch_feature_vector, edge_detect=False):
     dpath = Path(dpath)
     coords, targets = select_random_in_mask_and_out_mask_coords(dpath / 'masks' / '{:04}.png'.format(image_idx), sample_count, int(sample_size / 2))
     imf = skimage.exposure.equalize_adapthist(skio.imread(str(dpath / 'bestfmvs' / '{}.PNG'.format(image_idx)))).astype(numpy.float32)
@@ -117,18 +118,21 @@ def make_image_dataset(dpath, image_idx, sample_count, sample_size, sampler=make
         # [0, 1] scaling is desired.
         imf -= imf.min()
         imf /= imf.max()
+    if edge_detect:
+        imf = skimage.filters.edges.sobel(imf)
     vectors = numpy.array([make_patch_feature_vector(imf, sample_size, coord) for coord in coords])
     return (vectors, targets)
 
 if __name__ == '__main__':
-    def _worker_process_function(dpath, sample_count, sample_size):
+    def _worker_process_function(dpath, sample_count, sample_size, edge_detect):
         mask_dpath = dpath / 'masks'
         mask_fpaths = list(mask_dpath.glob('*.png'))
         idxs = sorted([int(mask_fpath.stem) for mask_fpath in mask_fpaths if mask_fpath.stem.isdigit()])
         vectorss = []
         targetss = []
+        c = 0
         for idx in idxs:
-            vectors, targets = make_image_dataset(dpath, idx, sample_count, sample_size)
+            vectors, targets = make_image_dataset(dpath, idx, sample_count, sample_size, edge_detect=edge_detect)
             vectorss.append(vectors)
             targetss.append(targets)
         return (numpy.vstack(vectorss), numpy.hstack(targetss))
@@ -147,6 +151,7 @@ if __name__ == '__main__':
     argparser.add_argument('--sample-size', default=51, type=int)
     argparser.add_argument('--sample-count', default=100, type=int)
     argparser.add_argument('--output-file', required=True, type=Path)
+    argparser.add_argument('--edge-detect', default=False, type=bool)
     args = argparser.parse_args()
     with open(str(args.wellDevelopmentalSuccessDb), 'rb') as f:
         well_developmental_success_db = pickle.load(f)
@@ -157,7 +162,8 @@ if __name__ == '__main__':
                 async_results.append(pool.apply_async(_worker_process_function,
                                                       (args.experiment01_a / p.parts[-1],
                                                        args.sample_count,
-                                                       args.sample_size),
+                                                       args.sample_size,
+                                                       args.edge_detect),
                                                       error_callback=_process_exception_callback))
         pool.close()
         pool.join()
