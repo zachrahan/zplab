@@ -4,3 +4,6 @@
 [submodule "misc/yapy_liblinear/source/liblinear/liblinear_git"]
 	path = misc/yapy_liblinear/source/liblinear/liblinear_git
 	url = https://github.com/erikhvatum/liblinear.git
+[submodule "wautofocuser"]
+	path = wautofocuser
+	url = https://github.com/erikhvatum/wautofocuser.git
