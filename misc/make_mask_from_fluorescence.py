@@ -93,7 +93,7 @@ def makeExperiment01aFluoMasks(rw, tryDivisors=None, ageLitFracCoef = 7.43478260
                        (2, 2.5),
                        (1.5, 1.8))
     experiment01aDPath = Path(os.path.expanduser('~')) / 'Data' / 'experiment01_a'
-    with (experiment01aDPath / 'wellDevelopmentalSuccessDb.pickle').open('rb') as f:
+    with (experiment01aDPath / 'well_developmental_success_db.pickle').open('rb') as f:
         wellDevelopmentalProgressDb = pickle.load(f)
     for wellDPath in sorted([wellDPath for wellDPath, developmentalProgress in wellDevelopmentalProgressDb.items() if developmentalProgress == 'Normal']):
         for imFPath in sorted(list(wellDPath.glob('**/experiment01_a__fluo_*.png')), reverse=True):
