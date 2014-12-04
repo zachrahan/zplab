@@ -27,6 +27,7 @@
 			<F N="fluorescence_trained_brightfield_worm_finder.py"/>
 			<F N="generate_ctypes.py"/>
 			<F N="gogostagegogoacquiregogogonotadrillgogogo.py"/>
+			<F N="image_fft.py"/>
 			<F N="image_transfer_zmq_benchmark.py"/>
 			<F N="make_mask_from_fluorescence.py"/>
 			<F N="manually_score_images.py"/>
