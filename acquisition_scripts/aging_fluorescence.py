@@ -10,9 +10,9 @@ import time
 class AgingFluorescence(Qt.QObject):
     def __init__(self, root, out_dir, prefix):
         super().__init__()
+        self.positionSetNames = ('reference', 'control', 'exp0', 'exp1', 'exp2')
+        self.positionSets = [[] for n in self.positionSetNames]
         self.root = root
-        self.positions_control = []
-        self.positions_exp = []
         self.get_more_positions_gt = None
         self.out_dir = Path(out_dir)
         self.prefix = prefix
@@ -21,7 +21,9 @@ class AgingFluorescence(Qt.QObject):
         self.positions_fpath = self.out_dir / (prefix + '_positions.json')
         if self.positions_fpath.exists():
             with open(str(self.positions_fpath), 'r') as f:
-                self.positions_control, self.positions_exp = json.load(f)
+                psd = json.load(f)
+                for name, set in psd.items():
+                    self.positionSets[self.positionSetNames.index(name)] = set
 
     def get_more_positions(self):
         if hasattr(self, 'pos_get_dialog'):
@@ -31,7 +33,7 @@ class AgingFluorescence(Qt.QObject):
         self.pos_get_dialog.setLayout(Qt.QVBoxLayout())
         self.pos_get_dialog.stop_button = Qt.QPushButton('stop getting positions')
         self.pos_get_dialog.layout().addWidget(self.pos_get_dialog.stop_button)
-        self.pos_get_dialog.posSetLabel = Qt.QLabel('control')
+        self.pos_get_dialog.posSetLabel = Qt.QLabel('reference')
         self.pos_get_dialog.layout().addWidget(self.pos_get_dialog.posSetLabel)
         self.pos_get_dialog.stop_button.clicked.connect(self.stop_getting_positions)
         self.root.pedals.pedalUpChanged.connect(self.on_pedal_up)
@@ -41,10 +43,14 @@ class AgingFluorescence(Qt.QObject):
         if not isUp:
             if pedal == 0:
                 pos = (self.root.dm6000b.stageX.pos, self.root.dm6000b.stageY.pos, self.root.dm6000b.stageZ.pos)
-                pl = self.positions_control if self.pos_get_dialog.posSetLabel.text() == 'control' else self.positions_exp
+                pl = self.positionSets[self.positionSetNames.index(self.pos_get_dialog.posSetLabel.text())]
                 pl.append(pos)
             elif pedal == 1:
-                self.pos_get_dialog.posSetLabel.setText('control' if self.pos_get_dialog.posSetLabel.text() == 'exp' else 'exp')
+                n = self.positionSetNames.index(self.pos_get_dialog.posSetLabel.text())
+                n += 1
+                if n >= len(self.positionSetNames):
+                    n = 0
+                self.pos_get_dialog.posSetLabel.setText(self.positionSetNames[n])
 
     def stop_getting_positions(self):
         self.root.pedals.pedalUpChanged.disconnect(self.on_pedal_up)
@@ -53,7 +59,7 @@ class AgingFluorescence(Qt.QObject):
 
     def save_positions(self):
         with open(str(self.positions_fpath), 'w') as f:
-            json.dump((self.positions_control, self.positions_exp), f)
+            json.dump({positionSetName : positions for positionSetName, positions in zip(self.positionSetNames, self.positionSets)}, f)
 
     def acquireForFilterSet(self, filterSetNumber, rw=None):
         imageCount = 4
@@ -68,8 +74,7 @@ class AgingFluorescence(Qt.QObject):
             raise ValueError('filterSetNumber must be 0 or 1')
         self.root.dm6000b.lamp.intensity = 255
         time.sleep(1)
-        for positionSet in ('control', 'exp'):
-            positions = self.positions_control if positionSet == 'control' else self.positions_exp
+        for positionSetName, positions in zip(self.positionSetNames, self.positionSets):
             for positionIndex, position in enumerate(positions):
                 print('posindex: {}, position: {}'.format(positionIndex, position))
                 self.root.dm6000b.stageX.pos, self.root.dm6000b.stageY.pos, self.root.dm6000b.stageZ.pos = position
@@ -105,7 +110,7 @@ class AgingFluorescence(Qt.QObject):
                 fluoAcquisitionTime = self.root.camera.exposureTime + 0.03
                 if filterSetNumber == 0:
                     self.root.lumencor.UVEnabled = True
-                    self.root.lumencor.UVPower = 4
+                    self.root.lumencor.UVPower = 4 if positionSetName == "reference" else 255
                     time.sleep(0.08)
                     self.root.camera.commandSoftwareTrigger()
                     time.sleep(fluoAcquisitionTime)
@@ -149,7 +154,7 @@ class AgingFluorescence(Qt.QObject):
                     self.root.camera._camera.AT_WaitBuffer(1000)
                 self.root.camera._camera.AT_Command(self.root.camera.Feature.AcquisitionStop)
                 for i in range(imageCount):
-                    imFP = self.out_dir / '{}_{}_{:04}_{}.png'.format(self.prefix, positionSet, positionIndex, names[i])
+                    imFP = self.out_dir / '{}_{}_{:04}_{}.png'.format(self.prefix, positionSetName, positionIndex, names[i])
                     if rw is not None:
                         rw.showImage(buffers[i])
                     skio.imsave(str(imFP), buffers[i][:2160,:2560])
