@@ -7,3 +7,6 @@
 [submodule "wautofocuser"]
 	path = wautofocuser
 	url = https://github.com/erikhvatum/wautofocuser.git
+[submodule "pyagg"]
+	path = pyagg
+	url = https://github.com/erikhvatum/pyagg.git
