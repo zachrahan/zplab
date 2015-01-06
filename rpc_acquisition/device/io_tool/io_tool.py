@@ -24,9 +24,9 @@
 
 import time
 
-from ...util import smart_serial
-from ... import scope_configuration as config
 from . import commands
+from ...util import smart_serial
+from ...config import scope_configuration
 
 _ECHO_OFF = b'\x80\xFF'
 
@@ -36,6 +36,7 @@ class IOTool:
     case the microcontroller is used to drive and time TTL/PWM signals to various
     microscope hardware."""
     def __init__(self):
+        config = scope_configuration.get_config()
         self._serial_port = smart_serial.Serial(config.IOTool.SERIAL_PORT, timeout=1)
         try:
             self._serial_port.write(b'!\nreset\n') # force the IOTool box to reset to known-good state

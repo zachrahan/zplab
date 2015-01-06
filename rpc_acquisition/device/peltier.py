@@ -27,11 +27,12 @@ import time
 
 from ..util import smart_serial
 from ..util import property_device
-from .. import scope_configuration as config
+from ..config import scope_configuration
 
 class Peltier(property_device.PropertyDevice):
     def __init__(self, property_server=None, property_prefix=''):
         super().__init__(property_server, property_prefix)
+        config = scope_configuration.get_config()
         self._serial_port = smart_serial.Serial(config.Peltier.SERIAL_PORT, baudrate=config.Peltier.SERIAL_BAUD, timeout=1)
         try:
             self.get_temperature()
