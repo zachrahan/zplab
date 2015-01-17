@@ -2,6 +2,7 @@
 <Workspace Version="10.0" VendorName="SlickEdit">
 	<Projects>
 		<Project File="acquisition.vpj"/>
+		<Project File="acquisition_scripts/acquisition_scripts.vpj"/>
 		<Project File="misc/misc.vpj"/>
 		<Project File="../py_interprocess_shared_memory_blob/py_interprocess_shared_memory_blob.vpj"/>
 		<Project File="pyagg/pyagg.vpj"/>
