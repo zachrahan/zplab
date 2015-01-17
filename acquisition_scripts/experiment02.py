@@ -128,7 +128,7 @@ class Experiment02(Qt.QObject):
         self.scope.camera.sensor_gain = '16-bit (low noise & high well capacity)'
         for pos_idx, pos in enumerate(self.positions):
             self.scope.stage.position = pos
-            self.scope.camera.autofocus.autofocus_continuous_move(24.4690702, 25.7415572, 0.2)
+            self.scope.camera.autofocus.autofocus_continuous_move(24.4690702, 25.7415572, 0.2, 'high pass + brenner', max_workers=3)
             im = self.scope.camera.acquire_image()
             im_fpath = self.dpath / '{:04}'.format(pos_idx)
             if not im_fpath.exists():
