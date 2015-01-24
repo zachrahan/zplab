@@ -146,7 +146,7 @@ class LifeAssayPilot(Qt.QObject):
             self.scope.camera.autofocus.autofocus_continuous_move(24.0690702, 25.04415572, 0.2, 'high pass + brenner', max_workers=3)
             im_bf = self.scope.camera.acquire_image()
             self.scope.tl.lamp.enabled = False
-            self.scope.il.spectra_x.Cyan.intensity = 100
+            self.scope.il.spectra_x.Cyan.intensity = 255
             self.scope.il.spectra_x.Cyan.enabled = True
             self.scope.camera.push_state(exposure_time=100)
             time.sleep(0.8)
