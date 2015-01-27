@@ -44,6 +44,8 @@ class LifeAssayPilot(Qt.QObject):
         self.checkpoint_fpath = self.dpath / (self.name + '__checkpoint.json')
         self.checkpoint_swaptemp_fpath = self.dpath / (self.name + '__checkpoint.json._')
         self.positions = []
+        # indexes of wells to skip
+        self.skipped_positions = [5, 7]
         # The index of the most recently completed or currently executing run
         self.run_idx = -1
         # The start time of the most recently completed or currently executing run
@@ -140,14 +142,16 @@ class LifeAssayPilot(Qt.QObject):
         self.scope.camera.shutter_mode = 'Rolling'
         self.scope.camera.sensor_gain = '16-bit (low noise & high well capacity)'
         for pos_idx, pos in enumerate(self.positions):
+            if pos_idx in self.skipped_positions:
+                continue
             self.scope.stage.position = pos
             self.scope.tl.lamp.enabled = True
             time.sleep(0.8)
             self.scope.camera.autofocus.autofocus_continuous_move(24.0690702, 25.04415572, 0.2, 'high pass + brenner', max_workers=3)
             im_bf = self.scope.camera.acquire_image()
             self.scope.tl.lamp.enabled = False
-            self.scope.il.spectra_x.Cyan.intensity = 255
-            self.scope.il.spectra_x.Cyan.enabled = True
+            self.scope.il.spectra_x.GreenYellow.intensity = 255
+            self.scope.il.spectra_x.GreenYellow.enabled = True
             self.scope.camera.push_state(exposure_time=100)
             time.sleep(0.8)
             im_fluo = self.scope.camera.acquire_image()
@@ -158,7 +162,7 @@ class LifeAssayPilot(Qt.QObject):
                 im_dpath.mkdir()
             im_bf_fpath = im_dpath / '{}__{:04}_{:04}_bf.tiff'.format(self.name, pos_idx, self.run_idx)
             skio.imsave(str(im_bf_fpath), im_bf)
-            im_fluo_fpath = im_dpath / '{}__{:04}_{:04}_fluo.tiff'.format(self.name, pos_idx, self.run_idx)
+            im_fluo_fpath = im_dpath / '{}__{:04}_{:04}_fluo_greenyellow.tiff'.format(self.name, pos_idx, self.run_idx)
             skio.imsave(str(im_fluo_fpath), im_fluo)
         if self.video_interval - (time.time() - self.video_ts) <= 0:
             tps = self.scope.camera.timestamp_ticks_per_second
@@ -166,6 +170,8 @@ class LifeAssayPilot(Qt.QObject):
             self.video_idx += 1
             self.write_checkpoint()
             for pos_idx, pos in enumerate(self.positions):
+                if pos_idx in self.skipped_positions:
+                    continue
                 ims = []
                 self.scope.tl.lamp.enabled = True
                 time.sleep(0.8)
