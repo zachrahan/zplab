@@ -155,7 +155,7 @@ class LifeAssayPilot(Qt.QObject):
             self.scope.camera.push_state(exposure_time=100)
             time.sleep(0.8)
             im_fluo = self.scope.camera.acquire_image()
-            self.scope.il.spectra_x.Cyan.enabled = False
+            self.scope.il.spectra_x.GreenYellow.enabled = False
             self.scope.camera.pop_state()
             im_dpath = self.dpath / '{:04}'.format(pos_idx)
             if not im_dpath.exists():
