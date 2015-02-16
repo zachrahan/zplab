@@ -16,8 +16,9 @@
 			<F N="life_assay_pilot.py"/>
 			<F N="non_rpc/sample.py"/>
 		</Folder>
-		<F N="task_runner.py"/>
 		<F N="experiment02.py"/>
+		<F N="make_references.py"/>
+		<F N="task_runner.py"/>
 	</Files>
 	<Config
 		Name="Debug"
