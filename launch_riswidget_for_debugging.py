@@ -4,10 +4,13 @@ for function in ('imread', 'imsave', 'imread_collection'):
     skio.use_plugin('freeimage', function)
 from PyQt5 import Qt
 from ris_widget.ris_widget import RisWidget
-from ris_widget import freeimage
+import freeimage
 import sys
 
-im = skio.imread('/Volumes/scopearray/pharyngeal_pumping_max_fps/pharyngeal_pumping_max_fps_010_0.274411275.png')
+if sys.platform == 'darwin':
+    im = freeimage.read('/Volumes/scopearray/pharyngeal_pumping_max_fps/pharyngeal_pumping_max_fps_010_0.274411275.png')
+elif sys.platform == 'linux':
+    im = freeimage.read('/mnt/scopearray/pharyngeal_pumping_max_fps/pharyngeal_pumping_max_fps_010_0.274411275.png')
 #im = skio.imread('/Users/ehvatum/heic1015a.jpg')
 #im = freeimage.read('/Users/ehvatum/heic1015a.jpg')
 #im = freeimage.read('/Users/ehvatum/zplrepo/ris_widget/top_left.png')
