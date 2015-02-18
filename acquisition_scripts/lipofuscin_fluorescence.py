@@ -36,7 +36,7 @@ class LipofuscinFluorescence(Qt.QObject):
     def __init__(self, scope, parent=None):
         super().__init__(parent)
         self.scope = scope
-        self.dpath = Path('/mnt/scopearray/Zhang_William/lipofuscin_fluorescence/')
+        self.dpath = Path('/mnt/scopearray/Zhang_William/lipofuscin_fluorescence')
         self.name = 'lipofuscin_fluorescence'
         self.interval = 1/2 * 60 * 60
         self.positions_fpath = self.dpath / (self.name + '__positions.json')
@@ -44,6 +44,7 @@ class LipofuscinFluorescence(Qt.QObject):
         self.checkpoint_swaptemp_fpath = self.dpath / (self.name + '__checkpoint.json._')
         self.positions = []
         # indexes of wells to skip
+        #self.skipped_positions = [1,2,6,7,12,15,18,20,26,27,29,30,31,33]
         self.skipped_positions = []
         # The index of the most recently completed or currently executing run
         self.run_idx = -1
@@ -125,46 +126,36 @@ class LipofuscinFluorescence(Qt.QObject):
         self.scope.camera.exposure_time = 10
         self.scope.camera.shutter_mode = 'Rolling'
         self.scope.camera.sensor_gain = '16-bit (low noise & high well capacity)'
+        self.scope.camera.acquisition_sequencer.new_sequence(GreenYellow=255, Cyan=255, UV=255)
+        self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=78)
+        self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=False, GreenYellow=True)
+        self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=False, Cyan=True)
+        self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=False, UV=True)
+        self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=78)
         for pos_idx, pos in enumerate(self.positions):
             if pos_idx in self.skipped_positions:
                 continue
-            ims = {}
+#           tps = self.scope.camera.timestamp_ticks_per_second
             self.scope.stage.position = pos
 
             self.scope.tl.lamp.intensity=78
             self.scope.tl.lamp.enabled = True
             time.sleep(0.001)
             self.scope.camera.autofocus.autofocus_continuous_move(pos[2]-0.1, pos[2]+0.1, 0.1, 'high pass + brenner', max_workers=3)
-
-            self.scope.camera.start_image_sequence_acquisition(frame_count=5, trigger_mode='Software')
-            self.scope.camera.send_software_trigger()
-            ims['bf0'] = self.scope.camera.next_image()
             self.scope.tl.lamp.enabled = False
 
-            self.scope.il.spectra_x.push_state(GreenYellow_enabled=True, GreenYellow_intensity=255)
-            self.scope.camera.send_software_trigger()
-            ims['greenyellow'] = self.scope.camera.next_image()
-            self.scope.il.spectra_x.pop_state()
-            self.scope.il.spectra_x.push_state(Cyan_enabled=True, Cyan_intensity=255)
-            self.scope.camera.send_software_trigger()
-            ims['cyan'] = self.scope.camera.next_image()
-            self.scope.il.spectra_x.pop_state()
-            self.scope.il.spectra_x.push_state(UV_enabled=True, UV_intensity=255)
-            self.scope.camera.send_software_trigger()
-            ims['UV'] = self.scope.camera.next_image()
-            self.scope.il.spectra_x.pop_state()
+            ims = dict(zip( ('bf0','greenyellow','cyan','uv','bf1'), self.scope.camera.acquisition_sequencer.run() ))
 
-            self.scope.tl.lamp.enabled = True
-            time.sleep(0.001)
-            self.scope.camera.send_software_trigger()
-            ims['bf1'] = self.scope.camera.next_image()
-            self.scope.tl.lamp.enabled = False
-
-            im_dpath = self.dpath / '{:04}'.format(pos_idx)
-            if not im_dpath.exists():
-                im_dpath.mkdir()
+            out_dpath = self.dpath / '{:04}'.format(pos_idx)
+            if not out_dpath.exists():
+                out_dpath.mkdir()
             for name, im in ims.items():
-                im_fpath = im_dpath / '{}__{:04}_{:04}_{}.png'.format(self.name, pos_idx, self.run_idx, name)
+                im_fpath = out_dpath / '{}__{:04}_{:04}_{}.png'.format(self.name, pos_idx, self.run_idx, name)
                 freeimage.write(im, str(im_fpath), flags=freeimage.IO_FLAGS.PNG_Z_BEST_SPEED)
+
+#           meta_fpath = out_dpath / '{}__{:04}_{:04}.json'.format(self.name, pos_idx, self.run_idx)
+#           with meta_fpath.open('w') as f:
+#               json.dump({'sequence_timestamps' : times}, f)
+
         time_to_next = max(0, self.interval - (time.time() - self.run_ts))
         self.run_timer.start(time_to_next * 1000)
