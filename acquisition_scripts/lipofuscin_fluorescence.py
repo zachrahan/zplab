@@ -141,7 +141,7 @@ class LipofuscinFluorescence(Qt.QObject):
             self.scope.tl.lamp.intensity=78
             self.scope.tl.lamp.enabled = True
             time.sleep(0.001)
-            self.scope.camera.autofocus.autofocus_continuous_move(pos[2]-0.1, pos[2]+0.1, 0.1, 'high pass + brenner', max_workers=3)
+            self.scope.camera.autofocus.autofocus_continuous_move(pos[2]+0.3-0.1, pos[2]+0.3+0.1, 0.1, 'high pass + brenner', max_workers=3)
             self.scope.tl.lamp.enabled = False
 
             ims = dict(zip( ('bf0','greenyellow','cyan','uv','bf1'), self.scope.camera.acquisition_sequencer.run() ))
@@ -159,3 +159,34 @@ class LipofuscinFluorescence(Qt.QObject):
 
         time_to_next = max(0, self.interval - (time.time() - self.run_ts))
         self.run_timer.start(time_to_next * 1000)
+
+    def make_focus_stacks(self):
+        self.scope.camera.pixel_readout_rate = '280 MHz'
+        self.scope.camera.exposure_time = 10
+        self.scope.camera.shutter_mode = 'Rolling'
+        self.scope.camera.sensor_gain = '16-bit (low noise & high well capacity)'
+
+        for pos_idx, pos in enumerate(self.positions):
+            if pos_idx in self.skipped_positions:
+                continue
+            self.scope.stage.position = pos
+            ims = []
+
+            self.scope.tl.lamp.intensity=78
+            self.scope.tl.lamp.enabled = True
+            time.sleep(0.001)
+            self.scope.camera.start_image_sequence_acquisition(frame_count=100, trigger_mode='Software')
+            for z in numpy.linspace(pos[2]+0.3-0.5, pos[2]+0.3+0.5, 100, endpoint=True):
+                z = float(z)
+                self.scope.stage.z = z
+                self.scope.camera.send_software_trigger()
+                ims.append((self.scope.camera.next_image(), z))
+            self.scope.tl.lamp.enabled = False
+            self.scope.camera.end_image_sequence_acquisition()
+
+            out_dpath = self.dpath / '{:04}'.format(pos_idx) / 'z_stack'
+            if not out_dpath.exists():
+                out_dpath.mkdir()
+            for idx, (im, z) in enumerate(ims):
+                im_fpath = out_dpath / '{}__{:04}_{:04}_{}.png'.format(self.name, pos_idx, idx, z)
+                freeimage.write(im, str(im_fpath), flags=freeimage.IO_FLAGS.PNG_Z_BEST_SPEED)
