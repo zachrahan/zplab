@@ -1,7 +1,4 @@
 import numpy
-from skimage import io as skio
-for function in ('imread', 'imsave', 'imread_collection'):
-    skio.use_plugin('freeimage', function)
 from PyQt5 import Qt
 from ris_widget.ris_widget import RisWidget
 import freeimage
