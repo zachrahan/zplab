@@ -39,8 +39,6 @@ class GV(Qt.QGraphicsView):
 class LipofuscinExperiment2VideoMaker(Qt.QMainWindow):
     DPATH_STR = '/mnt/scopearray/Zhang_William/lipofuscin_fluorescence2'
     OUT_FN = 'video.mkv'
-    WELL_COUNT = 90
-    RUN_COUNT = 173
     RENDER_SCALE_DIVISOR = 2
     TITLE_STRING = 'lipofuscin experiment 2, well {:02}, frame {:04}, {}'
 
@@ -49,6 +47,7 @@ class LipofuscinExperiment2VideoMaker(Qt.QMainWindow):
     paused_changed = Qt.pyqtSignal(bool)
     write_output_changed = Qt.pyqtSignal(bool)
     operation_completed_successfully = Qt.pyqtSignal()
+    last_detected_well_run_indexes_changed = Qt.pyqtSignal(int, int)
     _advance_frame = Qt.pyqtSignal()
 
     def __init__(self, parent=None):
@@ -62,6 +61,8 @@ class LipofuscinExperiment2VideoMaker(Qt.QMainWindow):
         self._paused = False
         self._write_output = True
         self._displayed_frame_idx = -1
+        self._last_detected_well_idx = -1
+        self._last_detected_run_idx = -1
         self.setWindowTitle('Lipofuscin Experiment2 Video Maker')
         self.gs = Qt.QGraphicsScene(self)
         self._populate_scene()
@@ -80,7 +81,38 @@ class LipofuscinExperiment2VideoMaker(Qt.QMainWindow):
         if self._ffmpeg_writer is not None:
             self._ffmpeg_writer.close()
 
+    def _populate_scene(self):
+        self.gs.setBackgroundBrush(Qt.QBrush(Qt.Qt.black))
+        title_font = Qt.QFont('Courier')
+        title_font.setPixelSize(60)
+        self.title_item = self.gs.addText(LipofuscinExperiment2VideoMaker.TITLE_STRING.format(0, 0, '*'*19), title_font)
+        self.title_item.setDefaultTextColor(Qt.QColor(Qt.Qt.white))
+        self.title_item.moveBy((2560 - self.title_item.boundingRect().width()) / 2, 0)
+        self.image_item = self.gs.addPixmap(Qt.QPixmap(2560, 2160))
+        self.image_item.moveBy(0, self.title_item.boundingRect().height() + 8)
+        self.image_item.setShapeMode(Qt.QGraphicsPixmapItem.BoundingRectShape)
+        file_not_found_font = Qt.QFont('Courier')
+        file_not_found_font.setPixelSize(300)
+        self.file_not_found_item = self.gs.addText('file not found', file_not_found_font)
+        self.file_not_found_item.setDefaultTextColor(Qt.QColor(Qt.Qt.red))
+        image_item_rect = self.image_item.mapToScene(self.image_item.boundingRect()).boundingRect()
+        file_not_found_pos = image_item_rect.center()
+        file_not_found_size = self.file_not_found_item.boundingRect().size()
+        self.file_not_found_item.setPos(image_item_rect.center())
+        self.file_not_found_item.moveBy(-file_not_found_size.width()/2, -file_not_found_size.height()/2)
+        self.file_not_found_item.hide()
+
+    def _find_last_well_and_run_indexes(self):
+        numeric_dpaths = filter(lambda p: p.is_dir() and str(p.stem).isdigit(), self._dpath.glob('*'))
+        self._last_detected_well_idx = max(map(lambda dp: int(str(dp.stem)), numeric_dpaths))
+
+        image_fpaths = (self._dpath / '{:04}'.format(self._last_detected_well_idx)).glob('lipofuscin_fluorescence2__{:04}_*_bf0_autofocus.png'.format(self._last_detected_well_idx))
+        self._last_detected_run_idx = max(map(lambda fp: int(str(fp.stem).split('_')[-3]), image_fpaths))
+
+        self.last_detected_well_run_indexes_changed.emit(self._last_detected_well_idx, self._last_detected_run_idx)
+
     def _start(self):
+        self._find_last_well_and_run_indexes()
         if self._write_output:
             if self._fpath.exists():
                 self._fpath.unlink()
@@ -106,38 +138,18 @@ class LipofuscinExperiment2VideoMaker(Qt.QMainWindow):
             self._ffmpeg_writer.close()
             self._ffmpeg_writer = None
 
-    def _populate_scene(self):
-        self.gs.setBackgroundBrush(Qt.QBrush(Qt.Qt.black))
-        title_font = Qt.QFont('Courier')
-        title_font.setPixelSize(60)
-        self.title_item = self.gs.addText(LipofuscinExperiment2VideoMaker.TITLE_STRING.format(0, 0, '*'*19), title_font)
-        self.title_item.setDefaultTextColor(Qt.QColor(Qt.Qt.white))
-        self.title_item.moveBy((2560 - self.title_item.boundingRect().width()) / 2, 0)
-        self.image_item = self.gs.addPixmap(Qt.QPixmap(2560, 1600))
-        self.image_item.moveBy(0, self.title_item.boundingRect().height() + 8)
-        self.image_item.setShapeMode(Qt.QGraphicsPixmapItem.BoundingRectShape)
-        file_not_found_font = Qt.QFont('Courier')
-        file_not_found_font.setPixelSize(300)
-        self.file_not_found_item = self.gs.addText('file not found', file_not_found_font)
-        self.file_not_found_item.setDefaultTextColor(Qt.QColor(Qt.Qt.red))
-        image_item_rect = self.image_item.mapToScene(self.image_item.boundingRect()).boundingRect()
-        file_not_found_pos = image_item_rect.center()
-        file_not_found_size = self.file_not_found_item.boundingRect().size()
-        self.file_not_found_item.setPos(image_item_rect.center())
-        self.file_not_found_item.moveBy(-file_not_found_size.width()/2, -file_not_found_size.height()/2)
-        self.file_not_found_item.hide()
-
     def _on_advance_frame(self):
         if self._started and not self._paused:
             self._run_idx += 1
-            if self._run_idx == LipofuscinExperiment2VideoMaker.RUN_COUNT:
+            if self._run_idx >= self._last_detected_run_idx:
                 self._run_idx = 0
                 self._well_idx += 1
-                if self._well_idx == LipofuscinExperiment2VideoMaker.WELL_COUNT:
+                if self._well_idx >= self._last_detected_well_idx:
                     del self._well_idx
                     del self._run_idx
                     self.started = False
-                    self.operation_completed_successfully.emit()
+                    if self._last_detected_well_idx > 0 and self._last_detected_run_idx > 0:
+                        self.operation_completed_successfully.emit()
                     return
             frame_idx = self._displayed_frame_idx + 1
             self._render_frame(frame_idx)
@@ -156,7 +168,7 @@ class LipofuscinExperiment2VideoMaker(Qt.QMainWindow):
             ts_str = datetime.datetime.fromtimestamp(im_fpath.stat().st_ctime).isoformat()[:19]
             try:
                 im = LipofuscinExperiment2VideoMaker.normalize_intensity(freeimage.read(str(im_fpath)))
-                qim = Qt.QImage(sip.voidptr(im.ctypes.data), 2560, 1600, Qt.QImage.Format_RGB888)
+                qim = Qt.QImage(sip.voidptr(im.ctypes.data), im.shape[0], im.shape[1], Qt.QImage.Format_RGB888)
                 self.file_not_found_item.hide()
                 self.image_item.setPixmap(Qt.QPixmap(qim))
                 self.image_item.show()
@@ -244,6 +256,9 @@ class ControlPane(Qt.QWidget):
         lf2vm.paused_changed.connect(self._on_paused_changed)
         self.ui.write_output_checkbox.toggled.connect(self._on_write_output_toggled)
         lf2vm.write_output_changed.connect(self._on_write_output_changed)
+        lf2vm.last_detected_well_run_indexes_changed.connect(self._on_last_detected_well_run_indexes_changed)
+        self.ui.completed_successfully_label.setVisible(False)
+        lf2vm.operation_completed_successfully.connect(lambda: self.ui.completed_successfully_label.setVisible(True))
 
     def _on_start_stop(self):
         # Do stuff in response to GUI manipulation
@@ -254,6 +269,7 @@ class ControlPane(Qt.QWidget):
         self.ui.start_stop_button.setText('Stop' if started else 'Start')
         self.ui.pause_resume_button.setEnabled(started)
         self.ui.write_output_checkbox.setEnabled(not started)
+        self.ui.completed_successfully_label.setVisible(False)
 
     def _on_pause_resume(self):
         self.lf2vm.paused = not self.lf2vm.paused
@@ -266,6 +282,10 @@ class ControlPane(Qt.QWidget):
 
     def _on_write_output_changed(self, write_output):
         self.ui.write_output_checkbox.setChecked(write_output)
+
+    def _on_last_detected_well_run_indexes_changed(self, last_well_idx, last_run_idx):
+        self.ui.last_detected_well_index_widget.display(last_well_idx)
+        self.ui.last_detected_run_index_widget.display(last_run_idx)
 
 if __name__ == "__main__":
     import sys
