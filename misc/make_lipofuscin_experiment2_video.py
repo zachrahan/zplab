@@ -151,14 +151,19 @@ class LipofuscinExperiment2VideoMaker(Qt.QMainWindow):
         if self._write_output:
             self._buffer[:] = 0
         im_fpath = self._dpath / '{:04}'.format(self._well_idx) / 'lipofuscin_fluorescence2__{:04}_{:04}_bf0_autofocus.png'.format(self._well_idx, self._run_idx)
+        got_image = False
         if im_fpath.exists():
             ts_str = datetime.datetime.fromtimestamp(im_fpath.stat().st_ctime).isoformat()[:19]
-            im = LipofuscinExperiment2VideoMaker.normalize_intensity(freeimage.read(str(im_fpath)))
-            qim = Qt.QImage(sip.voidptr(im.ctypes.data), 2560, 1600, Qt.QImage.Format_RGB888)
-            self.file_not_found_item.hide()
-            self.image_item.setPixmap(Qt.QPixmap(qim))
-            self.image_item.show()
-        else:
+            try:
+                im = LipofuscinExperiment2VideoMaker.normalize_intensity(freeimage.read(str(im_fpath)))
+                qim = Qt.QImage(sip.voidptr(im.ctypes.data), 2560, 1600, Qt.QImage.Format_RGB888)
+                self.file_not_found_item.hide()
+                self.image_item.setPixmap(Qt.QPixmap(qim))
+                self.image_item.show()
+                got_image = True
+            except ValueError:
+                pass
+        if not got_image:
             self.file_not_found_item.show()
             self.image_item.hide()
             ts_str = ''
