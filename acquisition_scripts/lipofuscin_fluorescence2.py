@@ -141,9 +141,20 @@ class LipofuscinFluorescence2(Qt.QObject):
             self.scope.tl.lamp.intensity=78
             self.scope.tl.lamp.enabled = True
             time.sleep(0.001)
-            self.scope.camera.autofocus.autofocus_continuous_move(pos[2]+0.3-0.1, pos[2]+0.3+0.1, 0.1, 'high pass + brenner', max_workers=3)
+            self.scope.camera.autofocus.hackified_autofocus_continuous_move(pos[2]+-0.5, min(pos[2]+0.5, 25.51), 0.2, max_workers=2)
             self.scope.tl.lamp.enabled = False
 
+            ims = dict(zip( ('bf0','greenyellow','cyan','uv','bf1'), self.scope.camera.acquisition_sequencer.run() ))
+
+            out_dpath = self.dpath / '{:04}'.format(pos_idx)
+            if not out_dpath.exists():
+                out_dpath.mkdir()
+            for name, im in ims.items():
+                im_fpath = out_dpath / '{}__{:04}_{:04}_{}_autofocus.png'.format(self.name, pos_idx, self.run_idx, name)
+                freeimage.write(im, str(im_fpath), flags=freeimage.IO_FLAGS.PNG_Z_BEST_SPEED)
+
+
+            self.scope.stage.position = pos
             ims = dict(zip( ('bf0','greenyellow','cyan','uv','bf1'), self.scope.camera.acquisition_sequencer.run() ))
 
             out_dpath = self.dpath / '{:04}'.format(pos_idx)
