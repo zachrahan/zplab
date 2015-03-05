@@ -5,8 +5,8 @@ import freeimage
 import sys
 
 if sys.platform == 'darwin':
-#   im = freeimage.read('/Volumes/scopearray/pharyngeal_pumping_max_fps/pharyngeal_pumping_max_fps_010_0.274411275.png')
-    im = freeimage.read('/Users/ehvatum/zplrepo/ris_widget/top_left_g.png')
+    im = freeimage.read('/Volumes/scopearray/pharyngeal_pumping_max_fps/pharyngeal_pumping_max_fps_010_0.274411275.png')
+#   im = freeimage.read('/Users/ehvatum/zplrepo/ris_widget/top_left_g.png')
 elif sys.platform == 'linux':
     im = freeimage.read('/mnt/scopearray/pharyngeal_pumping_max_fps/pharyngeal_pumping_max_fps_010_0.274411275.png')
 
