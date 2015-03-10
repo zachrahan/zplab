@@ -181,13 +181,14 @@ class LipofuscinFluorescence2(Qt.QObject):
             if pos_idx in self.skipped_positions:
                 continue
             self.scope.stage.position = pos
-            ims = []
 
-            self.scope.tl.lamp.intensity=78
+            ims = []
+            self.scope.tl.lamp.intensity=88
             self.scope.tl.lamp.enabled = True
+            self.scope.camera.binning = '1x1'
             time.sleep(0.001)
             self.scope.camera.start_image_sequence_acquisition(frame_count=100, trigger_mode='Software')
-            for z in numpy.linspace(pos[2]+0.3-0.5, pos[2]+0.3+0.5, 100, endpoint=True):
+            for z in numpy.linspace(pos[2]-0.5, min(pos[2]+0.5, 25.51), 100, endpoint=True):
                 z = float(z)
                 self.scope.stage.z = z
                 self.scope.camera.send_software_trigger()
@@ -199,5 +200,65 @@ class LipofuscinFluorescence2(Qt.QObject):
             if not out_dpath.exists():
                 out_dpath.mkdir()
             for idx, (im, z) in enumerate(ims):
-                im_fpath = out_dpath / '{}__{:04}_{:04}_{}.png'.format(self.name, pos_idx, idx, z)
+                im_fpath = out_dpath / '{}__{:04}_{:04}_{}_1x1.png'.format(self.name, pos_idx, idx, z)
+                freeimage.write(im, str(im_fpath), flags=freeimage.IO_FLAGS.PNG_Z_BEST_SPEED)
+
+            ims = []
+            self.scope.tl.lamp.intensity=51
+            self.scope.tl.lamp.enabled = True
+            self.scope.camera.binning = '2x2'
+            time.sleep(0.001)
+            self.scope.camera.start_image_sequence_acquisition(frame_count=100, trigger_mode='Software')
+            for z in numpy.linspace(pos[2]-0.5, min(pos[2]+0.5, 25.51), 100, endpoint=True):
+                z = float(z)
+                self.scope.stage.z = z
+                self.scope.camera.send_software_trigger()
+                ims.append((self.scope.camera.next_image(), z))
+            self.scope.tl.lamp.enabled = False
+            self.scope.camera.end_image_sequence_acquisition()
+
+            out_dpath = self.dpath / '{:04}'.format(pos_idx) / 'z_stack'
+            if not out_dpath.exists():
+                out_dpath.mkdir()
+            for idx, (im, z) in enumerate(ims):
+                im_fpath = out_dpath / '{}__{:04}_{:04}_{}_2x2.png'.format(self.name, pos_idx, idx, z)
+                freeimage.write(im, str(im_fpath), flags=freeimage.IO_FLAGS.PNG_Z_BEST_SPEED)
+
+            ims = []
+            self.scope.tl.lamp.intensity=43
+            self.scope.tl.lamp.enabled = True
+            self.scope.camera.binning = '3x3'
+            time.sleep(0.001)
+            self.scope.camera.start_image_sequence_acquisition(frame_count=100, trigger_mode='Software')
+            for z in numpy.linspace(pos[2]-0.5, min(pos[2]+0.5, 25.51), 100, endpoint=True):
+                z = float(z)
+                self.scope.stage.z = z
+                self.scope.camera.send_software_trigger()
+                ims.append((self.scope.camera.next_image(), z))
+            self.scope.tl.lamp.enabled = False
+            self.scope.camera.end_image_sequence_acquisition()
+
+            out_dpath = self.dpath / '{:04}'.format(pos_idx) / 'z_stack'
+            if not out_dpath.exists():
+                out_dpath.mkdir()
+            for idx, (im, z) in enumerate(ims):
+                im_fpath = out_dpath / '{}__{:04}_{:04}_{}_3x3.png'.format(self.name, pos_idx, idx, z)
+                freeimage.write(im, str(im_fpath), flags=freeimage.IO_FLAGS.PNG_Z_BEST_SPEED)
+
+            ims = []
+            self.scope.tl.lamp.intensity=41
+            self.scope.tl.lamp.enabled = True
+            self.scope.camera.binning = '4x4'
+            time.sleep(0.001)
+            self.scope.camera.start_image_sequence_acquisition(frame_count=100, trigger_mode='Software')
+            for z in numpy.linspace(pos[2]-0.5, min(pos[2]+0.5, 25.51), 100, endpoint=True):
+                z = float(z)
+                self.scope.stage.z = z
+                self.scope.camera.send_software_trigger()
+                ims.append((self.scope.camera.next_image(), z))
+            self.scope.tl.lamp.enabled = False
+            self.scope.camera.end_image_sequence_acquisition()
+
+            for idx, (im, z) in enumerate(ims):
+                im_fpath = out_dpath / '{}__{:04}_{:04}_{}_4x4.png'.format(self.name, pos_idx, idx, z)
                 freeimage.write(im, str(im_fpath), flags=freeimage.IO_FLAGS.PNG_Z_BEST_SPEED)
