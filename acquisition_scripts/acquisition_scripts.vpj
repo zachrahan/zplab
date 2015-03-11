@@ -21,6 +21,7 @@
 		<F N="make_references.py"/>
 		<F N="task_runner.py"/>
 		<F N="lipofuscin_fluorescence2.py"/>
+		<F N="peg_test.py"/>
 	</Files>
 	<Config
 		Name="Debug"
