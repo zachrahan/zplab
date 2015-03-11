@@ -25,4 +25,4 @@ def make_references(scope, dpath, prefix):
             ims.append(im)
     im = numpy.median(ims, axis=0).astype(numpy.uint16)
     freeimage.write(im, str(dpath / '{}_MEDIAN.png'.format(prefix)), flags=freeimage.IO_FLAGS.PNG_Z_BEST_SPEED)
-    scope.position = start_pos
+    scope.stage.position = start_pos
