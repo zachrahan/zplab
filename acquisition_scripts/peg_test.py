@@ -166,7 +166,7 @@ class PegTest(Qt.QObject):
                 freeimage.write(im, str(im_fpath), flags=freeimage.IO_FLAGS.PNG_Z_BEST_SPEED)
 
             csv_fpath = out_dpath / '{}__{:04}_z_positions.csv'.format(self.name, pos_idx)
-            with csv_fpath.open('w+') as f:
+            with csv_fpath.open('a+') as f:
                 print('{},{},{}'.format(pos_idx, self.run_idx, fine_z), file=f)
 
             if pos_idx == z_stack_pos:
