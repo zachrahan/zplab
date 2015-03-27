@@ -35,17 +35,18 @@ import time
 
 random.seed()
 
-class PegTest(Qt.QObject):
+class Age1Test(Qt.QObject):
     def __init__(self, scope, parent=None):
         super().__init__(parent)
         self.scope = scope
-        self.dpath = Path('/mnt/scopearray/Pitman_Will/PEG_test')
-        self.name = 'PEG_test'
-        self.interval = 1/2 * 60 * 60
-        self.positions_fpath = self.dpath / (self.name + '__positions.json')
+        self.dpath = Path('/mnt/scopearray/Pitman_Will/age1_test')
+        self.name = 'age1_test'
+        self.interval = 60 * 60
+        self.positions_fpath = self.dpath / (self.name + '__position_set_names_and_coords.json')
         self.checkpoint_fpath = self.dpath / (self.name + '__checkpoint.json')
         self.checkpoint_swaptemp_fpath = self.dpath / (self.name + '__checkpoint.json._')
-        self.positions = []
+        self.position_set_names = []
+        self.position_sets = {}
         # The index of the most recently completed or currently executing run
         self.run_idx = -1
         # The start time of the most recently completed or currently executing run
@@ -53,7 +54,7 @@ class PegTest(Qt.QObject):
         if self.dpath.exists():
             if self.positions_fpath.exists():
                 with open(str(self.positions_fpath), 'r') as f:
-                    self.positions = json.load(f)
+                    self.position_set_names, self.position_sets = json.load(f)
             if self.checkpoint_fpath.exists():
                 with open(str(self.checkpoint_fpath), 'r') as f:
                     d = json.load(f)
@@ -65,7 +66,7 @@ class PegTest(Qt.QObject):
         # indexes of wells to skip
         #self.skipped_positions = [1,2,6,7,12,15,18,20,26,27,29,30,31,33]
         self.skipped_positions = []
-        self.non_skipped_positions = sorted(list(set(range(len(self.positions))) - set(self.skipped_positions)))
+#       self.non_skipped_positions = sorted(list(set(range(len(self.positions))) - set(self.skipped_positions)))
 
         self.run_timer = Qt.QTimer(self)
         self.run_timer.timeout.connect(self.execute_run)
@@ -74,6 +75,8 @@ class PegTest(Qt.QObject):
     def get_more_positions(self):
         if hasattr(self, 'pos_get_dialog'):
             raise RuntimeError('get_more_positions() already in progress...')
+        if len(self.position_set_names) == 0:
+            self.position_set_names.append('default')
         self.pos_get_dialog = Qt.QDialog()
         self.pos_get_dialog.setAttribute(Qt.Qt.WA_DeleteOnClose, True)
         self.pos_get_dialog.setWindowTitle('Getting positions...')
@@ -87,14 +90,24 @@ class PegTest(Qt.QObject):
         self.pos_get_dialog.stop_button = Qt.QPushButton('stop getting positions')
         self.pos_get_dialog.layout().addWidget(self.pos_get_dialog.stop_button)
         self.pos_get_dialog.stop_button.clicked.connect(self.stop_getting_positions)
+        self.pos_get_dialog.position_set_combo = Qt.QComboBox(self.pos_get_dialog)
+        self.pos_get_dialog.position_set_combo.addItems(self.position_set_names)
+        self.pos_get_dialog.layout().addWidget(self.pos_get_dialog.position_set_combo)
         self.pos_get_dialog.show()
 
     def store_current_position(self):
-        self.positions.append(self.scope.stage.position)
+        position_set_name = self.pos_get_dialog.position_set_combo.currentText()
+        if position_set_name in self.position_sets:
+            self.position_sets[position_set_name].append(self.scope.stage.position)
+        else:
+            self.position_sets[position_set_name] = [self.scope.stage.position]
 
     def plot_positions(self):
-        if len(self.positions) >= 2:
-            positions_npy = numpy.array(self.positions)
+        all_positions = []
+        for position_set in self.position_sets.values():
+            all_positions.extend(position_set)
+        if len(all_positions) >= 2:
+            positions_npy = numpy.array(all_positions)
             plt.scatter(positions_npy[:,0], -positions_npy[:,1])
 
     def stop_getting_positions(self):
@@ -103,7 +116,7 @@ class PegTest(Qt.QObject):
 
     def save_positions(self):
         with open(str(self.positions_fpath), 'w') as f:
-            json.dump(self.positions, f)
+            json.dump((self.position_set_names, self.position_sets), f)
 
     def write_checkpoint(self):
         with self.checkpoint_swaptemp_fpath.open('w') as checkpoint_swaptemp_f:
@@ -134,7 +147,7 @@ class PegTest(Qt.QObject):
         self.scope.camera.acquisition_sequencer.new_sequence(green_yellow=255, cyan=255, uv=255)
         self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=78)
         self.scope.camera.acquisition_sequencer.add_step(exposure_ms=100, tl_enable=False, cyan=True)
-        z_stack_pos = random.choice(self.non_skipped_positions)
+#       z_stack_pos = random.choice(self.non_skipped_positions)
         print('Selected well {:04} for z_stacks.'.format(z_stack_pos))
         for pos_idx, pos in enumerate(self.positions):
             if pos_idx in self.skipped_positions:
