@@ -135,6 +135,14 @@ class Age1Test(Qt.QObject):
         else:
             self.run_timer.start((self.interval - delta) * 1000)
 
+    def pick_random_position(self):
+        # There are much better ways of doing this; I just needed it done :)
+        positions = []
+        for pos_set_name, pos_set in self.position_sets.items():
+            for pos_idx, pos in enumerate(pos_set):
+                positions.append((pos_set_name, pos_idx))
+        return random.choice(positions)
+
     def execute_run(self):
         self.run_ts = time.time()
         self.run_idx += 1
@@ -144,65 +152,85 @@ class Age1Test(Qt.QObject):
         self.scope.camera.pixel_readout_rate = '280 MHz'
         self.scope.camera.shutter_mode = 'Rolling'
         self.scope.camera.sensor_gain = '16-bit (low noise & high well capacity)'
-        self.scope.camera.acquisition_sequencer.new_sequence(green_yellow=255, cyan=255, uv=255)
+        self.scope.camera.acquisition_sequencer.new_sequence(cyan=255)
         self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=78)
-        self.scope.camera.acquisition_sequencer.add_step(exposure_ms=100, tl_enable=False, cyan=True)
-#       z_stack_pos = random.choice(self.non_skipped_positions)
-        print('Selected well {:04} for z_stacks.'.format(z_stack_pos))
-        for pos_idx, pos in enumerate(self.positions):
-            if pos_idx in self.skipped_positions:
-                continue
-            self.scope.stage.position = pos
+        self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=78)
+        self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=78)
+        self.scope.camera.acquisition_sequencer.add_step(exposure_ms=800, tl_enable=False, cyan=True)
+        self.scope.camera.acquisition_sequencer.add_step(exposure_ms=200, tl_enable=False, cyan=True)
+        self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=78)
+        self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=78)
+        self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=78)
+        z_stack_set, z_stack_pos_idx = self.pick_random_position()
+        print('Selected position {} of set {} for z_stacks.'.format(z_stack_pos_idx, z_stack_set))
+        for pos_set_name in self.position_set_names:
+            pos_set = self.position_sets[pos_set_name]
+            for pos_idx, pos in enumerate(pos_set):
+                if pos_idx in self.skipped_positions:
+                    continue
+                self.scope.stage.position = pos
 
-            self.scope.tl.lamp.intensity = 69
-            self.scope.tl.lamp.enabled = True
-            self.scope.camera.exposure_time = 10
-            # More binning gives higher contrast, meaning less light needed
-            self.scope.camera.binning = '4x4'
-            time.sleep(0.001)
-            self.scope.camera.autofocus.new_autofocus_continuous_move(pos[2]-0.5, min(pos[2]+0.5, 24.4), 0.2, max_workers=2)
-            coarse_z = self.scope.stage.z
-            self.scope.camera.binning = '1x1'
-            self.scope.tl.lamp.intensity = 97
-            time.sleep(0.001)
-            self.scope.camera.autofocus.new_autofocus_continuous_move(coarse_z-0.15, min(coarse_z+0.15, 24.4), 0.1, metric='high pass + brenner', max_workers=2)
-            fine_z = self.scope.stage.z
-            self.scope.tl.lamp.enabled = False
-
-            ims = dict(zip( ('bf','greenyellow'), self.scope.camera.acquisition_sequencer.run() ))
-
-            out_dpath = self.dpath / '{:04}'.format(pos_idx)
-            if not out_dpath.exists():
-                out_dpath.mkdir()
-            for name, im in ims.items():
-                im_fpath = out_dpath / '{}__{:04}_{:04}_{}.png'.format(self.name, pos_idx, self.run_idx, name)
-                freeimage.write(im, str(im_fpath), flags=freeimage.IO_FLAGS.PNG_Z_BEST_SPEED)
-
-            csv_fpath = out_dpath / '{}__{:04}_z_positions.csv'.format(self.name, pos_idx)
-            with csv_fpath.open('a+') as f:
-                print('{},{},{}'.format(pos_idx, self.run_idx, fine_z), file=f)
-
-            if pos_idx == z_stack_pos:
-                ims = []
-                self.scope.tl.lamp.intensity = 97
+                self.scope.tl.lamp.intensity = 69
                 self.scope.tl.lamp.enabled = True
                 self.scope.camera.exposure_time = 10
-                out_dpath = self.dpath / 'z_stacks'
+                # More binning gives higher contrast, meaning less light needed
+                self.scope.camera.binning = '4x4'
+                time.sleep(0.001)
+                self.scope.camera.autofocus.new_autofocus_continuous_move(22.1436906, 23.9931316, 0.2, max_workers=2)
+                coarse_z = self.scope.stage.z
+                self.scope.camera.binning = '1x1'
+                self.scope.tl.lamp.intensity = 97
+                time.sleep(0.001)
+                self.scope.camera.autofocus.new_autofocus_continuous_move(coarse_z-0.15, min(coarse_z+0.15, 23.9931316), 0.1, metric='high pass + brenner', max_workers=2)
+                fine_z = self.scope.stage.z
+                self.scope.tl.lamp.enabled = False
+
+                ims = dict(zip( ('bf_a_0','bf_a_delay','bf_a_1','cyan_agitate','cyan','bf_b_0','bf_b_delay','bf_b_1',),
+                                list(zip(self.scope.camera.acquisition_sequencer.run(), self.scope.camera.acquisition_sequencer.latest_timestamps))
+                          )   )
+                del ims['bf_a_delay']
+                del ims['bf_b_delay']
+                del ims['cyan_agitate']
+
+                out_dpath = self.dpath / '{}_{:04}'.format(pos_set_name, pos_idx)
                 if not out_dpath.exists():
                     out_dpath.mkdir()
-                time.sleep(0.001)
-                self.scope.camera.start_image_sequence_acquisition(frame_count=100, trigger_mode='Software')
-                for z in numpy.linspace(pos[2]-0.5, min(pos[2]+0.5, 24.4), 100, endpoint=True):
-                    z = float(z)
-                    self.scope.stage.z = z
-                    self.scope.camera.send_software_trigger()
-                    ims.append((self.scope.camera.next_image(), z))
-                self.scope.tl.lamp.enabled = False
-                self.scope.camera.end_image_sequence_acquisition()
-
-                for idx, (im, z) in enumerate(ims):
-                    im_fpath = out_dpath / '{}__{:04}_{:04}_{:04}_{}.png'.format(self.name, self.run_idx, pos_idx, idx, z)
+                for name, (im, ts) in ims.items():
+                    im_fpath = out_dpath / '{}__{}_{:04}_{:04}_{}.png'.format(self.name, pos_set_name, pos_idx, self.run_idx, name)
                     freeimage.write(im, str(im_fpath), flags=freeimage.IO_FLAGS.PNG_Z_BEST_SPEED)
+
+                csv_fpath = out_dpath / '{}__{}_{:04}_z_positions.csv'.format(self.name, pos_set_name, pos_idx)
+                if not csv_fpath.exists():
+                    with csv_fpath.open('w') as f:
+                        print('pos_set_name,pos_idx,run_idx,coarse_z,fine_z,bf_a_0_timestamp,bf_a_1_timestamp,cyan_timestamp,bf_b_0_timestamp,bf_b_1_timestamp', file=f)
+                ts_hz = self.scope.camera.timestamp_hz
+                t0 = ims['bf_a_0'][1]
+                with csv_fpath.open('a') as f:
+                    l = '{},{},{},{},{},'.format(pos_set_name, pos_idx, self.run_idx, coarse_z, fine_z)
+                    l+= ','.join([str((ims[name][1] - t0) / ts_hz) for name in ('bf_a_0','bf_a_1','cyan','bf_b_0','bf_b_1')])
+                    print(l, file=f)
+
+                if pos_set_name == z_stack_set and pos_idx == z_stack_pos_idx:
+                    ims = []
+                    self.scope.tl.lamp.intensity = 97
+                    self.scope.tl.lamp.enabled = True
+                    self.scope.camera.exposure_time = 10
+                    out_dpath = self.dpath / 'z_stacks'
+                    if not out_dpath.exists():
+                        out_dpath.mkdir()
+                    time.sleep(0.001)
+                    self.scope.camera.start_image_sequence_acquisition(frame_count=100, trigger_mode='Software')
+                    for z in numpy.linspace(pos[2]-0.5, min(pos[2]+0.5, 24.4), 100, endpoint=True):
+                        z = float(z)
+                        self.scope.stage.z = z
+                        self.scope.camera.send_software_trigger()
+                        ims.append((self.scope.camera.next_image(), z))
+                    self.scope.tl.lamp.enabled = False
+                    self.scope.camera.end_image_sequence_acquisition()
+
+                    for idx, (im, z) in enumerate(ims):
+                        im_fpath = out_dpath / '{}__{}_{:04}_{:04}_{:04}_{}.png'.format(self.name, pos_set_name, pos_idx, self.run_idx, idx, z)
+                        freeimage.write(im, str(im_fpath), flags=freeimage.IO_FLAGS.PNG_Z_BEST_SPEED)
 
         time_to_next = max(0, self.interval - (time.time() - self.run_ts))
         self.run_timer.start(time_to_next * 1000)
