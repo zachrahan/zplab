@@ -188,7 +188,7 @@ class PegTest(Qt.QObject):
                 self.scope.camera.end_image_sequence_acquisition()
 
                 for idx, (im, z) in enumerate(ims):
-                    im_fpath = out_dpath / '{}__{:04}_{:04}_{}.png'.format(self.name, pos_idx, idx, z)
+                    im_fpath = out_dpath / '{}__{:04}_{:04}_{:04}_{}.png'.format(self.name, self.run_idx, pos_idx, idx, z)
                     freeimage.write(im, str(im_fpath), flags=freeimage.IO_FLAGS.PNG_Z_BEST_SPEED)
 
         time_to_next = max(0, self.interval - (time.time() - self.run_ts))
