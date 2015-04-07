@@ -174,7 +174,7 @@ class AllylValidation(Qt.QObject):
                 fine_z = self.scope.stage.z
                 self.scope.tl.lamp.enabled = False
 
-                if pos_set_name == '':
+                if pos_set_name == 'dark':
                     im_names = 'bf0','greenyellow','cyan','uv','bf1'
                     self.scope.camera.acquisition_sequencer.new_sequence(GreenYellow=255, Cyan=255, UV=255)
                     self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=117)
