@@ -23,6 +23,7 @@
 		<F N="lipofuscin_fluorescence2.py"/>
 		<F N="peg_test.py"/>
 		<F N="age1_test.py"/>
+		<F N="allyl_validation.py"/>
 	</Files>
 	<Config
 		Name="Debug"
