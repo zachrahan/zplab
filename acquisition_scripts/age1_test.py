@@ -1,4 +1,3 @@
-
 # The MIT License (MIT)
 #
 # Copyright (c) 2014-2015 WUSTL ZPLAB
@@ -23,6 +22,7 @@
 #
 # Authors: Erik Hvatum <ice.rikh@gmail.com>
 
+import csv
 import json
 from pathlib import Path
 from PyQt5 import Qt
@@ -234,3 +234,15 @@ class Age1Test(Qt.QObject):
 
         time_to_next = max(0, self.interval - (time.time() - self.run_ts))
         self.run_timer.start(time_to_next * 1000)
+
+    def plot_acquisition_z_positions(self):
+        for pos_set_name in self.position_set_names:
+            pos_set = self.position_sets[pos_set_name]
+            for pos_idx, pos in enumerate(pos_set):
+                csv_dpath = self.dpath / '{}_{:04}'.format(pos_set_name, pos_idx)
+                csv_fpath = csv_dpath / '{}__{}_{:04}_z_positions.csv'.format(self.name, pos_set_name, pos_idx)
+                with csv_fpath.open('r') as f:
+                    csv_reader = csv.DictReader(f)
+                    zs = [row['coarse_z'] for row in csv_reader]
+                plt.plot(numpy.linspace(0, len(zs), len(zs)), zs, label='{} well {}'.format(pos_set_name, pos_idx))
+        plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
