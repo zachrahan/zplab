@@ -23,6 +23,7 @@
 #
 # Authors: Erik Hvatum <ice.rikh@gmail.com>
 
+import csv
 import json
 from pathlib import Path
 from PyQt5 import Qt
@@ -63,10 +64,6 @@ class AllylValidation(Qt.QObject):
                 self.run_ts = d['run_ts']
         else:
             self.dpath.mkdir(parents=True)
-        # indexes of wells to skip
-        #self.skipped_positions = [1,2,6,7,12,15,18,20,26,27,29,30,31,33]
-        self.skipped_positions = []
-#       self.non_skipped_positions = sorted(list(set(range(len(self.positions))) - set(self.skipped_positions)))
 
         self.run_timer = Qt.QTimer(self)
         self.run_timer.timeout.connect(self.execute_run)
@@ -155,8 +152,6 @@ class AllylValidation(Qt.QObject):
         for pos_set_name in self.position_set_names:
             pos_set = self.position_sets[pos_set_name]
             for pos_idx, pos in enumerate(pos_set):
-                if pos_idx in self.skipped_positions:
-                    continue
                 self.scope.stage.position = pos
 
                 self.scope.tl.lamp.intensity = 69
@@ -165,7 +160,7 @@ class AllylValidation(Qt.QObject):
                 # More binning gives higher contrast, meaning less light needed
                 self.scope.camera.binning = '4x4'
                 time.sleep(0.001)
-                self.scope.camera.autofocus.new_autofocus_continuous_move(22.242692, 25, 0.2, max_workers=2)
+                self.scope.camera.autofocus.new_autofocus_continuous_move(22.242692, 23.5, 0.2, max_workers=2)
                 coarse_z = self.scope.stage.z
                 self.scope.camera.binning = '1x1'
                 self.scope.tl.lamp.intensity = 117
@@ -175,12 +170,12 @@ class AllylValidation(Qt.QObject):
                 self.scope.tl.lamp.enabled = False
 
                 if pos_set_name == 'dark':
-                    im_names = 'bf0','greenyellow','cyan','uv','bf1'
-                    self.scope.camera.acquisition_sequencer.new_sequence(GreenYellow=255, Cyan=255, UV=255)
+                    im_names = 'bf0','green_yellow','cyan','uv','bf1'
+                    self.scope.camera.acquisition_sequencer.new_sequence(green_yellow=255, cyan=255, uv=255)
                     self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=117)
-                    self.scope.camera.acquisition_sequencer.add_step(exposure_ms=20, tl_enable=False, GreenYellow=True)
-                    self.scope.camera.acquisition_sequencer.add_step(exposure_ms=20, tl_enable=False, Cyan=True)
-                    self.scope.camera.acquisition_sequencer.add_step(exposure_ms=20, tl_enable=False, UV=True)
+                    self.scope.camera.acquisition_sequencer.add_step(exposure_ms=20, tl_enable=False, green_yellow=True)
+                    self.scope.camera.acquisition_sequencer.add_step(exposure_ms=20, tl_enable=False, cyan=True)
+                    self.scope.camera.acquisition_sequencer.add_step(exposure_ms=20, tl_enable=False, uv=True)
                     self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=117)
                 else:
                     im_names = 'bf',
@@ -214,3 +209,15 @@ class AllylValidation(Qt.QObject):
 
         time_to_next = max(0, self.interval - (time.time() - self.run_ts))
         self.run_timer.start(time_to_next * 1000)
+
+    def plot_acquisition_z_positions(self):
+        for pos_set_name in self.position_set_names:
+            pos_set = self.position_sets[pos_set_name]
+            for pos_idx, pos in enumerate(pos_set):
+                csv_dpath = self.dpath / '{}_{:04}'.format(pos_set_name, pos_idx)
+                csv_fpath = csv_dpath / '{}__{}_{:04}_z_positions.csv'.format(self.name, pos_set_name, pos_idx)
+                with csv_fpath.open('r') as f:
+                    csv_reader = csv.DictReader(f)
+                    zs = [row['coarse_z'] for row in csv_reader]
+                plt.plot(numpy.linspace(0, len(zs), len(zs)), zs, label='{} well {}'.format(pos_set_name, pos_idx))
+        plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
