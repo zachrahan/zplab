@@ -24,6 +24,7 @@
 		<F N="peg_test.py"/>
 		<F N="age1_test.py"/>
 		<F N="allyl_validation.py"/>
+		<F N="hw1360_development.py"/>
 	</Files>
 	<Config
 		Name="Debug"
