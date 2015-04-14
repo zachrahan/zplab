@@ -36,13 +36,13 @@ import time
 
 random.seed()
 
-class AllylValidation(Qt.QObject):
+class HW1360Development(Qt.QObject):
     def __init__(self, scope, parent=None):
         super().__init__(parent)
         self.scope = scope
-        self.dpath = Path('/mnt/scopearray/Zhang_William/allyl_validation')
-        self.name = 'allyl_validation'
-        self.interval = 60 * 60
+        self.dpath = Path('/mnt/scopearray/Earley_Brian/hw1360_development')
+        self.name = 'hw1360_development'
+        self.interval = 2 * 60 * 60
         self.positions_fpath = self.dpath / (self.name + '__position_set_names_and_coords.json')
         self.checkpoint_fpath = self.dpath / (self.name + '__checkpoint.json')
         self.checkpoint_swaptemp_fpath = self.dpath / (self.name + '__checkpoint.json._')
@@ -146,7 +146,7 @@ class AllylValidation(Qt.QObject):
         self.write_checkpoint()
         self.scope.il.shutter_open = True
         self.scope.tl.shutter_open = True
-        self.scope.nosepiece.magnification = 5
+        self.scope.nosepiece.magnification = 10
         self.scope.camera.pixel_readout_rate = '280 MHz'
         self.scope.camera.shutter_mode = 'Rolling'
         self.scope.camera.sensor_gain = '16-bit (low noise & high well capacity)'
@@ -161,27 +161,19 @@ class AllylValidation(Qt.QObject):
                 # More binning gives higher contrast, meaning less light needed
                 self.scope.camera.binning = '4x4'
                 time.sleep(0.001)
-                self.scope.camera.autofocus.new_autofocus_continuous_move(22.242692, 23.5, 0.2, max_workers=2)
+                self.scope.camera.autofocus.new_autofocus_continuous_move(pos[2]-0.5, min(pos[2]+0.5, 24.311678), 0.2, max_workers=2)
                 coarse_z = self.scope.stage.z
                 self.scope.camera.binning = '1x1'
                 self.scope.tl.lamp.intensity = 117
                 time.sleep(0.001)
-                self.scope.camera.autofocus.new_autofocus_continuous_move(coarse_z-0.15, min(coarse_z+0.15, 25), 0.1, metric='high pass + brenner', max_workers=2)
+                self.scope.camera.autofocus.new_autofocus_continuous_move(coarse_z-0.15, min(coarse_z+0.15, 24.311678), 0.1, metric='high pass + brenner', max_workers=2)
                 fine_z = self.scope.stage.z
                 self.scope.tl.lamp.enabled = False
 
-                if pos_set_name == 'dark':
-                    im_names = 'bf0','green_yellow','cyan','uv','bf1'
-                    self.scope.camera.acquisition_sequencer.new_sequence(green_yellow=255, cyan=255, uv=255)
-                    self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=117)
-                    self.scope.camera.acquisition_sequencer.add_step(exposure_ms=20, tl_enable=False, green_yellow=True)
-                    self.scope.camera.acquisition_sequencer.add_step(exposure_ms=20, tl_enable=False, cyan=True)
-                    self.scope.camera.acquisition_sequencer.add_step(exposure_ms=20, tl_enable=False, uv=True)
-                    self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=117)
-                else:
-                    im_names = 'bf',
-                    self.scope.camera.acquisition_sequencer.new_sequence()
-                    self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=117)
+                im_names = 'bf','gfp'
+                self.scope.camera.acquisition_sequencer.new_sequence(cyan=255)
+                self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=117)
+                self.scope.camera.acquisition_sequencer.add_step(exposure_ms=200, tl_enable=False, cyan=True)
 
                 ims = dict(zip( im_names,
                                 list(zip(self.scope.camera.acquisition_sequencer.run(), self.scope.camera.acquisition_sequencer.latest_timestamps))
@@ -221,4 +213,4 @@ class AllylValidation(Qt.QObject):
                     csv_reader = csv.DictReader(f)
                     zs = [row['coarse_z'] for row in csv_reader]
                 plt.plot(numpy.linspace(0, len(zs), len(zs)), zs, label='{} well {}'.format(pos_set_name, pos_idx))
-        plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+        return plt.legend(bbox_to_anchor=(1, 1), loc=2, borderaxespad=0)
