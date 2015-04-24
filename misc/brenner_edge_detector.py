@@ -1,3 +1,5 @@
+import numpy
+
 def _brenner(im, direction):
     if direction == 'h':
         xo = 2

@@ -1,6 +1,7 @@
 import numpy
 from PyQt5 import Qt
 from ris_widget.ris_widget import RisWidget
+from ris_widget.image_scene import ImageOverlayItem
 import freeimage
 import sys
 
@@ -10,6 +11,7 @@ if sys.platform == 'darwin':
 elif sys.platform == 'linux':
 #   im = freeimage.read('/home/ehvatum/2048.png')
     im = freeimage.read('/mnt/scopearray/pharyngeal_pumping_max_fps/pharyngeal_pumping_max_fps_010_0.274411275.png')
+    oim = freeimage.read('/mnt/scopearray/Zhang_William/allyl_validation/light_0002/allyl_validation__light_0002_0008_bf.png')
 elif sys.platform == 'win32':
     im = freeimage.read('C:/zplrepo/ris_widget/top_left_g.png')
 
@@ -18,6 +20,17 @@ app = Qt.QApplication(argv)
 rw = RisWidget()
 rw.show()
 rw.image_data = im
+#ioi = ImageOverlayItem(rw.image_scene.image_item, oim)
+#
+#hide_show_ioi_dlg = Qt.QWidget()
+#hide_show_ioi_dlg.setLayout(Qt.QHBoxLayout())
+#hide_show_ioi_dlg.show_button = Qt.QPushButton('show')
+#hide_show_ioi_dlg.layout().addWidget(hide_show_ioi_dlg.show_button)
+#hide_show_ioi_dlg.show_button.clicked.connect(ioi.show)
+#hide_show_ioi_dlg.hide_button = Qt.QPushButton('hide')
+#hide_show_ioi_dlg.layout().addWidget(hide_show_ioi_dlg.hide_button)
+#hide_show_ioi_dlg.hide_button.clicked.connect(ioi.hide)
+#hide_show_ioi_dlg.show()
 
 #form_scene = rw.image_scene
 #form_scene = rw.image_view_overlay_scene
