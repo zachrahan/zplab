@@ -42,18 +42,18 @@ class HW1360Clear(timecourse_handler.TimepointHandler):
 
     def autofocus(self):
         pos = self.scope.stage.position
-        self.scope.tl.lamp.intensity = 69
+        self.scope.tl.lamp.intensity = 67
         self.scope.tl.lamp.enabled = True
         self.scope.camera.exposure_time = 10
         # More binning gives higher contrast, meaning less light needed
         self.scope.camera.binning = '4x4'
         time.sleep(0.001)
-        self.scope.camera.autofocus.new_autofocus_continuous_move(pos[2]-0.5, min(pos[2]+0.5, 24.311678), 0.2, metric='high pass + brenner', max_workers=2)
+        self.scope.camera.autofocus.new_autofocus_continuous_move(pos[2]-0.5, min(pos[2]+0.5, 24.1), 0.2, metric='high pass + brenner', max_workers=2)
         coarse_z = self.scope.stage.z
         self.scope.camera.binning = '1x1'
-        self.scope.tl.lamp.intensity = 117
+        self.scope.tl.lamp.intensity = 92
         time.sleep(0.001)
-        self.scope.camera.autofocus.new_autofocus_continuous_move(coarse_z-0.15, min(coarse_z+0.15, 24.311678), 0.1, metric='high pass + brenner', max_workers=2)
+        self.scope.camera.autofocus.new_autofocus_continuous_move(coarse_z-0.15, min(coarse_z+0.15, 24.94), 0.1, metric='high pass + brenner', max_workers=2)
         self.scope.tl.lamp.enabled = False
         fine_z = self.scope.stage.z
         return coarse_z, fine_z
@@ -62,7 +62,7 @@ class HW1360Clear(timecourse_handler.TimepointHandler):
         coarse_z, fine_z = self.autofocus()
 
         self.scope.camera.acquisition_sequencer.new_sequence(cyan=255)
-        self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=117)
+        self.scope.camera.acquisition_sequencer.add_step(exposure_ms=10, tl_enable=True, tl_intensity=92)
         self.scope.camera.acquisition_sequencer.add_step(exposure_ms=200, tl_enable=False, cyan=True)
 
         im_names = ['bf.png', 'gfp.png']
