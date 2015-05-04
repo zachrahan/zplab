@@ -26,6 +26,7 @@
 		<F N="allyl_validation.py"/>
 		<F N="hw1360_development.py"/>
 		<F N="hw1360_development_ng.py"/>
+		<F N="hw1360_clear.py"/>
 	</Files>
 	<Config
 		Name="Debug"
