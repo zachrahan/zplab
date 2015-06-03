@@ -175,6 +175,7 @@ class ExtensibleVideoMaker(Qt.QMainWindow):
             if not self.update_scene_for_current_frame():
                 self.started = False
                 self.operation_completed.emit(True)
+                return
             self.gs.invalidate()
             if self._write_output:
                 self._buffer[:] = 0
