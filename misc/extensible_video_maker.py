@@ -22,7 +22,6 @@
 #
 # Authors: Erik Hvatum <ice.rikh@gmail.com>
 
-import datetime
 import freeimage
 from moviepy.video.io.ffmpeg_writer import FFMPEG_VideoWriter
 import numpy
@@ -36,7 +35,7 @@ class ControlPane(Qt.QWidget):
         # Note that uic.loadUiType(..) returns a tuple containing two class types (the form class and the Qt base
         # class).  The line below instantiates the form class.  It is assumed that the .ui file resides in the same
         # directory as this .py file.
-        self.ui = uic.loadUiType(str(Path(__file__).parent / 'video_maker_base.ui'))[0]()
+        self.ui = uic.loadUiType(str(Path(__file__).parent / 'extensible_video_maker.ui'))[0]()
         self.ui.setupUi(self)
         self.video_maker = video_maker
         video_maker.frame_index_changed.connect(lambda idx: self.ui.frame_index_widget.display(idx))
@@ -50,8 +49,8 @@ class ControlPane(Qt.QWidget):
         video_maker.operation_completed.connect(self.on_operation_completed)
 
     def on_operation_completed(self, successful):
-        self.ui.completed_successfully_label.setVisible(True)
-        self.ui.completed_successfully_label.setText('Completed Successfully' if successful else '<font color="red">Failed</font>')
+        self.ui.status_label.setVisible(True)
+        self.ui.status_label.setText('Completed Successfully' if successful else '<font color="red">Failed</font>')
 
     def on_start_stop(self):
         # Do stuff in response to GUI manipulation
@@ -75,7 +74,7 @@ class ControlPane(Qt.QWidget):
 
     def on_write_output_toggled(self, checked):
         # GUI change
-        self.lf2vm.write_output = checked
+        self.video_maker.write_output = checked
 
     def on_write_output_changed(self, write_output):
         # Property change
@@ -103,7 +102,6 @@ class ExtensibleVideoMaker(Qt.QMainWindow):
                  GVClass=GV):
         super().__init__(parent)
         self.ffmpeg_writer = None
-        self.update_scene_for_current_frame_callback = update_scene_for_current_frame_callback
         self.video_out_fpath = Path(video_out_fpath)
         self.scale_factor = scale_factor
         self.video_fps = video_fps
@@ -113,6 +111,7 @@ class ExtensibleVideoMaker(Qt.QMainWindow):
         self._displayed_frame_idx = -1
         self.setWindowTitle('Video Maker')
         self.gs = GSClass(self)
+        self.gs.setBackgroundBrush(Qt.QBrush(Qt.QColor(Qt.Qt.black)))
         self.populate_scene()
         self.gv = GVClass(self.gs)
         self.setCentralWidget(self.gv)
@@ -160,7 +159,7 @@ class ExtensibleVideoMaker(Qt.QMainWindow):
             self._buffer = numpy.empty((desired_size[1], desired_size[0], 3), dtype=numpy.uint8)
             self._qbuffer = Qt.QImage(sip.voidptr(self._buffer.ctypes.data), desired_size[0], desired_size[1], Qt.QImage.Format_RGB888)
 #           self.log_file = open(str(self._dpath / 'video.log'), 'w')
-            self.ffmpeg_writer = FFMPEG_VideoWriter(str(self._fpath), desired_size, fps=self.video_fps, codec='mpeg4', preset='veryslow', bitrate='15000k')#, logfile=self.log_file)
+            self.ffmpeg_writer = FFMPEG_VideoWriter(str(self.video_out_fpath), desired_size, fps=self.video_fps, codec='mpeg4', preset='veryslow', bitrate='15000k')#, logfile=self.log_file)
         self._displayed_frame_idx = -1
         self.frame_index_changed.emit(self._displayed_frame_idx)
 
@@ -243,24 +242,3 @@ class ExtensibleVideoMaker(Qt.QMainWindow):
     def frame_index(self):
         """Index of last frame rendered since started."""
         return self._displayed_frame_idx
-
-class CallbackingVideoMaker(ExtensibleVideoMaker):
-    def __init__(self,
-                 video_out_fpath,
-                 scale_factor=0.5,
-                 video_fps=10,
-                 populate_scene_callback,
-                 update_scene_for_current_frame_callback,
-                 parent=None,
-                 ControlPaneClass=ControlPane,
-                 GSClass=Qt.QGraphicsScene,
-                 GVClass=GV):
-        self.populate_scene_callback = populate_scene_callback
-        self.update_scene_for_current_frame_callback = update_scene_for_current_frame_callback
-        super().__init__(video_out_fpath, scale_factor, video_fps, parent, ControlPaneClass, GSClass, GVClass)
-
-    def populate_scene(self):
-        self.populate_scene_callback(self)
-
-    def update_scene_for_current_frame(self):
-        return self.update_scene_for_current_frame_callback(self)
