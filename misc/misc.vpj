@@ -28,6 +28,8 @@
 			<F N="collect_stage_movement_data.py"/>
 			<F N="experiment_video_maker.py"/>
 			<F N="experiment_video_maker.ui"/>
+			<F N="extensible_video_maker.py"/>
+			<F N="extensible_video_maker.ui"/>
 			<F N="fluorescence_trained_brightfield_worm_finder.py"/>
 			<F N="generate_ctypes.py"/>
 			<F N="gogostagegogoacquiregogogonotadrillgogogo.py"/>
