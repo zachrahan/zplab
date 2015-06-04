@@ -100,9 +100,6 @@ if __name__ == "__main__":
         raise ValueError('Please supply experiment title as the second parameter.')
     if len(sys.argv) < 4:
         raise ValueError('Please supply output video filename as the third parameter.')
-    ExtensibleVideoMakerSample.EXPERIMENT_DPATH = Path(sys.argv[1])
-    if not ExtensibleVideoMakerSample.EXPERIMENT_DPATH.exists():
-        raise ValueError('Specified experiment directory path does not exist or is not accessible.')
     vm = ExtensibleVideoMakerSample(experiment_dpath=sys.argv[1], experiment_title=sys.argv[2], video_out_fpath=sys.argv[3])
     vm.setAttribute(Qt.Qt.WA_DeleteOnClose)
     vm.show()

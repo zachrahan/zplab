@@ -136,9 +136,11 @@ class ExtensibleVideoMaker(Qt.QMainWindow):
         return numpy.dstack((imn, imn, imn))
 
     @classmethod
-    def read_image_file_into_qpixmap_item(cls, im_fpath, qpixmap_item):
+    def read_image_file_into_qpixmap_item(cls, im_fpath, qpixmap_item, required_size=None):
         im = cls.normalize_intensity(freeimage.read(str(im_fpath)))
         qim = Qt.QImage(sip.voidptr(im.ctypes.data), im.shape[0], im.shape[1], Qt.QImage.Format_RGB888)
+        if required_size is not None and qim.size() != required_size:
+            raise ValueError('Expected {}x{} image, but "{}" is {}x{}.'.format(required_size.width(), required_size.height(), str(im_fpath), qim.size().width(), qim.size().height()))
         qpixmap_item.setPixmap(Qt.QPixmap(qim))
 
     def populate_scene(self):
@@ -151,13 +153,28 @@ class ExtensibleVideoMaker(Qt.QMainWindow):
             scene_rect = self.gs.sceneRect()
             desired_size = numpy.array((scene_rect.width(), scene_rect.height()), dtype=int)
             desired_size *= self.scale_factor
-            # Odd value width or height causes problems for some codecs
-            if desired_size[0] % 2:
-                desired_size[0] += 1
-            if desired_size[1] % 2:
-                desired_size[1] += 1
+#           # Non-divisble-by-two value width or height causes problems for some codecs
+#           if desired_size[0] % 2:
+#               desired_size[0] += 1
+#           if desired_size[1] % 2:
+#               desired_size[1] += 1
+            desired_size[0] += desired_size[0] % 8
+            desired_size[1] += desired_size[1] % 8
+#           # 24-bit RGB QImage rows are padded to 32-bit chunks, which we must match
+#           row_stride = desired_size[0] * 3
+#           row_stride += row_stride % 4
+#           self._buffer = numpy.ndarray(
+#               shape=(desired_size[1], desired_size[0], 3),
+#               strides=(row_stride, 3, 1),
+#               dtype=numpy.uint8)
+            # Using ARGB32 and trashing the A component when feeding ffmpeg works but is slow.  At some point, I'm going to figure out how to make Numpy not fuck up padding.  It
+            # just won't allow padded rows.  "ValueError: strides is incompatible with shape of requested array and size of buffer".  Take out the padding,
+            # and the explicitly specified striding works.  Fucking Numpy, come on.  It just won't allow padding.  But, I KNOW IT FUCKING CAN.  There IS a way;
+            # Numpy is just being an ass.  Googling produces lots of information about the numpy.pad function, which is not goddamned helpful.
             self._buffer = numpy.empty((desired_size[1], desired_size[0], 3), dtype=numpy.uint8)
             self._qbuffer = Qt.QImage(sip.voidptr(self._buffer.ctypes.data), desired_size[0], desired_size[1], Qt.QImage.Format_RGB888)
+#           self._buffer = numpy.empty((desired_size[1], desired_size[0], 4), dtype=numpy.uint8)
+#           self._qbuffer = Qt.QImage(sip.voidptr(self._buffer.ctypes.data), desired_size[0], desired_size[1], Qt.QImage.Format_ARGB32)
 #           self.log_file = open(str(self._dpath / 'video.log'), 'w')
             self.ffmpeg_writer = FFMPEG_VideoWriter(str(self.video_out_fpath), desired_size, fps=self.video_fps, codec='mpeg4', preset='veryslow', bitrate='15000k')#, logfile=self.log_file)
         self._displayed_frame_idx = -1
@@ -184,6 +201,7 @@ class ExtensibleVideoMaker(Qt.QMainWindow):
                 self.gs.render(qpainter)
                 qpainter.end()
                 self.ffmpeg_writer.write_frame(self._buffer)
+#               self.ffmpeg_writer.write_frame(self._buffer[...,1:3])
             self._displayed_frame_idx += 1
             self.frame_index_changed.emit(self._displayed_frame_idx)
             self._advance_frame.emit()
