@@ -1,7 +1,8 @@
+#!/usr/bin/env python
+
 import numpy
 from PyQt5 import Qt
 from ris_widget.ris_widget import RisWidget
-from ris_widget.image_scene import ImageOverlayItem
 import freeimage
 import sys
 
@@ -19,7 +20,7 @@ argv = sys.argv
 app = Qt.QApplication(argv)
 rw = RisWidget()
 rw.show()
-rw.image_data = im
+rw.main_scene.image_stack.append_image(im)
 #ioi = ImageOverlayItem(rw.image_scene.image_item, oim)
 #
 #hide_show_ioi_dlg = Qt.QWidget()
