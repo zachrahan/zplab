@@ -22,31 +22,38 @@
 #
 # Authors: Zach Pincus
 
-from ..util import property_device
+import json
+import numpy
 
-class TL_Lamp(property_device.PropertyDevice):
-    def __init__(self, iotool, property_server=None, property_prefix=''):
-        super().__init__(property_server, property_prefix)
-        self._iotool = iotool
-        self.set_enabled(False)
-        self.set_intensity(255)
+class Encoder(json.JSONEncoder):
+    """JSON encoder that is smart about converting iterators and numpy arrays to
+    lists, and converting numpy scalars to python scalars.
 
-    def set_enabled(self, enabled):
-        """Turn lamp on or off.
-        """
-        self._enabled = enabled
-        self._iotool.execute(*self._iotool.commands.transmitted_lamp(enabled=enabled))
-        self._update_property('enabled', enabled)
+    Caution: it is absurd to send large numpy arrays over the wire this way. Use
+    the transfer_ism_buffer tools to send large data.
+    """
+    def default(self, o):
+        try:
+            return super().default(o)
+        except TypeError as x:
+            if isinstance(o, numpy.generic):
+                item = o.item()
+                if isinstance(item, numpy.generic):
+                    raise x
+                else:
+                    return item
+            try:
+                return list(o)
+            except:
+                raise x
 
-    def get_enabled(self):
-        return self._enabled
 
-    def set_intensity(self, value):
-        """Set intensity to any value in the range [0, 255] for min to max.
-        """
-        self._intensity = value
-        self._iotool.execute(*self._iotool.commands.transmitted_lamp(intensity=value))
-        self._update_property('intensity', value)
+COMPACT_ENCODER = Encoder(separators=(',', ':'))
+READABLE_ENCODER = Encoder(indent=4, sort_keys=True)
 
-    def get_intensity(self):
-        return self._intensity
+def encode_compact_to_bytes(data):
+    return COMPACT_ENCODER.encode(data).encode('utf8')
+
+def encode_legible_to_file(data, f):
+    for chunk in READABLE_ENCODER.iterencode(data):
+        f.write(chunk)

@@ -33,6 +33,7 @@ def main(argv):
     parser = argparse.ArgumentParser(description='microscope job control')
     parser.add_argument('-d', '--debug', action='store_true', help='show full stack traces on error')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
+    subparsers.required = True
     parser_start = subparsers.add_parser('start', help='start the job runner, if not running')
     parser_start.add_argument('-v', '--verbose', action='store_true', help='log extra debug information')
     parser_stop = subparsers.add_parser('stop', help='stop the job runner, if running')
@@ -59,7 +60,10 @@ def main(argv):
     parser_resume.add_argument(metavar='py_file', dest='exec_file', help='python script to resume')
     parser_resume.add_argument('-d', '--delay', metavar='DELAY', type=parse_delay, dest='next_run_time',
         help='time to delay before next running the job (h, h:m, or h:m:s). If not specified, use the currently scheduled next-run time')
-
+    parser_suspend_all = subparsers.add_parser('suspend_all',
+        help='suspend all queued jobs (do not remove jobs from queue, but do not run again until it is resumed)')
+    parser_resume_all = subparsers.add_parser('resume_all',
+        help='resume all suspended jobs (except those not running due to "error" status)')
     args = parser.parse_args()
 
     try:
@@ -71,15 +75,16 @@ def main(argv):
                 runner.terminate()
             else:
                 runner.stop()
-        elif args.command:
-            arg_dict = dict(vars(args))
-            del arg_dict['command']
-            del arg_dict['debug']
-            func = getattr(runner, arg_dict.pop('func'))
-            func(**arg_dict)
         else:
-            print('No command specified!')
-            parser.print_help()
+            arg_dict = dict(vars(args))
+            del arg_dict['debug']
+            if 'func' in arg_dict:
+                func_name = arg_dict.pop('func')
+                del arg_dict['command']
+            else:
+                func_name = arg_dict.pop('command')
+            func = getattr(runner, func_name)
+            func(**arg_dict)
     except Exception as e:
         if args.debug:
             traceback.print_exc(file=sys.stderr)

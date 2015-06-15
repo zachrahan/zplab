@@ -129,8 +129,8 @@ class Camera(property_device.PropertyDevice):
         self._add_andor_enum('FanSpeed', 'fan', readonly=True)
         self._add_andor_enum('IOSelector', 'io_selector')
         self._add_andor_enum('PixelEncoding', 'pixel_encoding', readonly=True)
-        self._add_andor_enum('PixelReadoutRate', 'pixel_readout_rate')
-        self._gain_enum = self._add_andor_enum('SimplePreAmpGainControl', 'sensor_gain', custom_setter=True) # setter defined below uses _gain_enum
+        self._add_andor_enum('PixelReadoutRate', 'readout_rate')
+        self._gain_enum = self._add_andor_enum('SimplePreAmpGainControl', 'sensor_gain') # need to stash _gain_enum for custom setter defined below
         self._add_andor_enum('ElectronicShutteringMode', 'shutter_mode')
         self._add_andor_enum('TriggerMode', 'trigger_mode')
         # TODO: figure out why TemperatureStatus never updates with a callback...
@@ -183,7 +183,6 @@ class Camera(property_device.PropertyDevice):
         self._update_property('live_mode', False)
         self._latest_live_data = None
         self._latest_timestamp = None
-        self._state_stack = []
 
     def _timer_update_temp(self):
         while self._timer_running:
@@ -217,11 +216,12 @@ class Camera(property_device.PropertyDevice):
         setattr(self, 'get_'+py_name, enum.get_value)
         self._add_property_data(at_feature, 'Enum', readonly, py_name, enum.get_value)
 
-        if not readonly and not custom_setter:
+        setter_name = 'set_'+py_name
+        if not readonly and not hasattr(self, setter_name):
             def setter(value):
                 with self._live_guarded():
                     enum.set_value(value)
-            setattr(self, 'set_'+py_name, setter)
+            setattr(self, setter_name, setter)
         return enum
 
     def _add_andor_property(self, at_feature, py_name, at_type, readonly=False):
@@ -290,12 +290,6 @@ class Camera(property_device.PropertyDevice):
             if live:
                 self.set_live_mode(True)
 
-    def _set_state(self, **state):
-        """Set a number of camera parameters at once using keyword arguments, e.g.
-        camera._set_state(exposure_time=50, frame_rate=10)"""
-        for k, v in state.items():
-            getattr(self, 'set_'+k)(v)
-
     def push_state(self, **state):
         """Set a number of camera parameters at once using keyword arguments, while
         saving the old values of those parameters. pop_state() will restore those
@@ -319,15 +313,6 @@ class Camera(property_device.PropertyDevice):
         if overlap is not None and lowlevel.IsWritable('Overlap'):
             self.set_overlap_enabled(overlap)
         self._set_state(**old_state)
-
-    @contextlib.contextmanager
-    def _pushed_state(self, **state):
-        """context manager to push and pop state around a with-block"""
-        self.push_state(**state)
-        try:
-            yield
-        finally:
-            self.pop_state()
 
     def get_readout_time(self):
         """Return sensor readout time in ms"""
@@ -433,7 +418,7 @@ class Camera(property_device.PropertyDevice):
 
     def get_safe_image_count_to_queue(self):
         """Return the maximum number of images that can be safely left on the camera head
-        before overflowing its limited memory. 
+        before overflowing its limited memory.
 
         Uses the current aoi and pixel-depth settings."""
         image_size_mb = self.get_image_byte_count() / 1024**2
@@ -480,7 +465,7 @@ class Camera(property_device.PropertyDevice):
         if self._live_mode:
             return
         lowlevel.Flush()
-        self.push_state(overlap_enabled=False, cycle_mode='Continuous', trigger_mode='Software', pixel_readout_rate='280 MHz')
+        self.push_state(overlap_enabled=False, cycle_mode='Continuous', trigger_mode='Software', readout_rate='280 MHz')
         trigger_interval = self._calculate_live_trigger_interval()
         namebase = 'live@-'+str(time.time())
         buffer_maker = BufferFactory(namebase, frame_count=1, cycle=True)
@@ -528,14 +513,14 @@ class Camera(property_device.PropertyDevice):
             return 0
         return 1/numpy.mean(self._live_reader.latest_intervals)
 
-    def acquire_image(self):
+    def acquire_image(self, **camera_params):
         """Acquire a single image from the camera, with its current settings.
         NB: This is a SLOW way to acquire multiple images. In that case,
         use the start_image_sequence_acquisition(), next_image(), and
         end_image_sequence_acquisition() functions, with software/internal/external
         triggering as appropriate."""
         read_timeout_ms = self.get_exposure_time() + 1000 # exposure time + 1 second
-        self.start_image_sequence_acquisition(frame_count=1)
+        self.start_image_sequence_acquisition(frame_count=1, **camera_params)
         name = self.next_image(read_timeout_ms)
         self.end_image_sequence_acquisition()
         return name

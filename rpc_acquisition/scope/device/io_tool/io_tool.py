@@ -36,16 +36,9 @@ class IOTool:
     case the microcontroller is used to drive and time TTL/PWM signals to various
     microscope hardware."""
     def __init__(self):
-        config = scope_configuration.get_config()
-        self._serial_port = smart_serial.Serial(config.IOTool.SERIAL_PORT, timeout=1)
+        self._config = scope_configuration.get_config()
         try:
-            self._serial_port.write(b'!\nreset\n') # force the IOTool box to reset to known-good state
-            time.sleep(0.5) # give it time to reboot
-            self._serial_port = smart_serial.Serial(config.IOTool.SERIAL_PORT, timeout=1)
-            self._serial_port.write(_ECHO_OFF + b'\n') # disable echo
-            echo_reply = self._serial_port.read_until(b'>')[:-1]
-            assert echo_reply == _ECHO_OFF + b'\r\n' # read back echo of above (no further echoes will come)
-            self._assert_empty_buffer()
+            self.reset()
         except (smart_serial.SerialTimeout, RuntimeError):
             # explicitly clobber traceback from SerialTimeout exception
             raise smart_serial.SerialException('Could not communicate with IOTool device -- is it attached?')
@@ -53,14 +46,27 @@ class IOTool:
         self._serial_port.setTimeout(None) # change to infinite time-out once initialized and in known-good state,
         # so that waiting for IOTool replies won't cause timeouts
 
+    def reset(self):
+        """Attempt to reset the IOTool device to a known-good state."""
+        if hasattr(self, '_serial_port'):
+            del self._serial_port
+        self._serial_port = smart_serial.Serial(self._config.IOTool.SERIAL_PORT, timeout=1)
+        self._serial_port.write(b'!\nreset\n')
+        time.sleep(0.5) # give it time to reboot
+        self._serial_port = smart_serial.Serial(self._config.IOTool.SERIAL_PORT, timeout=1)
+        self._serial_port.write(_ECHO_OFF + b'\n') # disable echo
+        echo_reply = self._wait_for_ready_prompt()
+        assert echo_reply == _ECHO_OFF + b'\r\n' # read back echo of above (no further echoes will come)
+        self._assert_empty_buffer()
+
     def execute(self, *commands):
         """Run a series of commands on the IOTool microcontroller."""
         self._assert_empty_buffer()
         responses = []
         for command in commands:
-            self._serial_port.write(bytes(command+'\n', encoding='ascii'))
-            response = self._serial_port.read_until(b'>')[:-1] # see if there was any output
-            responses.append(str(response, encoding='ascii') if response else None)
+            self._serial_port.write((command+'\n').encode('ascii'))
+            response = self.wait_until_done() # see if there was any output
+            responses.append(response if response else None)
         if len(commands) == 1:
             responses = responses[0]
         self._assert_empty_buffer()
@@ -70,7 +76,7 @@ class IOTool:
         """Verify that there is no IOTool output that should have been read previously."""
         buffered = self._serial_port.read_all_buffered()
         if buffered:
-            raise RuntimeError('Unexpected IOTool output: {}'.format(str(buffered, encoding='ascii')))
+            raise RuntimeError('Unexpected IOTool output: {}'.format(buffered.decode('ascii')))
 
     def store_program(self, *commands):
         """Send a list of commands to IOTool to run as a program, but do not
@@ -101,27 +107,31 @@ class IOTool:
         the host computer, this function can be used to send that signal."""
         self._serial_port.write(char.encode('ascii'))
 
-    def _wait_for_program_done(self):
+    def _wait_for_ready_prompt(self):
         return self._serial_port.read_until(b'>')[:-1]
 
-    def wait_for_program_done(self):
-        """Wait for a program started with start_program() to terminate, and
-        return any serial data produced by that program. A keyboard interrupt
-        while waiting will force-terminate the program on the IOTool device, via
-        stop_program()"""
+    def wait_until_done(self):
+        """Wait for a command run via execute() or a program started with
+        start_program() to terminate, and return any serial data produced by
+        that program. A keyboard interrupt while waiting will force-terminate
+        the program/command on the IOTool device, via stop()"""
         try:
-            return self._wait_for_program_done()
+            return self._wait_for_ready_prompt().decode('ascii')
         except KeyboardInterrupt as k:
-            self.stop_program()
+            self.stop()
             raise k
 
-    def stop_program(self):
-        """Force-terminate a running program on the IOTool device, and wait to
-        confirm that it actually stops."""
-        self.stop()
-        self._wait_for_program_done()
-
     def stop(self):
-        """Force-terminate a running program on the IOTool device."""
-        self._serial_port.write(b'!')
-
+        """Force-terminate a running program or single-command execution on the
+        IOTool device, and wait to confirm that it actually stops."""
+        # if a command is running, the below will generate two ready prompts:
+        # one from breaking out with '!' and one from the newline.
+        # If no command is running, this will generate an error due to the
+        # out-of-place '!', and then a ready prompt.
+        self._serial_port.write(b'!\n')
+        self._wait_for_ready_prompt()
+        # wait a bit to see if a second prompt is going to appear,
+        # and then clear the buffer. If
+        time.sleep(0.1)
+        buffered = self._serial_port.read_all_buffered()
+        assert buffered in {b'', b'>'} # we should have either gotten nothing or the second ready prompt

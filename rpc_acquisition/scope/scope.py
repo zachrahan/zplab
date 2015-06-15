@@ -51,7 +51,8 @@ class Scope(message_device.AsyncDeviceNamespace):
     def __init__(self, property_server=None):
         super().__init__()
 
-        config = scope_configuration.get_config()
+        self.get_configuration = scope_configuration.get_config
+        config = self.get_configuration()
 
         if property_server:
             self.rebroadcast_properties = property_server.rebroadcast_properties
@@ -101,7 +102,7 @@ class Scope(message_device.AsyncDeviceNamespace):
             _log_exception('Could not connect to camera:', e)
 
         if has_camera and has_iotool and has_spectra_x:
-            self.camera.acquisition_sequencer = acquisition_sequencer.AcquisitionSequencer(self.camera, self.iotool, self.il.spectra_x)
+            self.camera.acquisition_sequencer = acquisition_sequencer.AcquisitionSequencer(self)
 
         if has_scope and has_camera:
             self.camera.autofocus = autofocus.Autofocus(self.camera, self.stage)

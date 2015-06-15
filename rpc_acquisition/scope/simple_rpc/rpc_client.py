@@ -24,6 +24,9 @@
 
 import zmq
 import collections
+import contextlib
+
+from ..util import json_encode
 
 class RPCClient:
     """Client for simple remote procedure calls. RPC calls can be dispatched
@@ -101,10 +104,10 @@ class RPCClient:
         client_namespaces = {}
         for parents, function_descriptions in server_namespaces.items():
             # make a custom class to have the right names and more importantly to receive the namespace-specific properties
-            class ClientNamespace:
+            class NewNamespace(RPCClient.ClientNamespace):
                 pass
-            ClientNamespace.__name__ = parents[-1] if parents else 'root'
-            ClientNamespace.__qualname__ = '.'.join(parents) if parents else 'root'
+            NewNamespace.__name__ = parents[-1] if parents else 'root'
+            NewNamespace.__qualname__ = '.'.join(parents) if parents else 'root'
             # create functions and gather property accessors
             accessors = collections.defaultdict(RPCClient._accessor_pair)
             for name, qualname, doc, argspec in function_descriptions:
@@ -119,10 +122,10 @@ class RPCClient:
                 elif name.startswith('set_'):
                     accessors[name[4:]].setter = client_func
                     name = '_'+name
-                setattr(ClientNamespace, name, client_func)
+                setattr(NewNamespace, name, client_func)
             for name, accessor_pair in accessors.items():
-                setattr(ClientNamespace, name, accessor_pair.get_property())
-            client_namespaces[parents] = ClientNamespace()
+                setattr(NewNamespace, name, accessor_pair.get_property())
+            client_namespaces[parents] = NewNamespace()
 
 
         # now assemble these namespaces into the correct hierarchy, fetching intermediate
@@ -152,6 +155,23 @@ class RPCClient:
             # assume one of self.getter or self.setter is set
             return property(self.getter, self.setter, doc=self.getter.__doc__ if self.getter else self.setter.__doc__)
 
+    class ClientNamespace:
+        __attrs_locked = False
+        def _lock_attrs(self):
+            self.__attrs_locked = True
+            for v in self.__dict__.values():
+                if hasattr(v, '_lock_attrs'):
+                    v._lock_attrs()
+        def __setattr__(self, name, value):
+            if self.__attrs_locked:
+                if not hasattr(self, name):
+                    raise RuntimeError('Attribute "{}" is not known, so its state cannot be communicated to the server.'.format(name))
+                else:
+                    cls = type(self)
+                    if not hasattr(cls, name) or not isinstance(getattr(cls, name), property):
+                        raise RuntimeError('Attribute "{}" is not a property value that can be communicated to the server.'.format(name))
+            super().__setattr__(name, value)
+
 class RPCError(RuntimeError):
     pass
 
@@ -169,7 +189,8 @@ class ZMQClient(RPCClient):
         self.interrupt_socket.connect(interrupt_addr)
 
     def _send(self, command, args, kwargs):
-        self.socket.send_json((command, args, kwargs))
+        json = json_encode.encode_compact_to_bytes((command, args, kwargs))
+        self.socket.send(json)
 
     def _receive_reply(self):
         reply_type = self.socket.recv_string()
@@ -215,7 +236,7 @@ def _rich_proxy_function(doc, argspec, name, rpc_client, rpc_function, client_wr
         if not varargs:
             arg_parts.append('*')
         for arg in kwonly:
-            call_parts.append('{}={!r}'.format(arg, arg))
+            call_parts.append('{}={}'.format(arg, arg))
             if arg in kwdefaults:
                 arg_parts.append('{}={!r}'.format(arg, kwdefaults[arg]))
             else:
