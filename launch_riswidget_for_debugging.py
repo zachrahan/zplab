@@ -3,6 +3,8 @@
 import numpy
 from PyQt5 import Qt
 from ris_widget.ris_widget import RisWidget
+from ris_widget.image import Image
+from ris_widget.layer import Layer
 import freeimage
 import sys
 
@@ -20,7 +22,8 @@ argv = sys.argv
 app = Qt.QApplication(argv)
 rw = RisWidget()
 rw.show()
-rw.main_scene.image_stack.append_image(im)
+rw.bottom_layer = Layer(Image(im))
+rw.layer_stack.append(Layer(Image(freeimage.read('/mnt/scopearray/experiment02/0006/experiment02__0006_0007.png'))))
 #ioi = ImageOverlayItem(rw.image_scene.image_item, oim)
 #
 #hide_show_ioi_dlg = Qt.QWidget()

@@ -157,7 +157,10 @@ class ExtensibleVideoMaker(Qt.QMainWindow):
             desired_size += desired_size % 2
             # 24-bit RGB QImage rows are padded to 32-bit chunks, which we must match
             row_stride = desired_size[0] * 3
-            row_stride += 4 - (row_stride % 4)
+            row_stride_unpadding = row_stride % 4
+            if row_stride_unpadding > 0:
+                row_stride_padding = 4 - row_stride_unpadding
+                row_stride += row_stride_padding
             # If NPY_RELAXED_STRIDES_CHECKING=1 was defined when your copy of numpy was built, the following commented code would work.  However, typically,
             # NPY_RELAXED_STRIDES_CHECKING=1 is not set, although the numpy manual states that it is eventually to become standard.
 #           self._buffer = numpy.ndarray(

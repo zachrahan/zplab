@@ -9,5 +9,6 @@
 		<Project File="rpc_acquisition/rpc_acquisition.vpj"/>
 		<Project File="wautofocuser/wautofocuser.vpj"/>
 		<Project File="misc/yapy_liblinear/yapy_liblinear.vpj"/>
+		<Project File="../zplib/zplib.vpj"/>
 	</Projects>
 </Workspace>
