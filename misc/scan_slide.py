@@ -41,7 +41,7 @@ def scan_slide(scope, tl, br, increment, dpath, fn_prefix):
                 return
             ngets = 1
         for _ in range(ngets):
-            futs.append(threadpool.submit(freeimage.write, scope.camera.next_image(), str(dpath / 'fn_prefix_{}.png'.format(get_stack.pop(0)))))
+            futs.append(threadpool.submit(freeimage.write, scope.camera.next_image(), str(dpath / '{}_{}.png'.format(fn_prefix, get_stack.pop(0)))))
     z = scope.stage.position[2]
     dpath =  Path(dpath)
     threadpool = futures.ThreadPoolExecutor(3)
