@@ -28,6 +28,11 @@ import freeimage
 import json
 import math
 import numpy
+import time
+
+def write_image(image, fpath_str):
+    u8_scaled_image = ((image.astype(numpy.float32) / image.max()) * 255).astype(numpy.uint8)
+    freeimage.write(u8_scaled_image, fpath_str)
 
 def scan_slide(scope, tl, br, increment, dpath, fn_prefix):
     def get_and_store(do_all=False):
@@ -41,7 +46,7 @@ def scan_slide(scope, tl, br, increment, dpath, fn_prefix):
                 return
             ngets = 1
         for _ in range(ngets):
-            futs.append(threadpool.submit(freeimage.write, scope.camera.next_image(), str(dpath / '{}_{}.png'.format(fn_prefix, get_stack.pop(0)))))
+            futs.append(threadpool.submit(write_image, scope.camera.next_image(), str(dpath / '{}_{}.png'.format(fn_prefix, get_stack.pop(0)))))
     z = scope.stage.position[2]
     dpath =  Path(dpath)
     threadpool = futures.ThreadPoolExecutor(3)
@@ -66,8 +71,10 @@ def scan_slide(scope, tl, br, increment, dpath, fn_prefix):
             get_and_store()
             step_idx += 1
             print('{}/{} ({}%)'.format(step_idx, num_steps, 100 * step_idx/num_steps))
+    print('Waiting for trailing acquisition...')
+    time.sleep(1)
     scope.tl.lamp.pop_state()
-    print('Writing remaining images...')
+    print('Writing remaining images and finalizing...')
     get_and_store(True)
     with open(str(dpath / '{}_positions.json'.format(fn_prefix)), 'w') as f:
         json.dump(positions, f)
