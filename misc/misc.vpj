@@ -41,6 +41,7 @@
 			<F N="manually_score_images.ui"/>
 			<F N="pca.py"/>
 			<F N="resumable_slot_with_generator_example.py"/>
+			<F N="scan_slide.py"/>
 			<F N="skeletonize_fluorescence_masks.py"/>
 			<F N="terrible_eval_thread.py"/>
 			<F N="test_skimage_16bit_png.py"/>
