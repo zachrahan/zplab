@@ -28,6 +28,7 @@ from ...util import enumerated_properties
 # TL and IL shutters
 SET_SHUTTER_LAMP = 77032
 GET_SHUTTER_LAMP = 77033
+SET_SHUTTER_EVENT_SUBSCRIPTIONS = 77003
 # NB: 77032 is an unusual command in that two outstanding instances issued with
 # different values for their first parameter are answered separately.
 # Furthermore, the response does not include any parameters, making it difficult
@@ -123,7 +124,6 @@ class ILFieldWheel(enumerated_properties.DictProperty):
     def _write(self, value):
         self._il.send_message(POS_ABS_LFWHEEL, value, intent="set IL field wheel position")
 
-
 class _ShutterDevice(stand.DM6000Device):
     def get_shutter_open(self):
         '''True: shutter open, False: shutter closed.'''
@@ -189,3 +189,13 @@ class TL(_ShutterDevice):
         pos_min = int(self.send_message(GET_MIN_POS_APBL_TL, async=False, intent="get aperture diaphragm min position").response)
         pos_max = int(self.send_message(GET_MAX_POS_APBL_TL, async=False, intent="get aperture diaphragm max position").response)
         return pos_min, pos_max
+
+class ShutterOpenednessWatcher(stand.DM6000Device):
+    def _setup_device(self):
+        self.send_message(SET_SHUTTER_EVENT_SUBSCRIPTIONS, 0, 0, 0, 0, 1, 1, async=False, intent="subscribe to TL and IL shutter opened/closed events")
+        self.register_event_callback(GET_SHUTTER_LAMP, self._on_shutter_event)
+
+    def _on_shutter_event(self, response):
+        tl_open, il_open = (bool(int(c)) for c in response.response.split())
+        self._update_property('tl.shutter_open', tl_open)
+        self._update_property('il.shutter_open', il_open)
