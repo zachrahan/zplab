@@ -25,13 +25,15 @@
 import enum
 from PyQt5 import Qt
 from . import device_widget
+from ..simple_rpc import rpc_client
+from ..util import state_stack
 
 class PT(enum.Enum):
     Bool = 0,
     Int = 1,
-    Float = 2,
-    Enum = 3,
-    Objective = 4
+    Enum = 2,
+    Objective = 3,
+    StageAxisPos = 4
 
 class MicroscopeWidget(device_widget.DeviceWidget):
     PROPERTY_ROOT = 'scope.'
@@ -50,9 +52,12 @@ class MicroscopeWidget(device_widget.DeviceWidget):
         ('tl.aperture_diaphragm', PT.Int, 'tl.aperture_diaphragm_range', 'nosepiece.position'),
         ('tl.field_diaphragm', PT.Int, 'tl.field_diaphragm_range', 'nosepiece.position'),
         ('tl.condenser_retracted', PT.Bool),
-        ('stage.x', PT.Float),
-        ('stage.y', PT.Float),
-        ('stage.z', PT.Float)]
+        ('stage.xy_fine_manual_control', PT.Bool),
+        ('stage.z_fine_manual_control', PT.Bool),
+        ('stage.x', PT.StageAxisPos, 'stage'),
+        ('stage.y', PT.StageAxisPos, 'stage'),
+        ('stage.z', PT.StageAxisPos, 'stage')
+    ]
 
     @classmethod
     def can_run(cls, scope):
@@ -76,19 +81,23 @@ class MicroscopeWidget(device_widget.DeviceWidget):
         self.widget_makers = {
             PT.Bool : self.make_bool_widget,
             PT.Int : self.make_int_widget,
-            PT.Float : self.make_float_widget,
+            PT.StageAxisPos : self.make_stage_axis_pos_widget,
             PT.Enum : self.make_enum_widget,
             PT.Objective : self.make_objective_widget}
         for ptuple in self.PROPERTIES:
             self.make_widgets_for_property(ptuple)
 
-    def make_widgets_for_property(self, ptuple):
-        if ptuple[1] not in (PT.Bool, PT.Enum, PT.Objective):
-            return
+    def pattr(self, ppath):
         attr = self.scope
+        for attr_name in ppath.split('.'):
+            attr = getattr(attr, attr_name)
+        return attr
+
+    def make_widgets_for_property(self, ptuple):
+        if ptuple[1] not in (PT.Bool, PT.Enum, PT.Int, PT.Objective):
+            return
         try:
-            for attr_name in ptuple[0].split('.'):
-                attr = getattr(attr, attr_name)
+            self.pattr(ptuple[0])
         except:
             Qt.qDebug('Failed to read value of "{}{}", so this property will not be presented in the GUI.'.format(self.PROPERTY_ROOT, ptuple[0]))
             return
@@ -121,6 +130,7 @@ class MicroscopeWidget(device_widget.DeviceWidget):
         layout = Qt.QHBoxLayout()
         widget.setLayout(layout)
         slider = Qt.QSlider(Qt.Qt.Horizontal)
+        slider.setTickInterval(1)
         layout.addWidget(slider)
         spinbox = Qt.QSpinBox()
         layout.addWidget(spinbox)
@@ -131,7 +141,8 @@ class MicroscopeWidget(device_widget.DeviceWidget):
                 return
             handling_change = True
             try:
-                pass
+                slider.setValue(value)
+                spinbox.setValue(value)
             finally:
                 handling_change = False
         def range_changed(_):
@@ -140,7 +151,12 @@ class MicroscopeWidget(device_widget.DeviceWidget):
                 return
             handling_change = True
             try:
-                pass
+                attr = self.scope
+                for attr_name in ptuple[2].split('.'):
+                    attr = getattr(attr, attr_name)
+                range_ = attr
+                slider.setRange(*range_)
+                spinbox.setRange(*range_)
             finally:
                 handling_change = False
         def gui_changed(value):
@@ -149,23 +165,27 @@ class MicroscopeWidget(device_widget.DeviceWidget):
                 return
             handling_change = True
             try:
-                pass
+                update(value)
             finally:
                 handling_change = False
         update = self.subscribe(ppath, callback=prop_changed)
+        if update is None:
+            raise TypeError('{} is not a writable property!'.format(ppath))
+        self.subscribe(self.PROPERTY_ROOT + ptuple[3], callback=range_changed)
+        slider.valueChanged[int].connect(gui_changed)
+        spinbox.valueChanged[int].connect(gui_changed)
         return widget
 
-    def make_float_widget(self, ptuple):
-        pass
+    def make_stage_axis_pos_widget(self, ptuple):
+        device = self.pattr(ptuple[0])
+#       command = device.set_pos(123, async=True)
+        # TODO: attach on-complete callback to command future...
 
     def make_enum_widget(self, ptuple):
         widget = Qt.QComboBox()
         widget.setEditable(False)
         ppath = self.PROPERTY_ROOT + ptuple[0]
-        attr = self.scope
-        for attr_name in ptuple[2].split('.'):
-            attr = getattr(attr, attr_name)
-        widget.addItems(sorted(attr))
+        widget.addItems(sorted(self.pattr(ptuple[2])))
         update = self.subscribe(ppath, callback=widget.setCurrentText)
         if update is None:
             raise TypeError('{} is not a writable property!'.format(ppath))
@@ -182,10 +202,7 @@ class MicroscopeWidget(device_widget.DeviceWidget):
         widget = Qt.QComboBox()
         widget.setEditable(False)
         ppath = self.PROPERTY_ROOT + ptuple[0]
-        attr = self.scope
-        for attr_name in ptuple[2].split('.'):
-            attr = getattr(attr, attr_name)
-        mags = attr
+        mags = self.pattr(ptuple[2])
         model = _ObjectivesModel(mags, widget.font(), self)
         widget.setModel(model)
         def prop_changed(value):
