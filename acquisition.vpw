@@ -7,8 +7,8 @@
 		<Project File="pyagg/pyagg.vpj"/>
 		<Project File="ris_widget/ris_widget.vpj"/>
 		<Project File="rpc_acquisition/rpc_acquisition.vpj"/>
+		<Project File="../StackStream/StackStream.vpj"/>
 		<Project File="wautofocuser/wautofocuser.vpj"/>
 		<Project File="misc/yapy_liblinear/yapy_liblinear.vpj"/>
-		<Project File="../zplib/zplib.vpj"/>
 	</Projects>
 </Workspace>
