@@ -1,162 +1,162 @@
 <!DOCTYPE Project SYSTEM "http://www.slickedit.com/dtd/vse/10.0/vpj.dtd">
 <Project
-	Version="10.0"
-	VendorName="SlickEdit"
-	TemplateName="Python - Empty Project"
-	WorkingDir=".">
-	<Files>
-		<Folder
-			Name="andor"
-			Filters="">
-			<F N="acquisition/andor/__init__.py"/>
-			<F N="acquisition/andor/_andor.cpp"/>
-			<F N="acquisition/andor/_AndorException.cpp"/>
-			<F N="acquisition/andor/_AndorException.h"/>
-			<F N="acquisition/andor/_Api.cpp"/>
-			<F N="acquisition/andor/_Api.h"/>
-			<F N="acquisition/andor/_Camera.cpp"/>
-			<F N="acquisition/andor/_Camera.h"/>
-			<F N="acquisition/andor/_common.h"/>
-			<F N="acquisition/andor/_GilScopedRelease.cpp"/>
-			<F N="acquisition/andor/_GilScopedRelease.h"/>
-			<F N="acquisition/andor/andor.py"/>
-			<F N="acquisition/andor/andor_exception.py"/>
-			<F N="acquisition/andor/direct_manip.py"/>
-			<F N="acquisition/andor/direct_manip.ui"/>
-			<F N="acquisition/andor/Makefile"/>
-		</Folder>
-		<Folder
-			Name="auto_focuser"
-			Filters="">
-			<F N="acquisition/auto_focuser/__init__.py"/>
-			<F N="acquisition/auto_focuser/auto_focuser.py"/>
-		</Folder>
-		<Folder
-			Name="brightfield_led"
-			Filters="">
-			<F N="acquisition/brightfield_led/__init__.py"/>
-			<F N="acquisition/brightfield_led/adafruit_atmega32u4/adafruit_atmega32u4.pde"/>
-			<F N="acquisition/brightfield_led/brightfield_led.py"/>
-			<F N="acquisition/brightfield_led/direct_manip.py"/>
-		</Folder>
-		<Folder
-			Name="dm6000b"
-			Filters="">
-			<Folder
-				Name="function_units"
-				Filters="">
-				<F N="acquisition/dm6000b/function_units/__init__.py"/>
-				<F N="acquisition/dm6000b/function_units/condenser_aperature_iris.py"/>
-				<F N="acquisition/dm6000b/function_units/cube_turret.py"/>
-				<F N="acquisition/dm6000b/function_units/dic_turret.py"/>
-				<F N="acquisition/dm6000b/function_units/lamp.py"/>
-				<F N="acquisition/dm6000b/function_units/main.py"/>
-				<F N="acquisition/dm6000b/function_units/objective_turret.py"/>
-				<F N="acquisition/dm6000b/function_units/stage.py"/>
-			</Folder>
-			<F N="acquisition/dm6000b/__init__.py"/>
-			<F N="acquisition/dm6000b/dm6000b.py"/>
-			<F N="acquisition/dm6000b/enums.py"/>
-			<F N="acquisition/dm6000b/function_unit.py"/>
-			<F N="acquisition/dm6000b/packet.py"/>
-		</Folder>
-		<Folder
-			Name="lumencor"
-			Filters="">
-			<F N="acquisition/lumencor/__init__.py"/>
-			<F N="acquisition/lumencor/direct_manip.py"/>
-			<F N="acquisition/lumencor/direct_manip.ui"/>
-			<F N="acquisition/lumencor/lumencor.py"/>
-			<F N="acquisition/lumencor/lumencor_exception.py"/>
-		</Folder>
-		<Folder
-			Name="pedals"
-			Filters="">
-			<F N="acquisition/pedals/__init__.py"/>
-			<F N="acquisition/pedals/pedal.py"/>
-			<F N="acquisition/pedals/pedals.ino"/>
-			<F N="acquisition/pedals/pedals.py"/>
-		</Folder>
-		<Folder
-			Name="peltier"
-			Filters="">
-			<F N="acquisition/peltier/__init__.py"/>
-			<F N="acquisition/peltier/peltier.py"/>
-		</Folder>
-		<Folder
-			Name="root"
-			Filters="">
-			<F N="acquisition/root/__init__.py"/>
-			<F N="acquisition/root/direct_manip.py"/>
-			<F N="acquisition/root/root.py"/>
-		</Folder>
-		<F N="acquisition/__init__.py"/>
-		<F N="acquisition_direct_manip.py"/>
-		<F N="acquisition/acquisition_exception.py"/>
-		<F N="acquisition/device.py"/>
-		<F N="misc/fluorescence_trained_brightfield_worm_finder.py"/>
-		<F N="acquisition/focus_range_stack.py"/>
-		<F N="misc/make_mask_from_fluorescence.py"/>
-		<F N="misc/manually_score_images.py"/>
-		<F N="misc/skeletonize_fluorescence_masks.py"/>
-	</Files>
-	<Config
-		Name="Debug"
-		DebugCallbackName="pydbgp"
-		Type="python"
-		OutputFile=""
-		AppType="python"
-		CompilerConfigName="">
-		<Menu>
-			<Target
-				Name="Execute"
-				MenuCaption="E&amp;xecute"
-				Dialog="_python_options_form Run"
-				CaptureOutputWith="ProcessBuffer"
-				SaveOption="SaveNone"
-				RunFromDir="%rw"
-				Deletable="0">
-				<Exec
-					CmdLine='"%(SLICKEDIT_PYTHON_EXE)" %(SLICKEDIT_PYTHON_EXECUTE_ARGS) /home/ehvatum/zplrepo/acquisition_direct_manip.py %~other'
-					OtherOptions="andor"/>
-			</Target>
-			<Target
-				Name="Debug"
-				MenuCaption="&amp;Debug"
-				Dialog="_python_options_form Debug"
-				CaptureOutputWith="ProcessBuffer"
-				SaveOption="SaveNone"
-				RunFromDir="%rw"
-				Deletable="0">
-				<Exec
-					CmdLine="python_debug"
-					Type="Slick-C"/>
-			</Target>
-			<Target
-				Name="Python Options"
-				MenuCaption="Python &amp;Options"
-				ShowOnMenu="HideIfNoCmdLine"
-				Deletable="0">
-				<Exec
-					CmdLine="pythonoptions"
-					Type="Slick-C"/>
-			</Target>
-		</Menu>
-		<List Name="Python Options">
-		</List>
-		<List Name="pydbgp Options">
-			<Item
-				Name="ServerHost"
-				Value="127.0.0.1"/>
-			<Item
-				Name="ServerPort"
-				Value="0"/>
-			<Item
-				Name="ListenInBackground"
-				Value="1"/>
-			<Item
-				Name="show_hidden"
-				Value="1"/>
-		</List>
-	</Config>
+    Version="10.0"
+    VendorName="SlickEdit"
+    TemplateName="Python - Empty Project"
+    WorkingDir=".">
+    <Files>
+        <Folder
+            Name="andor"
+            Filters="">
+            <F N="acquisition/andor/__init__.py"/>
+            <F N="acquisition/andor/_andor.cpp"/>
+            <F N="acquisition/andor/_AndorException.cpp"/>
+            <F N="acquisition/andor/_AndorException.h"/>
+            <F N="acquisition/andor/_Api.cpp"/>
+            <F N="acquisition/andor/_Api.h"/>
+            <F N="acquisition/andor/_Camera.cpp"/>
+            <F N="acquisition/andor/_Camera.h"/>
+            <F N="acquisition/andor/_common.h"/>
+            <F N="acquisition/andor/_GilScopedRelease.cpp"/>
+            <F N="acquisition/andor/_GilScopedRelease.h"/>
+            <F N="acquisition/andor/andor.py"/>
+            <F N="acquisition/andor/andor_exception.py"/>
+            <F N="acquisition/andor/direct_manip.py"/>
+            <F N="acquisition/andor/direct_manip.ui"/>
+            <F N="acquisition/andor/Makefile"/>
+        </Folder>
+        <Folder
+            Name="auto_focuser"
+            Filters="">
+            <F N="acquisition/auto_focuser/__init__.py"/>
+            <F N="acquisition/auto_focuser/auto_focuser.py"/>
+        </Folder>
+        <Folder
+            Name="brightfield_led"
+            Filters="">
+            <F N="acquisition/brightfield_led/__init__.py"/>
+            <F N="acquisition/brightfield_led/adafruit_atmega32u4/adafruit_atmega32u4.pde"/>
+            <F N="acquisition/brightfield_led/brightfield_led.py"/>
+            <F N="acquisition/brightfield_led/direct_manip.py"/>
+        </Folder>
+        <Folder
+            Name="dm6000b"
+            Filters="">
+            <Folder
+                Name="function_units"
+                Filters="">
+                <F N="acquisition/dm6000b/function_units/__init__.py"/>
+                <F N="acquisition/dm6000b/function_units/condenser_aperature_iris.py"/>
+                <F N="acquisition/dm6000b/function_units/cube_turret.py"/>
+                <F N="acquisition/dm6000b/function_units/dic_turret.py"/>
+                <F N="acquisition/dm6000b/function_units/lamp.py"/>
+                <F N="acquisition/dm6000b/function_units/main.py"/>
+                <F N="acquisition/dm6000b/function_units/objective_turret.py"/>
+                <F N="acquisition/dm6000b/function_units/stage.py"/>
+            </Folder>
+            <F N="acquisition/dm6000b/__init__.py"/>
+            <F N="acquisition/dm6000b/dm6000b.py"/>
+            <F N="acquisition/dm6000b/enums.py"/>
+            <F N="acquisition/dm6000b/function_unit.py"/>
+            <F N="acquisition/dm6000b/packet.py"/>
+        </Folder>
+        <Folder
+            Name="lumencor"
+            Filters="">
+            <F N="acquisition/lumencor/__init__.py"/>
+            <F N="acquisition/lumencor/direct_manip.py"/>
+            <F N="acquisition/lumencor/direct_manip.ui"/>
+            <F N="acquisition/lumencor/lumencor.py"/>
+            <F N="acquisition/lumencor/lumencor_exception.py"/>
+        </Folder>
+        <Folder
+            Name="pedals"
+            Filters="">
+            <F N="acquisition/pedals/__init__.py"/>
+            <F N="acquisition/pedals/pedal.py"/>
+            <F N="acquisition/pedals/pedals.ino"/>
+            <F N="acquisition/pedals/pedals.py"/>
+        </Folder>
+        <Folder
+            Name="peltier"
+            Filters="">
+            <F N="acquisition/peltier/__init__.py"/>
+            <F N="acquisition/peltier/peltier.py"/>
+        </Folder>
+        <Folder
+            Name="root"
+            Filters="">
+            <F N="acquisition/root/__init__.py"/>
+            <F N="acquisition/root/direct_manip.py"/>
+            <F N="acquisition/root/root.py"/>
+        </Folder>
+        <F N="acquisition/__init__.py"/>
+        <F N="acquisition_direct_manip.py"/>
+        <F N="acquisition/acquisition_exception.py"/>
+        <F N="acquisition/device.py"/>
+        <F N="misc/fluorescence_trained_brightfield_worm_finder.py"/>
+        <F N="acquisition/focus_range_stack.py"/>
+        <F N="misc/make_mask_from_fluorescence.py"/>
+        <F N="misc/manually_score_images.py"/>
+        <F N="misc/skeletonize_fluorescence_masks.py"/>
+    </Files>
+    <Config
+        Name="Debug"
+        DebugCallbackName="pydbgp"
+        Type="python"
+        OutputFile=""
+        AppType="python"
+        CompilerConfigName="">
+        <Menu>
+            <Target
+                Name="Execute"
+                MenuCaption="E&amp;xecute"
+                Dialog="_python_options_form Run"
+                CaptureOutputWith="ProcessBuffer"
+                SaveOption="SaveNone"
+                RunFromDir="%rw"
+                Deletable="0">
+                <Exec
+                    CmdLine='"%(SLICKEDIT_PYTHON_EXE)" %(SLICKEDIT_PYTHON_EXECUTE_ARGS) /home/ehvatum/zplrepo/acquisition_direct_manip.py %~other'
+                    OtherOptions="andor"/>
+            </Target>
+            <Target
+                Name="Debug"
+                MenuCaption="&amp;Debug"
+                Dialog="_python_options_form Debug"
+                CaptureOutputWith="ProcessBuffer"
+                SaveOption="SaveNone"
+                RunFromDir="%rw"
+                Deletable="0">
+                <Exec
+                    CmdLine="python_debug"
+                    Type="Slick-C"/>
+            </Target>
+            <Target
+                Name="Python Options"
+                MenuCaption="Python &amp;Options"
+                ShowOnMenu="HideIfNoCmdLine"
+                Deletable="0">
+                <Exec
+                    CmdLine="pythonoptions"
+                    Type="Slick-C"/>
+            </Target>
+        </Menu>
+        <List Name="Python Options">
+        </List>
+        <List Name="pydbgp Options">
+            <Item
+                Name="ServerHost"
+                Value="127.0.0.1"/>
+            <Item
+                Name="ServerPort"
+                Value="0"/>
+            <Item
+                Name="ListenInBackground"
+                Value="1"/>
+            <Item
+                Name="show_hidden"
+                Value="1"/>
+        </List>
+    </Config>
 </Project>

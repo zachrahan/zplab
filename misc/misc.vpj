@@ -1,112 +1,112 @@
 <!DOCTYPE Project SYSTEM "http://www.slickedit.com/dtd/vse/10.0/vpj.dtd">
 <Project
-	Version="10.0"
-	VendorName="SlickEdit"
-	TemplateName="Python - Empty Project"
-	WorkingDir=".">
-	<Files>
-		<Folder
-			Name="Other Files"
-			Filters="">
-			<F N="minicom_to_scope.bash"/>
-			<F N="vs_pydbg.bash"/>
-		</Folder>
-		<Folder
-			Name="Source Files"
-			Filters="*.py">
-			<Folder
-				Name="_texture_analysis"
-				Filters="">
-				<F N="_texture_analysis/_texture_analysis.pyx"/>
-				<F N="_texture_analysis/setup.py"/>
-			</Folder>
-			<Folder
-				Name="fast_image_sampler"
-				Filters=""/>
-			<F N="__init__.py"/>
-			<F N="brenner_edge_detector.py"/>
-			<F N="callbacking_video_maker.py"/>
-			<F N="collect_stage_movement_data.py"/>
-			<F N="extensible_video_maker.py"/>
-			<F N="extensible_video_maker.ui"/>
-			<F N="extensible_video_maker_multiwell_usage_sample.py"/>
-			<F N="extensible_video_maker_usage_sample.py"/>
-			<F N="fluorescence_trained_brightfield_worm_finder.py"/>
-			<F N="generate_ctypes.py"/>
-			<F N="gogostagegogoacquiregogogonotadrillgogogo.py"/>
-			<F N="image_fft.py"/>
-			<F N="image_transfer_zmq_benchmark.py"/>
-			<F N="make_mask_from_fluorescence.py"/>
-			<F N="manually_score_images.py"/>
-			<F N="manually_score_images.ui"/>
-			<F N="pca.py"/>
-			<F N="resumable_slot_with_generator_example.py"/>
-			<F N="scan_slide.py"/>
-			<F N="skeletonize_fluorescence_masks.py"/>
-			<F N="terrible_eval_thread.py"/>
-			<F N="test_skimage_16bit_png.py"/>
-			<F N="worm_border_and_interior_classifier.py"/>
-			<F N="worm_classifier_for_autofocus.py"/>
-		</Folder>
-	</Files>
-	<Config
-		Name="Debug"
-		DebugCallbackName="pydbgp"
-		Type="python"
-		OutputFile=""
-		AppType="python"
-		CompilerConfigName="">
-		<Menu>
-			<Target
-				Name="Execute"
-				MenuCaption="E&amp;xecute"
-				Dialog="_python_options_form Run"
-				CaptureOutputWith="ProcessBuffer"
-				SaveOption="SaveNone"
-				RunFromDir="%rw"
-				Deletable="0">
-				<Exec CmdLine='python %(SLICKEDIT_PYTHON_EXECUTE_ARGS) "%f"'/>
-			</Target>
-			<Target
-				Name="Debug"
-				MenuCaption="&amp;Debug"
-				Dialog="_python_options_form Debug"
-				CaptureOutputWith="ProcessBuffer"
-				SaveOption="SaveNone"
-				RunFromDir="%rw"
-				Deletable="0">
-				<Exec
-					CmdLine="python_debug"
-					Type="Slick-C"/>
-			</Target>
-			<Target
-				Name="Python Options"
-				MenuCaption="Python &amp;Options"
-				ShowOnMenu="HideIfNoCmdLine"
-				Deletable="0">
-				<Exec
-					CmdLine="pythonoptions"
-					Type="Slick-C"/>
-			</Target>
-		</Menu>
-		<List Name="Python Options">
-			<Item
-				Name="DefaultFile"
-				Value=""/>
-		</List>
-		<List Name="pydbgp Options">
-			<Item
-				Name="ServerHost"
-				Value="127.0.0.1"/>
-			<Item
-				Name="ServerPort"
-				Value="0"/>
-			<Item
-				Name="ListenInBackground"
-				Value="1"/>
-			<Item
-				Name="show_hidden"
-				Value="0"/>
-		</List>
-	</Config>
+    Version="10.0"
+    VendorName="SlickEdit"
+    TemplateName="Python - Empty Project"
+    WorkingDir=".">
+    <Files>
+        <Folder
+            Name="Other Files"
+            Filters="">
+            <F N="minicom_to_scope.bash"/>
+            <F N="vs_pydbg.bash"/>
+        </Folder>
+        <Folder
+            Name="Source Files"
+            Filters="*.py">
+            <Folder
+                Name="_texture_analysis"
+                Filters="">
+                <F N="_texture_analysis/_texture_analysis.pyx"/>
+                <F N="_texture_analysis/setup.py"/>
+            </Folder>
+            <Folder
+                Name="fast_image_sampler"
+                Filters=""/>
+            <F N="__init__.py"/>
+            <F N="brenner_edge_detector.py"/>
+            <F N="callbacking_video_maker.py"/>
+            <F N="collect_stage_movement_data.py"/>
+            <F N="extensible_video_maker.py"/>
+            <F N="extensible_video_maker.ui"/>
+            <F N="extensible_video_maker_multiwell_usage_sample.py"/>
+            <F N="extensible_video_maker_usage_sample.py"/>
+            <F N="fluorescence_trained_brightfield_worm_finder.py"/>
+            <F N="generate_ctypes.py"/>
+            <F N="gogostagegogoacquiregogogonotadrillgogogo.py"/>
+            <F N="image_fft.py"/>
+            <F N="image_transfer_zmq_benchmark.py"/>
+            <F N="make_mask_from_fluorescence.py"/>
+            <F N="manually_score_images.py"/>
+            <F N="manually_score_images.ui"/>
+            <F N="pca.py"/>
+            <F N="resumable_slot_with_generator_example.py"/>
+            <F N="scan_slide.py"/>
+            <F N="skeletonize_fluorescence_masks.py"/>
+            <F N="terrible_eval_thread.py"/>
+            <F N="test_skimage_16bit_png.py"/>
+            <F N="worm_border_and_interior_classifier.py"/>
+            <F N="worm_classifier_for_autofocus.py"/>
+        </Folder>
+    </Files>
+    <Config
+        Name="Debug"
+        DebugCallbackName="pydbgp"
+        Type="python"
+        OutputFile=""
+        AppType="python"
+        CompilerConfigName="">
+        <Menu>
+            <Target
+                Name="Execute"
+                MenuCaption="E&amp;xecute"
+                Dialog="_python_options_form Run"
+                CaptureOutputWith="ProcessBuffer"
+                SaveOption="SaveNone"
+                RunFromDir="%rw"
+                Deletable="0">
+                <Exec CmdLine='python %(SLICKEDIT_PYTHON_EXECUTE_ARGS) "%f"'/>
+            </Target>
+            <Target
+                Name="Debug"
+                MenuCaption="&amp;Debug"
+                Dialog="_python_options_form Debug"
+                CaptureOutputWith="ProcessBuffer"
+                SaveOption="SaveNone"
+                RunFromDir="%rw"
+                Deletable="0">
+                <Exec
+                    CmdLine="python_debug"
+                    Type="Slick-C"/>
+            </Target>
+            <Target
+                Name="Python Options"
+                MenuCaption="Python &amp;Options"
+                ShowOnMenu="HideIfNoCmdLine"
+                Deletable="0">
+                <Exec
+                    CmdLine="pythonoptions"
+                    Type="Slick-C"/>
+            </Target>
+        </Menu>
+        <List Name="Python Options">
+            <Item
+                Name="DefaultFile"
+                Value=""/>
+        </List>
+        <List Name="pydbgp Options">
+            <Item
+                Name="ServerHost"
+                Value="127.0.0.1"/>
+            <Item
+                Name="ServerPort"
+                Value="0"/>
+            <Item
+                Name="ListenInBackground"
+                Value="1"/>
+            <Item
+                Name="show_hidden"
+                Value="0"/>
+        </List>
+    </Config>
 </Project>
