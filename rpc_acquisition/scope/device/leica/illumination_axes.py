@@ -199,7 +199,10 @@ class TL(_ShutterDeviceMixin, stand.LeicaComponent):
     '''IL represents an interface into elements used in Transmitted Light (Brighftield and DIC) mode.'''
     _shutter_idx = 0
 
-class DMi8_TL(TL):
+class DMi8_TL(stand.LeicaComponent):
+    pass
+
+class DMi8_LeicaLED_TL(TL):
     def _setup_device(self):
         super()._setup_device()
         self.send_message(
@@ -226,7 +229,7 @@ class DMi8_TL(TL):
     def _on_lamp_event(self, response):
         intensity, lamp = (int(c) for c in response.response.split())
         if lamp != self._shutter_idx:
-             logger.warning('Received IL lamp event from DMi8 which has no Leica-controlled IL lamp')
+            logger.warning('Received IL lamp event from DMi8 which has no Leica-controlled IL lamp')
         else:
             self._update_property('lamp.intensity', intensity)
 
@@ -243,7 +246,7 @@ class DMi8_TL(TL):
         self.send_message(SET_LAMP, int(intensity), self._shutter_idx, async=False, intent='set TL lamp intensity')
 
 class DM6000B_TL(TL):
-    '''IL represents an interface into elements used in Transmitted Light (Brighftield and DIC) mode.'''
+    '''TL represents an interface into elements used in Transmitted Light (Brighftield and DIC) mode.'''
     def _setup_device(self):
         super()._setup_device()
         self.send_message(SET_KOND_EVENT_SUBSCRIPTIONS, 1, async=False, intent="subscribe to flapping condenser flap events")
